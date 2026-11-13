@@ -58,6 +58,28 @@ this code becoming the binding of the module's interfaces (N 2.1) and the rest d
 used by an engine is committed here first and pushed before the engine's commit that moves the
 pointer. One commit an engine, after item 3's first part.
 
+5. **The two copies read, before the move.** Written on 2026-11-13, ahead of item 3, by the session
+    that is free while the game waits on the engine's package, as items 1 and 2 were. One document,
+    `.github/KERNELS.md`, of the radiance cascades as each engine has them today, from reading
+    alone, no engine's file changed and nothing built or run. 3DEngine's are the Slang under
+    3DEngine/Shaders, cascades, gi, gi_trace, gi_merge, gi_ambient, gi_probes, gi_screen,
+    gi_screen_filter, gi_screen_glow, glow, probelight, scenefield, the field's splat, stamp,
+    resolve and count, lightthrough and roughreflect, with their C# under
+    3DEngine/GlobalIllumination and Rendering/Lighting; the bridge's are the Slang under
+    BevyCSharp/GlobalIllumination/Kernels with the C# beside them and bcs_pass. The document lists
+    each engine's kernels and passes in the order a frame runs them; pairs each kernel with its like
+    in the other engine or says it has none; says for each pair where the two differ, in the
+    algorithm, in a constant, in what is read and written, with file and line in both, and which
+    reads to the reader as the later or the mended form where that can be told from the code; says
+    what is one engine's own and stays there, its bindings, its view's block, its field's lookups;
+    and ends with the interface the module would name, the fewest things an engine must give a
+    kernel. It also places the three findings that wait for the kernels written once, a hit past a
+    cascade's band taking the next cascade's probes where none sees the point, a tied cell of the
+    field's color pass taking whichever thread ran last, and the field's build in world floats, each
+    at the kernel it belongs to. The engines' sessions read it at their items 265 and 138 and
+    correct it in their Replies. One commit of the document here, read by the reviewing session
+    before it is pushed.
+
 ## Verdicts
 
 None yet.
