@@ -1,11 +1,10 @@
 # Kernels
 
 The radiance cascades as 3DEngine and BevyCSharp each have them, read from the code alone ahead of
-the move of item 3 of [REVIEW.md](REVIEW.md), kernel by kernel in the order a frame runs them, each
-paired with its like in the other engine. 3DEngine is read at `3768c988` and BevyCSharp at
-`36840712`, both of 2026-11-13, and every line number is at those commits. Nothing of either engine
-was built or run for this document, so each difference it states comes from the code and not from a
-measurement.
+the move of the code into the module, kernel by kernel in the order a frame runs them, each paired
+with its like in the other engine. 3DEngine is read at `3768c988` and BevyCSharp at `36840712`, both
+of 2026-11-13, and every line number is at those commits. Nothing of either engine was built or run
+for this document, so each difference it states comes from the code and not from a measurement.
 
 Paths are relative to each repository's root, shortened as the table says. A reference stands in its
 engine's column or after its engine's name, so `GlobalIllumination/` is read in the repository the
@@ -675,9 +674,9 @@ The fewest things an engine gives a kernel, from what both supply.
 
 ## What holds each kernel
 
-The tests each engine has for the kernels this document pairs, so the move of item 3 knows what must
-read alike before and after it. Each engine's tests are read as committed, 3DEngine's at `d102cd72`
-of 2026-11-14 and BevyCSharp's at `36840712`. 3DEngine's lie in `3DEngine.Tests/Rendering/`.
+The tests each engine has for the kernels this document pairs, so the move knows what must read
+alike before and after it. Each engine's tests are read as committed, 3DEngine's at `d102cd72` of
+2026-11-14 and BevyCSharp's at `36840712`. 3DEngine's lie in `3DEngine.Tests/Rendering/`.
 BevyCSharp's lie in `BevyCSharp.Tests/GlobalIllumination/`, apart from `TreeCanopyTests.cs` in
 `BevyCSharp.Tests/Vegetation/` and the Rust tests in `field_triangles.rs` and `scene_field.rs` under
 `render/`. A test is named by its file, the line of its method and the method's name.
