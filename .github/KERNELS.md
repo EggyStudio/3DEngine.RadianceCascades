@@ -1238,3 +1238,589 @@ The kernels move least bound first, each with the tests named above in both engi
    applied stay each engine's.
 9. **`gi_reference`** stays with each engine, bound to its own ray scene, materials and diffuse
    term, and the module keeps the references the two trace.
+
+## The interface written out
+
+The ten things of the interface above, each written as the declaration the module would hold, a
+Slang struct or interface and, for the order, a C# interface. 3DEngine is read at `d102cd72` as
+committed and BevyCSharp at `36840712`. Each field and function carries what it is called in each
+engine today, as `3DEngine: name file:line | BevyCSharp: name file:line`, with `lacks` where an
+engine has none. A file is named alone, as `scenefield.slang`, where its name is its engine's own.
+Where the two engines hold one thing in two forms both are shown and the difference is said, and no
+choice is made between them. The engines' sessions choose at their items 265 and 138.
+
+### 1. The field's images
+
+```slang
+// A cascade's cell q is texel (q.x, q.y, q.z + c * size), its uvw (cell.xy / size,
+// (cell.z + c * size) / (size * count)), the cell held within 0.5 and size - 0.5.
+// 3DEngine: scenefield.slang:229-230 | BevyCSharp: bcs_field.slang:131-132
+public interface IFieldImages
+{
+    // The distance between texels, x the distance and yzw the first sheet's plane where one is kept.
+    // 3DEngine: IVolume.sampleAt scenefield.slang:16, over Sampler3D :22, SplitVolume :38, SheetVolume :61
+    // BevyCSharp: Texture3D<float>.SampleLevel with field_sampler, bcs_field.slang:133, x alone
+    float4 distanceBlend(float3 uvw);
+    // 3DEngine: IVolume.loadAt scenefield.slang:17, :23, :39, :62 | BevyCSharp: lacks
+    float4 distanceTexel(int3 texel);
+    // 3DEngine: ISheetVolume.secondAt scenefield.slang:46 over fieldSecond, gi_trace.slang:113-114 | BevyCSharp: lacks
+    float3 secondPlane(int3 texel);
+    // 3DEngine: albedo.sampleAt gi.slang:210, :270, :288 | BevyCSharp: albedo.SampleLevel bcs_field.slang:221, :238
+    float4 colorBlend(float3 uvw);
+    // 3DEngine: albedo.loadAt gi.slang:250 | BevyCSharp: albedo.Load bcs_field.slang:278, :349, :439
+    float4 colorTexel(int3 texel);
+    // 3DEngine: glow.sampleAt gi.slang:271, :291 | BevyCSharp: glow.SampleLevel bcs_field.slang:239
+    float4 glowBlend(float3 uvw);
+    // 3DEngine: glow.loadAt gi.slang:303 | BevyCSharp: glow.Load bcs_glow.slang:672
+    float4 glowTexel(int3 texel);
+    // 3DEngine: fieldFaces.Load gi.slang:248 | BevyCSharp: faces.Load bcs_field.slang:276
+    uint faceTexel(int3 texel);
+    // 3DEngine: true by its form | BevyCSharp: lacks, false by its form
+    bool hasSheets();
+};
+
+// The bits the images hold, which the module owns.
+// 3DEngine: faceBits scenefield.slang:456, faceWay :464 | BevyCSharp: faceBits bcs_field.slang:175, faceWay :184, alike
+uint faceBits(float3 n);
+float3 faceWay(uint bits);
+// 3DEngine: lightThroughOf scenefield.slang:426 | BevyCSharp: lightThroughOf bcs_field.slang:328, alike
+float lightThroughOf(float alpha);
+```
+
+| Image | 3DEngine | BevyCSharp |
+|---|---|---|
+| distance | `R16G16B16A16Sfloat`, distance and plane (`SceneFieldStages.cs:97`) | `R16Float`, distance alone (`SceneField.cs:333`) |
+| colors | `R8G8B8A8Unorm` (`:98`) | `Rgba8` (`:335`) |
+| emission | `R16G16B16A16Sfloat` (`:99`) | `Rgba16Float` (`:339`) |
+| faces | `R32Uint` (`:101`) | `R32UInt` (`:337`) |
+| second plane | `R16G16B16A16Sfloat` (`:104`) | lacks |
+| sampler | linear, clamped to the edge (`SceneFieldStages.cs:156-157`) | `SamplerSettings.ClampedTable`, linear and clamped (`BevyCSharp/Rendering/SamplerSettings.cs:70`) |
+| handed from C# | `GpuSceneField.View`, `AlbedoView`, `GlowView`, `FacesView`, `SecondView` (`GpuSceneField.cs:60`, `89`, `92`, `99`, `154`) | `SceneField.Image`, `Albedo`, `Glow`, `Faces` (`SceneField.cs:127`, `136`, `142`, `150`), set by name (`WorldProbes.cs:464-465`) |
+
+3DEngine holds both forms of a binding. Its probe kernels bind a combined image and
+sampler, `Sampler3D` (`gi_trace.slang:37-47`), and its model pass binds the images apart from one
+shared sampler, `SplitVolume` (`lightset.slang:247-259`, `281-282`), since Metal allows sixteen
+samplers to a stage. BevyCSharp binds a `Texture3D` and a `SamplerState` everywhere
+(`gi_trace.slang:35-41` among its kernels), which is the split form, WGSL having no combined one.
+
+Where one form holds what the other cannot:
+
+- **Sheets.** 3DEngine's distance image carries the first sheet's plane and its second image the
+  second plane, and its readers take half a cell off near a sheet (`scenefield.slang:231-232`) and
+  trace through sheets (`fieldDistanceSheetIn` `:245`, `traceFieldSheets` `:376`). BevyCSharp's one
+  channel holds no plane and cannot hold sheets.
+- **Gloss bits.** 3DEngine holds roughness in bits 8 to 15 and metallic in 16 to 23 with a painted
+  flag in bit 24, an unpainted cell reading 0.5 and no metal (`glossBits` `scenefield.slang:478`,
+  `faceGloss` `:484`). BevyCSharp holds reflectance in bits 24 to 31 and no flag
+  (`bcs_field.slang:195`, `:203`). Each layout holds a thing the other drops, the flag or the
+  reflectance.
+- **Leaf cards.** BevyCSharp marks a card by an odd alpha byte (`lightThroughCardsPaint`
+  `bcs_field.slang:311`, `lightThroughCards` `:320`) and rounds the rest to an even byte (`:294`).
+  3DEngine's paint is blended (`field_resolve.slang:234`, `field_splat.slang:419`) and keeps no byte
+  even, so a shared `lightThroughCards` reads 3DEngine's odd bytes as cards.
+
+### 2. The field's cascades
+
+```slang
+// xyz the cascade's corner, w the width of its cell, 0 for a cascade not built.
+// 3DEngine: FieldCascade.originAndCell scenefield.slang:66-71 | BevyCSharp: FieldCascade.origin_and_cell bcs_field.slang:16-21
+public struct FieldCascade { float4 originAndCell; };
+
+// 3DEngine: SceneFieldInfo scenefield.slang:73-88, 208 bytes | BevyCSharp: FieldInfo bcs_field.slang:24-34, 176 bytes
+public struct FieldTable
+{
+    // x the cascades held, y the cells a side, z the cells of exact distance, w the far cascade or 0.
+    // 3DEngine: counts scenefield.slang:78 | BevyCSharp: counts bcs_field.slang:29
+    float4 counts;
+    // 3DEngine: cascades scenefield.slang:79 | BevyCSharp: cascades bcs_field.slang:30
+    FieldCascade cascades[9];
+    // xyz the eye the cascades lie about. 3DEngine: eye scenefield.slang:82 | BevyCSharp: eye bcs_field.slang:33
+    float4 eye;
+    // The cells a shift brought in that hold nothing yet, w of the first one more than the cascade.
+    // 3DEngine: waitingFirst, waitingLast scenefield.slang:86-87 | BevyCSharp: lacks
+    float4 waitingFirst;
+    float4 waitingLast;
+};
+
+// 3DEngine: fieldOn scenefield.slang:91 | BevyCSharp: fieldOn bcs_field.slang:37
+bool fieldOn(FieldTable t);
+// The probes' cascade c, the far cascade in place of the last where there is one.
+// 3DEngine: cascadeAt scenefield.slang:104, reading the table in place | BevyCSharp: probesOf bcs_field.slang:48, copying it
+float4 probeCascade(FieldTable t, int c, int probes);
+// 3DEngine: cascadesOf scenefield.slang:112 | BevyCSharp: probesOf's counts.x bcs_field.slang:54
+int probeCascades(FieldTable t, int probes);
+// 3DEngine: fieldCascade scenefield.slang:190, passing over the waiting cells | BevyCSharp: fieldCascade bcs_field.slang:108
+int fieldCascade(FieldTable t, float3 p, float margin, int probes);
+// 3DEngine: fieldWaits scenefield.slang:179 | BevyCSharp: lacks
+bool fieldWaits(FieldTable t, float3 cell, float margin);
+// 3DEngine: bandHold scenefield.slang:138, fieldHold :155, fieldCoarsestBuilt :167, fieldCell :432
+// BevyCSharp: bandHold bcs_field.slang:72, fieldHold :98, fieldCoarsestBuilt :85, fieldCell :161, none taking probes
+float bandHold(FieldTable t, int c, float3 cell, float band, float margin, int probes);
+float fieldHold(FieldTable t, float3 p);
+int fieldCoarsestBuilt(FieldTable t, int upTo, int probes);
+float fieldCell(FieldTable t, float3 p);
+// 3DEngine: fieldDistanceIn scenefield.slang:225, fieldDistance :295, fieldNormal :310, traceField :357
+// BevyCSharp: fieldDistanceIn bcs_field.slang:127, fieldDistance :138, fieldNormal :146, traceField bcs_gi.slang:137
+float fieldDistanceIn<I : IFieldImages>(I images, FieldTable t, int c, float3 p);
+float fieldDistance<I : IFieldImages>(I images, FieldTable t, float3 p);
+float3 fieldNormal<I : IFieldImages>(I images, FieldTable t, float3 p);
+float traceField<I : IFieldImages>(I images, FieldTable t, float3 from, float3 way, float near, float far);
+// 3DEngine: FieldBand :119, EyeClear :128 | BevyCSharp: FieldBand bcs_field.slang:61, EyeClear :64
+static const float FieldBand = 8;
+static const float EyeClear = 6;
+```
+
+BevyCSharp's 176 bytes are 3DEngine's first 176, so the two layouts agree as far as BevyCSharp's
+goes, and the waiting box follows in 3DEngine's alone. 3DEngine binds the table as a constant buffer
+(`gi_trace.slang:40-41`), written by `vkCmdUpdateBuffer` (`SceneFieldStages.cs:268-277`) from
+`SceneField.Info` (`SceneField.cs:590-610`). BevyCSharp binds it as a structured buffer read at
+`info[0]` (`gi_trace.slang:37`, `212`), written by `InfoValues` (`SceneField.cs:445-456`). Its WGSL
+copy for the leaves reads the buffer in place for the reason 3DEngine's `cascadeAt` gives
+(`forward_probes.rs:91-104`).
+
+### 3. A cascade's run and the plan's facts
+
+```slang
+// What a dispatch of the trace, the merge or the gather is told of its cascade.
+// 3DEngine: TracePush gi_trace.slang:126-149 (IlluminationTrace GlobalIlluminationStages.cs:24-34), MergePush gi_merge.slang:137-155, AmbientPush gi_ambient.slang:99-111
+// BevyCSharp: uniform globals gi_trace.slang:113-121, gi_merge.slang:40-45, gi_ambient.slang:75-78, set WorldProbes.cs:462-494
+public struct ProbeRun
+{
+    uint cascade;        // 3DEngine: cascade.x in all three | BevyCSharp: cascade.x in all three
+    uint probes;         // 3DEngine: cascade.y | BevyCSharp: cascade.y
+    uint texels;         // 3DEngine: cascade.z | BevyCSharp: cascade.z
+    uint last;           // 3DEngine: trace cascade.w, the last or the last counted, GlobalIlluminationStages.cs:362 | BevyCSharp: trace cascade.w, the last alone, WorldProbes.cs:462
+    uint texelsAbove;    // 3DEngine: trace above.x :368, merge cascade.w | BevyCSharp: merge cascade.w, the trace lacks
+    float start;         // 3DEngine: trace interval.x | BevyCSharp: trace interval.x
+    float end;           // 3DEngine: trace interval.y, gather interval.x | BevyCSharp: the same
+    float spacing;       // 3DEngine: trace interval.z, merge spacing.x, the gather lacks | BevyCSharp: trace interval.z, merge spacing.x, gather interval.y
+    uint cascades;       // 3DEngine: trace interval.w, merge counts.x, the gather lacks | BevyCSharp: the same and gather interval.z
+    float edge;          // 3DEngine: trace follow.y, the last counted cascade's end | BevyCSharp: trace follow.y, the last cascade's end
+    float aboveEnd;      // 3DEngine: merge spacing.w | BevyCSharp: merge spacing.w
+    float belowEnd;      // 3DEngine: trace follow.w, read gi_trace.slang:546 | BevyCSharp: lacks
+    uint lying;          // 3DEngine: trace follow.x, gather cascade.w bit 1 | BevyCSharp: trace follow.x, gather cascade.w + 2
+    uint parity;         // 3DEngine: trace follow.z bit 0, gather cascade.w bit 0 | BevyCSharp: trace follow.z, gather cascade.w bit 0
+    uint fieldWhole;     // 3DEngine: trace follow.z bit 1, GlobalIlluminationStages.cs:365 | BevyCSharp: trace follow.w, WorldProbes.cs:447-449
+    uint firstProbe;     // the far cascade in four parts. 3DEngine: trace above.y :376-383 | BevyCSharp: lacks
+    uint half;           // 3DEngine: trace above.w, Halved :46 | BevyCSharp: lacks
+    uint traceFlags;     // 1 moving carried rays, 2 every ray meets meshes. 3DEngine: trace above.z | BevyCSharp: lacks
+    uint moved;          // 3DEngine: merge counts.y, three signed bytes and bits 24 and 25, :436-438 | BevyCSharp: lacks
+    uint carriedSince;   // 3DEngine: merge counts.z | BevyCSharp: lacks
+    uint carriedPhase;   // 3DEngine: merge counts.w | BevyCSharp: lacks
+    float carriedShare;  // 3DEngine: gather interval.y | BevyCSharp: lacks
+    float mergeOff;      // 3DEngine: merge spacing.y | BevyCSharp: lacks
+    float alone;         // 3DEngine: merge spacing.z | BevyCSharp: lacks
+};
+
+// What the light passes are told of the probes.
+// 3DEngine: Lighting.indirect (on, spacing, probes, cascades) lightset.slang:76, LightingUboPrepare.cs:95
+// BevyCSharp: gi_light's probes (probes, spacing, cascades, 0) gi_light.slang:62, WorldProbes.cs:509, and forward_probes.rs probe_counts (probes, spacing, cascades, on) :49-51
+public struct ProbePlan { float on; float spacing; float probes; float cascades; };
+```
+
+3DEngine traces its last counted cascade to the field's edge and merges it from nothing above
+(`GlobalIlluminationRenderer.cs:206-207`, `GlobalIlluminationStages.cs:444`), and BevyCSharp has no
+such cascade, its intervals ending at the edge for the last cascade alone
+(`WorldProbes.cs:401-408`). `fieldWhole` sits in `follow.z` bit 1 in 3DEngine and in `follow.w` in
+BevyCSharp, whose `follow.w` 3DEngine gives to `belowEnd`. 3DEngine's gather binds no field, and
+BevyCSharp's reads the field for its normals (`gi_ambient.slang:46-48`). Neither engine tells a
+kernel its quality, both choosing the texels a cascade on the CPU and the trace's variant by light
+through (3DEngine's `GlobalIlluminationStages.cs:314-316`, BevyCSharp's `WorldProbes.cs:453-457`).
+The frame's number reaches the kernels as its parity alone, the number itself riding in the lights
+(item 5).
+
+### 4. The origin
+
+```slang
+// The place every position the module is handed is taken against. w unused.
+// 3DEngine: RenderOrigin RenderOrigin.cs:36 (Near :51, a step of 16 :48, AsVector3 :55), on the GPU Lighting.origin lightset.slang:119 and ModelPush.origin modelpass.slang:57-64
+// BevyCSharp: lacks, every position in world numbers, the origin 0
+public struct FrameOrigin { float4 origin; };
+// 3DEngine: world modelpass.slang:333 | BevyCSharp: the place itself
+float3 worldOf(FrameOrigin o, float3 place);
+// 3DEngine: placeOf lightset.slang:126 | BevyCSharp: the world point itself
+float3 placeOf(FrameOrigin o, float3 world);
+```
+
+The trace, the merge and the gather read no origin in either engine. They work in whatever frame the
+table, the lights and the frame before's corners are handed in, places against the origin in
+3DEngine (`SceneField.cs:596-600`, `GlobalIlluminationRenderer.cs:496-509`) and world numbers in
+BevyCSharp (`SceneField.cs:451-454`, `WorldProbes.cs:433-436`). The module needs the origin itself
+only where a kernel reads something laid in world numbers, as BevyCSharp's light pass reads Bevy's
+air through the world point (`gi_light.slang:623-626`), or as a hash of a point is taken.
+
+### 5. The lights
+
+```slang
+// 3DEngine: GiLights.lights[16] gi.slang:126 | BevyCSharp: GiLights.lights[16] bcs_gi.slang:128, MOST_LIGHTS gi_lights.rs:15
+static const int MostLamps = 16;
+// 3DEngine: MostGlowLights glow.slang:12, GlowLights.cs:49 | BevyCSharp: MostGlowLights bcs_glow.slang:19, GlowLights.cs:38
+static const int MostGlowLights = 64;
+
+// 64 bytes, laid out alike in both.
+public struct GiLamp
+{
+    float4 positionAndKind;    // w 1 point, 2 spot. 3DEngine: gi.slang:98, against the origin GlobalIlluminationRenderer.cs:500-501 | BevyCSharp: bcs_gi.slang:104, world numbers gi_lights.rs:131, 152
+    float4 directionAndRange;  // 3DEngine: gi.slang:100 | BevyCSharp: bcs_gi.slang:106
+    float4 colorAndShadow;     // w 1 where it casts shadows. 3DEngine: gi.slang:102 | BevyCSharp: bcs_gi.slang:108
+    float4 cone;               // 3DEngine: x cos inner, y cos outer, gi.slang:104 | BevyCSharp: x scale, y offset, bcs_gi.slang:110
+};
+
+// 80 bytes, laid out and read alike in both.
+public struct GlowLight
+{
+    float4 middleAndReach;     // 3DEngine: glow.slang:32 | BevyCSharp: bcs_glow.slang:35
+    float4 halfX;              // 3DEngine: glow.slang:34 | BevyCSharp: bcs_glow.slang:37
+    float4 halfY;              // 3DEngine: glow.slang:35 | BevyCSharp: bcs_glow.slang:38
+    float4 halfZ;              // 3DEngine: glow.slang:36 | BevyCSharp: bcs_glow.slang:39
+    float4 glowAndShare;       // w 3DEngine: the share and twice the faces, GlowLights.cs:258 | BevyCSharp: the share alone, the faces 0 for all, GlowLights.cs:92
+};
+// 3DEngine: glowShare glow.slang:44, glowFaces :53 | BevyCSharp: glowShare bcs_glow.slang:47, glowFaces :56
+float glowShare(GlowLight l);
+uint glowFaces(GlowLight l);
+
+public interface ILights
+{
+    bool hasSun();                              // 3DEngine: sunDirection.w gi.slang:116 | BevyCSharp: sunDirection.w bcs_gi.slang:120
+    float3 towardSun();                         // 3DEngine: sunDirection.xyz gi.slang:116 | BevyCSharp: sunDirection.xyz bcs_gi.slang:120
+    float3 sunLight();                          // 3DEngine: sunColor.rgb gi.slang:118 | BevyCSharp: sunColor.rgb bcs_gi.slang:122, above the air
+    bool sunCastsShadows();                     // 3DEngine: lacks in the probes, sunColor.w left 0 | BevyCSharp: sunColor.w bcs_gi.slang:121, read by gi_reference.slang:476 alone
+    int lampCount();                            // 3DEngine: counts.x gi.slang:122 | BevyCSharp: counts.x bcs_gi.slang:125
+    GiLamp lamp(int i);                         // 3DEngine: lights[i] gi.slang:126 | BevyCSharp: lights[i] bcs_gi.slang:128
+    float spotShare(GiLamp l, float3 toward);   // 3DEngine: smoothstep(cone.y, cone.x) inline gi.slang:347-348 | BevyCSharp: spotShare bcs_gi.slang:177-183, the square of a clamped line
+    int glowCount();                            // 3DEngine: glowCounts.x gi.slang:132 | BevyCSharp: counts.w bcs_gi.slang:126
+    GlowLight glow(int i);                      // 3DEngine: glows[i] gi.slang:135, in the lights' buffer | BevyCSharp: glow_lights[i] gi_trace.slang:48, a buffer of its own
+    bool glowsMayReach(float3 p);               // 3DEngine: the reach's box glowCounts.yzw to glowHigh.xyz gi.slang:130-134, read :651 | BevyCSharp: lacks
+};
+```
+
+The two engines give the sun and the lamps in one unit, the light a white surface facing one returns
+(3DEngine's `probelight.slang:550-552`, BevyCSharp's `gi_lights.rs:4-10`), and differ in the
+exposure, which BevyCSharp multiplies into every light (`gi_lights.rs:95-98`) and 3DEngine applies
+after. 3DEngine holds the lights, the frame before's corners, the glow lights with their head of 32
+bytes and the sun's map's cascades in one constant buffer of 6,608 bytes
+(`GpuIllumination.cs:77-86`, `GlowLights.cs:55-64`), and BevyCSharp holds the lights and corners in
+a structured buffer of 1,168 bytes and the glow lights in a structured buffer of their own
+(`WorldProbes.cs:40`, `350-351`). The head's box of the glow lights' reach and the faces in
+`glowAndShare.w` are 3DEngine's alone. The two cones are two forms of a soft edge, a smoothstep and
+a squared ramp, and neither is written in the other's terms, so each engine keeps its own
+`spotShare`. `counts.w` means a toggle of the lamps at hits in 3DEngine (`gi.slang:123-124`, read
+`:684`) and the glow lights' count in BevyCSharp, a clash the shared layout settles. The frame's
+number (`counts.y`), the gain on the frame before's light (`counts.z`) and the frame before's
+corners (`before[5]`, 3DEngine's `gi.slang:129` and BevyCSharp's `bcs_gi.slang:131`) share the
+buffer today and belong with the run and the frame before (items 3 and 9).
+
+### 6. The sky
+
+```slang
+public interface ISky
+{
+    // The light along a way of a ray that meets nothing.
+    // 3DEngine: inline gi_trace.slang:505, 512, 687 | BevyCSharp: skyAlong gi_trace.slang:56-60
+    float3 along(float3 way);
+    // The share of the sun's light the air lets through to the probes.
+    // 3DEngine: lacks, 1, the air baked into the sun's color on the CPU, DaySky.Air.cs:97-106 | BevyCSharp: air[0].rgb gi_trace.slang:46, applied :214
+    float3 sunThrough();
+};
+```
+
+3DEngine's `along` is the environment cube at its first level times `lights.sky.rgb` where the
+program has an environment, and `lights.sky.rgb` alone, the ambient lights' sum, where it has none
+(`gi_trace.slang:75-77`, `GlobalIlluminationRenderer.cs:527-536`), one or the other. BevyCSharp's is
+the ambient light plus a 64 by 64 octahedron of the environment blurred to a roughness of 0.25 and
+times the exposure, which `gi_sky` writes on the camera after its prepass and the trace reads the
+frame after (`gi_sky.slang:22`, `57`, `WorldProbes.cs:104`, `294-304`, `352`). BevyCSharp's sum
+holds 3DEngine's choice, an ambient of 0 where a map is, and 3DEngine's form cannot hold an ambient
+light and a map at once. 3DEngine's cube holds the sky sharp, and BevyCSharp's octahedron holds it
+blurred and a frame late.
+
+### 7. The sun's reach
+
+```slang
+public interface ISunReach
+{
+    // The share of the sun reaching p on a face facing n, 0 to 1, or -1 where this source does not
+    // hold p and the field is traced.
+    // 3DEngine: ISunShadow.reached(lights, p, n, cell) gi.slang:149-152 | BevyCSharp: lacks
+    float reached(float3 p, float3 n, float cell);
+};
+// 3DEngine: FieldSun gi.slang:155-161 | BevyCSharp: its one path, unnamed
+public struct FieldSunOnly : ISunReach { float reached(float3 p, float3 n, float cell) { return -1.0; } };
+// 3DEngine: directLight gi.slang:317-352, directReflected :391-408 | BevyCSharp: directLight bcs_gi.slang:204-221
+float3 directLight<S : ISunReach, L : ILights, I : IFieldImages>(S sun, L lights, I images, FieldTable t, float3 p, float3 n);
+```
+
+3DEngine reads the frame before's sun shadow map at the probes' hits through `SunShadowMap`
+(`gi.slang:174-197`), its cascades in the lights' buffer, a soft share of a 3 by 3 compare, and
+traces the field where the map does not hold the point (`gi.slang:330`). It binds the map only where
+the frame before's shadow was the probes' sun (`GlobalIlluminationRenderer.cs:482-490`, `555`). The
+screen probes pass `FieldSun` (`gi_screen.slang:613`, `645`). BevyCSharp traces the field alone at
+every hit (`bcs_gi.slang:204-221`). Its shadow maps are bound to the camera's passes alone
+(`bcs_pass.slang:200`), and whether the bridge can bind them to the probes' dispatch, which runs
+before the cameras, was not found. The map's share passes through gaps narrower than a cell, which
+the field's yes or no cannot.
+
+### 8. The screen's view
+
+```slang
+public struct GiScreenView
+{
+    float4x4 clipFromWorld;      // 3DEngine: viewProjection screenmarch.slang:52, unjittered, against the origin | BevyCSharp: passView.clip_from_world bcs_pass.slang:41, jittered, and unjittered_clip_from_world :42
+    float4x4 worldFromClip;      // 3DEngine: inverseViewProjection screenmarch.slang:53 | BevyCSharp: passView.world_from_clip bcs_pass.slang:43
+    float4x4 eyeFromClip;        // 3DEngine: inverseFromEye screenmarch.slang:89, in doubles GlobalIlluminationRenderer.cs:411-419 | BevyCSharp: lacks as a matrix, passEyeOffset bcs_pass.slang:504-509
+    float3 eye;                  // 3DEngine: eye.xyz screenmarch.slang:55, against the origin | BevyCSharp: passView.world_position bcs_pass.slang:48
+    float4x4 lastClipFromWorld;  // 3DEngine: lastViewProjection screenmarch.slang:66, against this frame's origin | BevyCSharp: passPreviousView.clip_from_world bcs_pass.slang:58
+    float3 lastEye;              // 3DEngine: last.xyz screenmarch.slang:70 | BevyCSharp: lacks, eyeBefore gi_screen_filter.slang:69-74 from passPreviousView
+    float lastState;             // 0 none, 1 readable, 2 still. 3DEngine: last.w screenmarch.slang:70 | BevyCSharp: screen.y WorldProbes.Screen.cs:234, 0 or 1, lacks 2
+    float2 pictureSize;          // 3DEngine: sizes.zw screenmarch.slang:64 | BevyCSharp: passPictureSize bcs_pass.slang:402-412
+    float2 depthSize;            // 3DEngine: sizes.xy, half the window | BevyCSharp: lacks, the picture's size
+    float tile;                  // 3DEngine: grid.x screenmarch.slang:59 | BevyCSharp: screen.x WorldProbes.Screen.cs:245
+    uint2 probesAcross;          // 3DEngine: grid.yz | BevyCSharp: lacks as a value, the image's size gi_screen.slang:414-416
+    uint switches;               // 1 the frame before left out, 2 the neighbors left out. 3DEngine: grid.w | BevyCSharp: lacks
+    float firstInterval;         // 3DEngine: trace.x | BevyCSharp: screen.y in gi_screen, WorldProbes.Screen.cs:236
+    float3 worldProbes;          // the probes a side, their spacing, their cascades. 3DEngine: trace.yzw | BevyCSharp: probes.xyz WorldProbes.Screen.cs:246
+    float2 jitter;               // 3DEngine: jitter.xy screenmarch.slang:77 | BevyCSharp: jitter.xy WorldProbes.Screen.cs:237
+    uint cyclePhase;             // 3DEngine: jitter.z, the frame modulo 16 | BevyCSharp: lacks
+    uint settling;               // 3DEngine: jitter.w | BevyCSharp: lacks
+    uint2 glowKept;              // 3DEngine: glows.yz | BevyCSharp: places.xy WorldProbes.Screen.cs:250
+    uint cascadesRebuilt;        // 3DEngine: glows.w | BevyCSharp: places.z
+    float3 changedMin;           // 3DEngine: changedMin screenmarch.slang:84, against the origin | BevyCSharp: changed_min WorldProbes.Screen.cs:255, world numbers
+    float3 changedMax;           // 3DEngine: changedMax screenmarch.slang:85 | BevyCSharp: changed_max
+};
+
+// The depth the screen probes stand on and march through.
+// 3DEngine: IPicture screenmarch.slang:7-23 | BevyCSharp: passLoadDepth bcs_pass.slang:428
+public interface IScreenDepth
+{
+    float load(float2 uv);       // 3DEngine: depth.SampleLevel gi_screen.slang:372, half size, forward | BevyCSharp: passLoadDepth by the pixel, full size, reversed
+    bool empty(float d);         // 3DEngine: d >= 1 gi_screen.slang:375 | BevyCSharp: d <= 0 gi_screen.slang:427
+    float2 ndcOf(float2 uv);     // 3DEngine: uv * 2 - 1 gi_screen.slang:145 | BevyCSharp: (u * 2 - 1, 1 - v * 2) bcs_pass.slang:506
+    float2 uvOf(float2 ndc);     // 3DEngine: ndc * 0.5 + 0.5 gi_screen_filter.slang:197 | BevyCSharp: (x * 0.5 + 0.5, 0.5 - y * 0.5) gi_screen_filter.slang:119
+};
+// 3DEngine: fromEyeAt gi_screen.slang:143-147 | BevyCSharp: passEyeOffset bcs_pass.slang:504-509
+float3 fromEye(GiScreenView v, float2 uv, float d);
+// 3DEngine: mul(lastViewProjection, eye + p) gi_screen_filter.slang:194 | BevyCSharp: passPreviousClipAt bcs_pass.slang:554
+float4 lastClipAt(GiScreenView v, float3 fromEye);
+```
+
+3DEngine fills one block of 400 bytes on the CPU, its places and matrices against the origin in
+doubles (`GlobalIlluminationRenderer.cs:380-458`, `GpuScreenProbes.cs:114`), and draws the depth
+unjittered for it (`AmbientOcclusion.cs:205-207`). BevyCSharp reads Bevy's view block
+(`bcs_pass.slang:39-62`), its matrices jittered as Bevy's prepass is, with loose uniforms beside it,
+and keeps its precision by working on offsets from the eye. BevyCSharp alone carries the frame
+before's inverse, view and projection, and 3DEngine alone the frame before's eye, the still state,
+the depth's own size, the switches, the cycle and the settling flag. 3DEngine traces the screen
+probes for the window and for every render target, each target with its own frame before
+(`GlobalIlluminationRenderer.cs:286-307`, `330-367`), and BevyCSharp for one camera
+(`WorldProbes.cs:293`). `JitterAt` and `TileAt` are the same code in both (3DEngine's
+`Illumination.cs:60-65`, `91-99`, BevyCSharp's `WorldProbes.Screen.cs:100-109`, `129-134`) and move
+into the module as they are.
+
+### 9. The frame before
+
+```slang
+public struct GiHistoryFlags
+{
+    uint frame;            // 3DEngine: _frame GlobalIlluminationRenderer.cs:85, in the lights :553 | BevyCSharp: _frame WorldProbes.cs:124, in the lights :419
+    uint parity;           // 3DEngine: GlobalIlluminationStages.cs:365, 385, 472 | BevyCSharp: WorldProbes.cs:443, 463, 490
+    uint lying;            // a bit a cascade. 3DEngine: GlobalIlluminationRenderer.cs:247-250 | BevyCSharp: WorldProbes.cs:433-435
+    uint shift;            // 3DEngine: MergePush counts.y GlobalIlluminationStages.cs:436-438 | BevyCSharp: lacks, 0 WorldProbes.cs:478
+    uint cycleSince;       // 3DEngine: GlobalIlluminationStages.cs:447, GlobalIllumination.Changes.cs:37-41 | BevyCSharp: lacks
+    uint cyclePhase;       // 3DEngine: the same | BevyCSharp: lacks
+    int farPart;           // 3DEngine: GlobalIlluminationRenderer.cs:257 | BevyCSharp: lacks
+    float heldBounce;      // the gain on the frame before's light. 3DEngine: lights :553 | BevyCSharp: lights WorldProbes.cs:419
+};
+
+public interface IGiFrameBefore
+{
+    float4 bounced(int3 t);        // the gathered faces. 3DEngine: CubesView binding 6 gi_trace.slang:61-64 | BevyCSharp: bounced gi_trace.slang:67-69
+    float4 bouncedAt(int3 t);      // 3DEngine: CubesAtView binding 15 | BevyCSharp: bounced_at
+    float reachBefore(int3 t);     // 3DEngine: ReachView, the gather's of the frame before, gi_merge.slang:72-75 | BevyCSharp: lacks, the trace writes reach and the merge reads this frame's
+    float skyAbove(int3 t);        // 3DEngine: MergedSky of the cascade above, gi_trace.slang:121-124 | BevyCSharp: lacks
+    float4 waysBefore(int3 t);     // 3DEngine: lacks in the trace | BevyCSharp: ways gi_trace.slang:73-75
+    float4 held(int3 t);           // the probe's own light by parity. 3DEngine: an rgba16f image gi_trace.slang:94-98 | BevyCSharp: a structured buffer gi_trace.slang:100-104
+    float4 partial(int3 t);        // 3DEngine: an rgba32f image | BevyCSharp: a structured buffer gi_trace.slang:106-109
+    float4 cycleBefore(int3 t);    // 3DEngine: the Cycle*Before images, merge bindings 10, 11, 14, 16 | BevyCSharp: lacks
+    float sunVisible(float3 p);    // 3DEngine: the frame before's map, item 7 | BevyCSharp: lacks
+    float4 skyBefore(float2 oct);  // 3DEngine: lacks, this frame's cube | BevyCSharp: sky_map and air from gi_sky, gi_trace.slang:43-52
+    float4 cornerBefore(uint c);   // 3DEngine: the lights' before GlobalIlluminationRenderer.cs:245-251 | BevyCSharp: the lights' before WorldProbes.cs:436
+    float4 screenLight(int2 i);    // 3DEngine: History, the kept light before the blend | BevyCSharp: gi_screen_blended_previous, after it, WorldProbes.Screen.cs:207
+    float4 screenSurface(int2 i);  // 3DEngine: LastGeometry | BevyCSharp: gi_screen_surfaces_previous WorldProbes.Screen.cs:206
+    float4 screenCycle(int2 i);    // 3DEngine: Cycle.Last images | BevyCSharp: lacks
+    float4 glowBefore(int2 i);     // 3DEngine: the glow's Last images GlobalIlluminationStages.ScreenProbes.cs:126-131 | BevyCSharp: gi_glow_*_previous WorldProbes.Screen.cs:213-215
+    float4 picture(float2 uv, float lod); // 3DEngine: the reflection history, half size with mips, ModelRenderer.Lighting.cs:230 | BevyCSharp: gi_picture_previous, full size, one level, WorldProbes.cs:307-308
+    float pictureDepth(float2 uv); // 3DEngine: the reflection history's depth ModelRenderer.Lighting.cs:233 | BevyCSharp: lacks
+};
+```
+
+The two engines keep the frame before in two ways. Both read some images before this frame writes
+them over in place, the faces, the faces at the surface, the held light and the partial sums. Beyond
+that 3DEngine copies with `vkCmdCopyImage`, the world's cycle
+(`GlobalIlluminationStages.cs:392-409`), the screen probes' kept light, surfaces and cycle and the
+glow's images (`GlobalIlluminationStages.ScreenProbes.cs:150-159`) and the lit picture with its
+depth (`GlobalIlluminationRenderer.cs:466-476`). BevyCSharp gives a camera's image two textures that
+trade places each frame, read as `name_previous` (`render/images.rs:106-108`, `175-183`), and has no
+copy call and no history for images in three dimensions, so a world image it needs from the frame
+before is a pair it swaps by parity. The merge reads the frame before's reach in 3DEngine and this
+frame's in BevyCSharp, a difference of meaning the module settles.
+
+### 10. The order
+
+```csharp
+// What the module asks of an engine.
+public interface IGiEngine
+{
+    // 3DEngine: GlobalIlluminationRenderer._frame :85 | BevyCSharp: WorldProbes._frame :124
+    long Frame { get; }
+    // The views that take screen probes.
+    // 3DEngine: the window GlobalIlluminationRenderer.cs:286 and each render target TargetsNode.cs:39-43 | BevyCSharp: one camera WorldProbes.cs:293
+    IReadOnlyList<GiView> Views { get; }
+    // 3DEngine: records at once, ProbeRun GlobalIlluminationStages.cs:510, run.Dispatch :370, :448, :474 | BevyCSharp: queues, Shaders.Dispatch BevyCSharp/Rendering/Shaders.Views.cs:620, or a ViewDispatch WorldProbes.Screen.cs:226-229
+    void Dispatch(GiStep step, GiView? view, GiKernel kernel, IGiBindings bindings, uint x, uint y, uint z);
+    // 3DEngine: vkCmdCopyImage GlobalIlluminationStages.ScreenProbes.cs:139-159 | BevyCSharp: a history image render/images.rs:106-108, lacks for three dimensions
+    void KeepForNextFrame(GiImage image);
+}
+
+// What an engine calls on the module, in this order.
+public interface IGiFrameHooks
+{
+    // 3DEngine: GlobalIlluminationRenderer.Draw :134-275 | BevyCSharp: WorldProbes.Tick :247-313, Trace :391-445
+    void PrepareFrame(GiFrameState state);
+    // 3DEngine: the scene_field node Renderer.cs:149-150, SceneField.cs:754-758 | BevyCSharp: AreasWork 2000 FieldWork.cs:11-14, SceneField.Tick :197
+    void BuildField(IGiEngine engine);
+    // 3DEngine: the global_illumination node GlobalIlluminationPlugin.cs:71-73 | BevyCSharp: AreasWork 2100 FieldWork.cs:15-18, WorldProbes.cs:471, 484, 495
+    void WorldProbes(IGiEngine engine);
+    // After the view's depth. 3DEngine: GlobalIlluminationRenderer.cs:286-307, a target TargetsNode.cs:42 | BevyCSharp: FramePoint.AfterPrepass WorldProbes.Screen.cs:226-229, render/views.rs:201-204
+    void ScreenProbes(IGiEngine engine, GiView view);
+    // 3DEngine: _sunBefore GlobalIlluminationRenderer.cs:227, the shadows node after it Renderer.cs:169-170 | BevyCSharp: lacks
+    void SunShadowDrawn(GiShadow shadow);
+    // 3DEngine: the hdr_scene node Renderer.cs:182-183, ModelRenderer.Lighting.cs:223-233 | BevyCSharp: gi_light at FramePoint.AfterOpaque SceneField.cs:316, render/views.rs:255-259
+    void LightView(GiView view);
+    // 3DEngine: KeepFrame HdrNodes.cs:47, GlobalIlluminationRenderer.cs:466 | BevyCSharp: CopyAt BeforeTonemapping WorldProbes.cs:307-308, render/views.rs:235-238
+    void KeepPicture(GiView view, GiImage lit);
+    // 3DEngine: the copies at the recordings' end GlobalIlluminationStages.ScreenProbes.cs:139-159 | BevyCSharp: lacks, its images trading at the prepare
+    void EndFrame(IGiEngine engine);
+}
+```
+
+3DEngine records Vulkan commands at once inside its render graph's nodes, from the render world.
+BevyCSharp's C# runs in the main world at the frame's first stage and queues work, the global
+dispatches run before the cameras (`render/compute.rs:161-166`, `411-472`) and a camera's at its
+frame points (`render/views.rs:170-308`), so a hook declares work for a step and records nothing on
+the spot. BevyCSharp's trace reads the sky and the air the camera wrote the frame before, and
+3DEngine's reads the sun's map of the frame before. Render targets with screen probes of their own
+and an end-of-frame step are 3DEngine's alone. Whether BevyCSharp's render world runs a frame behind
+its main world's queued work was not found.
+
+### What each engine changes to give it
+
+3DEngine, a file at a time:
+
+- `3DEngine/Shaders/scenefield.slang`. `IVolume`, `ISheetVolume`, `SheetVolume` and `SplitVolume`
+  (`:14-64`) become one struct implementing `IFieldImages`. `SceneFieldInfo` (`:73-88`) becomes
+  `FieldTable`, and `cascadeAt` and `cascadesOf` (`:104`, `:112`) the module's `probeCascade` and
+  `probeCascades`. `lightThroughPaint` (`:419-422`) keeps an even byte if the cards' mark is taken,
+  and `glossBits` and `faceGloss` (`:478-487`) change if BevyCSharp's gloss is taken.
+- `3DEngine/Shaders/field_splat.slang` (`:419`, `:431`), `field_stamp.slang` (`:122`) and
+  `field_resolve.slang` (`:234`). They follow any change to the paint's byte or the gloss.
+- `3DEngine/Shaders/gi.slang`. `GiLight` (`:95-105`) becomes `GiLamp`, and `GiLights` (`:113-145`)
+  is wrapped as an `ILights` over the constant buffer. `ISunShadow` (`:149-152`) becomes
+  `ISunReach`, and `SunShadowMap` (`:174-197`) reads its cascades from its own fields.
+  `directLight`, `directReflected`, the hidden lamps and the glow lights (`:311-743`) move to the
+  module, and `counts.w`'s toggle moves where the shared layout puts it. The surface reads
+  (`:201-307`) take the images' struct.
+- `3DEngine/Shaders/glow.slang`. `GlowLight` and its closed forms (`:12-57` and after) move to the
+  module as they are.
+- `3DEngine/Shaders/gi_trace.slang`. The bindings (`:37-47`, `:107-114`) build the images' struct,
+  the lights' binding (`:49-50`) is wrapped, and a sky struct over the cube (`:76-77`) gives `along`
+  in place of the reads at `:505`, `:512` and `:687`. `TracePush` (`:126-149`) maps onto `ProbeRun`,
+  and `gatheredAt` (`:169-181`) and the reads of `before` (`:177`) take the module's lookups.
+- `3DEngine/Shaders/gi_merge.slang`. The bindings (`:52-56`, `:78-79`) build the images' struct, and
+  `MergePush` (`:137-155`) maps onto `ProbeRun`.
+- `3DEngine/Shaders/gi_ambient.slang`. `AmbientPush` (`:99-111`) takes the spacing and the cascades
+  in its unused `interval.zw`, and the field's images where the shared gather reads normals.
+- `3DEngine/Shaders/probelight.slang` (`:443-568`), `cascades.slang` (`:27-86`) and
+  `lightthrough.slang` (`:12`, `:65`, `:93`). They take `FieldTable`, the images' struct and a
+  generic `ILights`.
+- `3DEngine/Shaders/screenmarch.slang`. `ScreenView` (`:49-90`) becomes `GiScreenView`, and
+  `IPicture` (`:7-23`) the module's `IScreenDepth`.
+- `3DEngine/Shaders/gi_screen.slang`, `gi_screen_filter.slang` and `gi_screen_glow.slang`. They
+  import the module, read the frame before through `IGiFrameBefore` and use the wrappers for the
+  lights (`gi_screen.slang:33`, `613`, `645`, `gi_screen_glow.slang:24`).
+- `3DEngine/Shaders/lightset.slang`. The model pass's images (`:247-259`, `:281-285`) build the
+  split form, and `indirect` (`:76`) is read as or reordered to `ProbePlan`.
+- `3DEngine/Shaders/lights.slang` (`:727-738`). The model pass's reads of the lights and the sky use
+  the wrappers.
+- `3DEngine/GlobalIllumination/GlobalIlluminationStages.cs`. `IlluminationTrace` (`:24-34`) and the
+  merge's and gather's spans (`:445-447`, `:472-473`) follow `ProbeRun`'s order, and the frame
+  before's bindings (`:345-355`, `:392-409`, `:424-433`) move to the module's slots.
+- `3DEngine/GlobalIllumination/GlobalIlluminationStages.ScreenProbes.cs` (`:21-165`). The copies sit
+  behind `KeepForNextFrame` and `EndFrame`.
+- `3DEngine/GlobalIllumination/GlobalIlluminationRenderer.cs`. The screen's view (`:380-421`) is
+  written in `GiScreenView`'s order, and the lights (`:515-585`) where the shared layout moves a
+  field.
+- `3DEngine/GlobalIllumination/GlobalIllumination.Changes.cs` (`:17-44`). It fills `GiHistoryFlags`.
+- `3DEngine/Rendering/Lighting/GpuScreenProbes.cs` (`:104-114`). The view's buffer takes the
+  module's size.
+- `3DEngine/Rendering/Lighting/Illumination.cs` (`:60-99`). `JitterAt` and `TileAt` move to the
+  module.
+- `3DEngine/Rendering/Lighting/IIlluminationPasses.cs` (`:10-32`). It implements `IGiFrameHooks`,
+  `KeepFrame` and `DrawTarget` being there, the field's and the world's hooks added.
+- `3DEngine/Rendering/Lighting/SceneField.cs` (`:754-758`). The field's node calls the module's
+  `BuildField`. The table's bytes (`GpuSceneField.cs:69`, `SceneField.cs:590-610`) stay as they are
+  unless the origin joins the table.
+- `3DEngine/GlobalIllumination/GlobalIlluminationPlugin.cs` (`:67-77`),
+  `3DEngine/Rendering/PostProcess/HdrNodes.cs` (`:43-48`) and
+  `3DEngine/Rendering/Immediate/TargetsNode.cs` (`:39-43`). The graph's wiring stays and calls the
+  hooks.
+
+BevyCSharp, a file at a time:
+
+- `native/bevy_csharp/src/render/bcs_field.slang`. An `IFieldImages` struct over the `Texture3D`
+  images and the sampler, its texel distance and second plane reading 0 and `hasSheets` false.
+  `FieldInfo` (`:24-34`) gains the waiting box, `fieldCascade` (`:108`) a branch for it, and
+  `probesOf` (`:48`) a lookup in place or stands as the module's second form. The free functions
+  (`:127-459`) take the images' struct.
+- `native/bevy_csharp/src/render/bcs_gi.slang`. `GiLight` (`:100-111`) becomes `GiLamp`, `GiLights`
+  (`:117-132`) is wrapped as an `ILights` over the buffer and the glow lights' buffer, and
+  `spotShare` (`:177-183`) stays its own. The lamps', the direct and the hits' light (`:187-221`,
+  `:644-731`) move to the module with a sun parameter filled by `FieldSunOnly`. The march and the
+  probes' lookups (`:137`, `:157`, `:252`, `:434`, `:494`, `:607`) take the images' struct.
+- `native/bevy_csharp/src/render/bcs_glow.slang`. The glow lights' reads (`:19-60`, `:540-541`,
+  `:647`) take `ILights` and the images' struct, `glowsMayReach` answering true unless a reach's box
+  is added.
+- `native/bevy_csharp/src/render/bcs_pass.slang` or a file of BevyCSharp's own beside it.
+  `IScreenDepth` over `passDepth`, reversed, 0 for none, full size and turned in y, `eyeFromClip`
+  through `passEyeOffset`, and `lastEye` from `passPreviousView`.
+- `native/bevy_csharp/src/render/forward_probes.rs` (`:68-72`, `:77`, `:340`). The WGSL copy of the
+  table follows the new layout, and the sky's index where it moves.
+- `native/bevy_csharp/src/render/gi_lights.rs` (`:24-54`, `:147-157`, `:175-182`). It changes only
+  if the cone is made one.
+- `BevyCSharp/GlobalIllumination/Kernels/gi_trace.slang`. The bindings (`:35-48`) build the images'
+  struct and the wrapped lights, a sky struct over `sky_map`, `lights.sky` and `air[0]` gives
+  `along` (`:56-60`) and `sunThrough` (`:214`), and the uniforms (`:113-121`) become `ProbeRun`,
+  `fieldWhole` moving from `follow.w` and the fields BevyCSharp lacks set to 0. The lookups
+  (`:152-159`, `:215`, `:298`) take the module's.
+- `BevyCSharp/GlobalIllumination/Kernels/gi_merge.slang` (`:24-45`, `:90`), `gi_ambient.slang`
+  (`:46-48`, `:75-78`, `:196`) and `gi_light.slang` (`:40-42`, `:57-58`, `:62`, `:66-68`, `:410`).
+  The same as the trace, `ProbePlan` in place of `probes` in the light pass.
+- `BevyCSharp/GlobalIllumination/Kernels/gi_screen.slang` (`:73-101`), `gi_screen_filter.slang`
+  (`:31`) and `gi_screen_glow.slang` (`:58-71`). The loose uniforms become one `GiScreenView`, which
+  the bridge's reflection fills field by field by name (`render/reflect.rs:13`, `657-665`).
+- `BevyCSharp/GlobalIllumination/SceneField.cs`. `InfoBytes` (`:439`) grows from 176 to 208, and
+  `InfoValues` (`:445-456`) writes a waiting box of none.
+- `BevyCSharp/GlobalIllumination/WorldProbes.cs`. The values (`:462-470`, `:477-483`, `:490-494`,
+  `:509`) are set in `ProbeRun`'s and `ProbePlan`'s order, the frame before's merged sky and cycle
+  are made as pairs swapped by parity (`:318-365`), and the layouts (`:40`, `:350-351`, `:415-440`)
+  follow any move of the shared lights. Whether the bridge sets a uniform of a struct's type as it
+  sets a `float4` was not read.
+- `BevyCSharp/GlobalIllumination/WorldProbes.Screen.cs` (`:204-255`). It fills the view's still
+  state, the switches, the cycle, the settling flag and the depth's size, adds the history images
+  the module's filter asks for, and resets `_screenSince` on a resize.
+- `BevyCSharp/GlobalIllumination/GlowLights.cs` (`:69-95`). It writes a reach's box where `ILights`
+  asks for one.
+- `BevyCSharp/GlobalIllumination/FieldWork.cs` (`:11-22`) and `SceneField.cs` (`:314-317`). They
+  call the hooks at the areas' work 2000 and 2100 and in the draw after the opaque pass.
+- The frame before's sun map. Nothing keeps Bevy's directional maps for the global queue, which runs
+  before the cameras, so a map behind `ISunReach` takes work in `render/views.rs` and
+  `render/images.rs`, or the module leaves the map to the engine that has one.

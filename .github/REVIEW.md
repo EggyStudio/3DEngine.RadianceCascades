@@ -1,22 +1,25 @@
 # Review
 
-Reviewed up to `7806020`, item 5, the two engines' radiance cascades read side by side in
-.github/KERNELS.md, each kernel paired with its like, where each pair differs, what stays an
-engine's own and the interface of ten things an engine gives a kernel, a document alone that starts
-no run, pushed at 00:10 on 2026-11-14; it keeps the form. Before it `8cc387d`, item 2, pushed at
-12:31 on 2026-10-31 with `8811a8e`, item 1, after the owner's first commit, its run green at 12:35
-on the three systems in about three minutes, the first of this repository. Both commits keep the
-form, the three-mark subject, one sentence, the owner's identity as author and committer, no trailer
-(N 7.2 and N 7.6 kept at the first commit); the library references no engine (N 2.1). The documents
-are the engines' with the engine's name replaced and the engine-only lines dropped, COMMITS.md the
-game's with N 7.1's pointer rule in place of the legacy branch line, .gitignore with the dump
-folder, .claude and .ref; AGENTS.md's devlog row carries no link until DEVLOG.md exists and its
-table of areas gains the rows item 2 adds. The skeleton sets ImportDirectoryBuildTargets false,
-since a submodule under modules/ would inherit an engine's Directory.Build.targets, makes a missing
-summary an error, loads the assembly by name in its one test, and build/version.sh prints 0.1.0; the
-strict build 0 warnings and 0 errors, the test passing. After it `ff4bfe3`, the norm and the
-review's head alone, pushed at 14:51 on 2026-11-03, with no run since the build passes over the
-review's files; it keeps the form. Before it `cbc0d97`, the owner's first commit alone.
+Reviewed up to `13d21db`, item 6, what holds each kernel today, 262 tests of the two engines tabled
+a pair with their devices and gaps, the rooms both draw alike and the order of the move, a section
+of .github/KERNELS.md, pushed at 02:15 on 2026-11-14; it keeps the form. Before it `7806020`, item
+5, the two engines' radiance cascades read side by side in .github/KERNELS.md, each kernel paired
+with its like, where each pair differs, what stays an engine's own and the interface of ten things
+an engine gives a kernel, a document alone that starts no run, pushed at 00:10 on 2026-11-14; it
+keeps the form. Before it `8cc387d`, item 2, pushed at 12:31 on 2026-10-31 with `8811a8e`, item 1,
+after the owner's first commit, its run green at 12:35 on the three systems in about three minutes,
+the first of this repository. Both commits keep the form, the three-mark subject, one sentence, the
+owner's identity as author and committer, no trailer (N 7.2 and N 7.6 kept at the first commit); the
+library references no engine (N 2.1). The documents are the engines' with the engine's name replaced
+and the engine-only lines dropped, COMMITS.md the game's with N 7.1's pointer rule in place of the
+legacy branch line, .gitignore with the dump folder, .claude and .ref; AGENTS.md's devlog row
+carries no link until DEVLOG.md exists and its table of areas gains the rows item 2 adds. The
+skeleton sets ImportDirectoryBuildTargets false, since a submodule under modules/ would inherit an
+engine's Directory.Build.targets, makes a missing summary an error, loads the assembly by name in
+its one test, and build/version.sh prints 0.1.0; the strict build 0 warnings and 0 errors, the test
+passing. After it `ff4bfe3`, the norm and the review's head alone, pushed at 14:51 on 2026-11-03,
+with no run since the build passes over the review's files; it keeps the form. Before it `cbc0d97`,
+the owner's first commit alone.
 
 ## Now
 
@@ -94,6 +97,17 @@ pointer. One commit an engine, after item 3's first part.
     one room can be compared, with what differs in how each builds it. It ends with the order the
     kernels could move in, the least bound first. One commit of the document, read by the reviewing
     session before it is pushed.
+
+7. **The interface written out.** Written on 2026-11-14, after item 6, by the same session, from
+    reading alone. A section added to `.github/KERNELS.md` that takes the ten things an engine gives
+    a kernel and writes each as the declaration it would be, a Slang interface or struct with its
+    fields and the functions a kernel calls on it, each field and function marked with what it is
+    called in each engine today, with file and line, and with which engine lacks it. Where the two
+    engines hold the same thing in two forms, both are shown and the difference said, with no choice
+    made between them; where one engine's form holds what the other's cannot, that is said. It ends
+    with what each engine would have to change in its own bindings to give that interface, a list a
+    file. The engines' sessions choose between the forms at their items 265 and 138. One commit of
+    the document, read by the reviewing session before it is pushed.
 
 ## Verdicts
 
