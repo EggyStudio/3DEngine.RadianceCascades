@@ -1,19 +1,22 @@
 # Review
 
-Reviewed up to `8cc387d`, item 2, pushed at 12:31 on 2026-10-31 with `8811a8e`, item 1, after the
-owner's first commit, its run green at 12:35 on the three systems in about three minutes, the first
-of this repository. Both commits keep the form, the three-mark subject, one sentence, the owner's
-identity as author and committer, no trailer (N 7.2 and N 7.6 kept at the first commit); the library
-references no engine (N 2.1). The documents are the engines' with the engine's name replaced and the
-engine-only lines dropped, COMMITS.md the game's with N 7.1's pointer rule in place of the legacy
-branch line, .gitignore with the dump folder, .claude and .ref; AGENTS.md's devlog row carries no
-link until DEVLOG.md exists and its table of areas gains the rows item 2 adds. The skeleton sets
-ImportDirectoryBuildTargets false, since a submodule under modules/ would inherit an engine's
-Directory.Build.targets, makes a missing summary an error, loads the assembly by name in its one
-test, and build/version.sh prints 0.1.0; the strict build 0 warnings and 0 errors, the test passing.
-After it `ff4bfe3`, the norm and the review's head alone, pushed at 14:51 on 2026-11-03, with no run
-since the build passes over the review's files; it keeps the form. Before it `cbc0d97`, the owner's
-first commit alone.
+Reviewed up to `7806020`, item 5, the two engines' radiance cascades read side by side in
+.github/KERNELS.md, each kernel paired with its like, where each pair differs, what stays an
+engine's own and the interface of ten things an engine gives a kernel, a document alone that starts
+no run, pushed at 00:10 on 2026-11-14; it keeps the form. Before it `8cc387d`, item 2, pushed at
+12:31 on 2026-10-31 with `8811a8e`, item 1, after the owner's first commit, its run green at 12:35
+on the three systems in about three minutes, the first of this repository. Both commits keep the
+form, the three-mark subject, one sentence, the owner's identity as author and committer, no trailer
+(N 7.2 and N 7.6 kept at the first commit); the library references no engine (N 2.1). The documents
+are the engines' with the engine's name replaced and the engine-only lines dropped, COMMITS.md the
+game's with N 7.1's pointer rule in place of the legacy branch line, .gitignore with the dump
+folder, .claude and .ref; AGENTS.md's devlog row carries no link until DEVLOG.md exists and its
+table of areas gains the rows item 2 adds. The skeleton sets ImportDirectoryBuildTargets false,
+since a submodule under modules/ would inherit an engine's Directory.Build.targets, makes a missing
+summary an error, loads the assembly by name in its one test, and build/version.sh prints 0.1.0; the
+strict build 0 warnings and 0 errors, the test passing. After it `ff4bfe3`, the norm and the
+review's head alone, pushed at 14:51 on 2026-11-03, with no run since the build passes over the
+review's files; it keeps the form. Before it `cbc0d97`, the owner's first commit alone.
 
 ## Now
 
@@ -79,6 +82,18 @@ pointer. One commit an engine, after item 3's first part.
     at the kernel it belongs to. The engines' sessions read it at their items 265 and 138 and
     correct it in their Replies. One commit of the document here, read by the reviewing session
     before it is pushed.
+
+6. **What holds each kernel, before the move.** Written on 2026-11-14, after item 5, by the same
+    session, from reading alone. A section added to `.github/KERNELS.md`, the tests and reference
+    rooms each engine has today for each kernel the document pairs, so the move of item 3 knows what
+    must read alike before and after. For each pair, the tests in 3DEngine.Tests and in
+    BevyCSharp.Tests that would fail if that kernel were wrong, with file and test name, what each
+    holds, a level, a count of pixels, a reference picture or a path traced room, and on which
+    device it runs; where one engine holds a thing the other does not, said as a gap with the test
+    that would close it; and the rooms both engines can draw alike, so the two engines' pictures of
+    one room can be compared, with what differs in how each builds it. It ends with the order the
+    kernels could move in, the least bound first. One commit of the document, read by the reviewing
+    session before it is pushed.
 
 ## Verdicts
 

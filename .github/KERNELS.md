@@ -672,3 +672,569 @@ The fewest things an engine gives a kernel, from what both supply.
 10. **The order.** The field's build, then the trace, the merge and the gather before any camera,
     then on each view after its depth the screen probes, then the light put on the picture, then the
     lit picture kept for the next frame's reflections.
+
+## What holds each kernel
+
+The tests each engine has for the kernels this document pairs, so the move of item 3 knows what must
+read alike before and after it. Each engine's tests are read as committed, 3DEngine's at `d102cd72`
+of 2026-11-14 and BevyCSharp's at `36840712`. 3DEngine's lie in `3DEngine.Tests/Rendering/`.
+BevyCSharp's lie in `BevyCSharp.Tests/GlobalIllumination/`, apart from `TreeCanopyTests.cs` in
+`BevyCSharp.Tests/Vegetation/` and the Rust tests in `field_triangles.rs` and `scene_field.rs` under
+`render/`. A test is named by its file, the line of its method and the method's name.
+
+### The devices
+
+| Device | What the test needs | Where it runs |
+|---|---|---|
+| CPU | the runtime alone, a plain `[Fact]` | everywhere, CI among them |
+| Vulkan | `slangc` and any Vulkan device, `NeedsVulkanFact` (3DEngine's `Needs.cs:30`) | CI on lavapipe on Linux and Windows, where `E3D_REQUIRE_VULKAN=1` fails a missing device rather than skipping it, and through MoltenVK on macOS (3DEngine's `.github/workflows/build.yml:125-134`) |
+| GPU rays | a Vulkan device with ray queries that does not draw on the CPU, `NeedsRayQuery` (3DEngine's `Needs.cs:73-91`) | a desktop GPU alone, skipped in every CI job, the bounds measured on an RTX 4070 |
+| Bevy | a render bridge and `slangc`, `Needs.Shaders()` (BevyCSharp's `Needs.cs:27`, `62-66`) | a local GPU alone, since CI builds the headless bridge (BevyCSharp's `build.yml:173`) and the test skips there |
+| Bevy rays | the same with a wgpu adapter offering ray queries, `Needs.RayQueries()` (BevyCSharp's `Needs.cs:112-113`) | a local GPU alone |
+| Rust | `cargo test` of the bridge (BevyCSharp's `build/test.py:122-124`) | Linux CI, on the CPU |
+
+3DEngine's comparisons with a path-traced reference run on no CI machine, and BevyCSharp's tests of
+global illumination on the GPU run on none either, its CPU and Rust tests alone running in CI. A
+kernel moved into the module is held in CI by 3DEngine's Vulkan tests on lavapipe and by the CPU
+tests of both, and against a reference by local runs on a GPU with ray queries in each engine.
+
+### The field's plan
+
+| Engine | Test | What it holds | Device |
+|---|---|---|---|
+| 3DEngine | `SceneFieldTests.cs:34` `A_Cascade_Lies_Around_The_Eye_And_Moves_Only_Past_Its_Grid` | Each cascade's corner about the eye and which cascades rebuild as the eye crosses its grid, exact corners | CPU |
+| 3DEngine | `SceneFieldTests.cs:52` `A_Mesh_Drawn_The_Same_For_Eight_Frames_Is_Built_And_Stands_In_For_Nothing_Until_Then` | A mesh built after eight still frames and stamped as nothing before | CPU |
+| 3DEngine | `SceneFieldTests.cs:76` `A_Still_Mesh_Waiting_For_Its_Cascades_Is_Stamped_Only_Where_It_Moved_Before_It_Settled` | A still mesh waiting for its cascades stamped only where it moved | CPU |
+| 3DEngine | `SceneFieldTests.cs:108` `A_Still_Mesh_Replaced_In_Place_Stays_In_The_Field_Until_The_One_Replacing_It_Settles` | A mesh replaced in place kept until its replacement settles | CPU |
+| 3DEngine | `SceneFieldTests.cs:135` `A_Mesh_Kept_For_A_Replacement_That_Never_Settles_Leaves_After_Twice_The_Frames_To_Settle` | A kept mesh leaves after twice the settling frames, exactly | CPU |
+| 3DEngine | `SceneFieldTests.Replaced.cs:10` `A_Mesh_That_Replaced_One_In_Place_Is_Not_Stamped_While_A_Cascade_Not_Yet_Built_Holds_The_One_It_Replaced` | No stamp while a cascade not yet built holds the replaced mesh | CPU |
+| 3DEngine | `SceneFieldTests.cs:155` `The_Budget_Builds_The_Finest_Dirty_Cascades_First` | The finest dirty cascades built first, 0, 1, 2 | CPU |
+| 3DEngine | `SceneFieldTests.cs:171` `A_Moving_Mesh_Is_Stamped_Into_The_Bricks_Around_It_And_They_Are_Put_Back_When_It_Leaves` | A moving mesh stamped into 125 bricks and the bricks given back | CPU |
+| 3DEngine | `SceneFieldTests.cs:194` `Each_Brick_Is_Given_The_Shapes_That_Come_Within_It_Alone` | Each brick's own shapes, the ranges summing to the list | CPU |
+| 3DEngine | `SceneFieldTests.cs:225` `A_Scene_Drawn_In_The_Same_Order_Is_Read_By_Place_And_Planned_As_One_Drawn_In_Another_Order_Each_Frame` | A scene read by place matches one read whole over about 1,038 frames | CPU |
+| 3DEngine | `SceneFieldTests.cs:260` `Figures_Past_What_A_Frame_Stamps_Are_Boxes_Beyond_The_Nearest_And_None_Is_Left_Out` | Figures past a frame's shapes become boxes, none left out | CPU |
+| 3DEngine | `SceneFieldTests.cs:501` `A_Moving_Mesh_Is_Stamped_In_Its_Color_Times_Its_Vertices_Mean_Color` | A stamped shape's color, exactly | CPU |
+| 3DEngine | `SceneFieldTests.Figures.cs:10` `A_Figure_Walking_Among_Still_Meshes_Is_Read_By_Place_And_Builds_No_Cascade_Again_Where_It_Stops` | A walking figure read by place builds no cascade again | CPU |
+| 3DEngine | `SceneFieldTests.Figures.cs:37` `A_Copy_That_Never_Moved_Settles_After_The_Short_Count_Beside_One_That_Walks` | A copy that never moved settles after the short count | CPU |
+| 3DEngine | `SceneFieldTests.Budget.cs:47` `Five_Hundred_Meshes_Arriving_In_One_Frame_Are_Built_Over_Several_Frames_Under_The_Triangle_Budget_The_Nearest_First` | 500 meshes built in parts under 65,536 triangles a frame, nearest first | CPU |
+| 3DEngine | `SceneFieldTests.Budget.cs:94` `A_Build_In_Progress_Takes_In_A_Mesh_That_Settles_And_Starts_Again_For_A_Splatted_One_That_Leaves` | A build in progress takes in a settled mesh and restarts for a leaving one | CPU |
+| 3DEngine | `SceneFieldTests.Budget.cs:146` `A_Finer_Cascade_The_Eye_Moves_Past_Is_Built_Before_A_Coarser_Build_In_Progress_Which_Starts_Again_After` | A finer cascade the eye passes is built before a coarser one in progress | CPU |
+| 3DEngine | `SceneFieldTests.Budget.cs:224` `The_Triangle_Budget_Is_Raised_Where_The_Frame_Has_Room_And_Falls_Back_Where_It_Has_None` | The budget raised where the frame has room and back where it has none | CPU |
+| 3DEngine | `SceneFieldTests.Budget.cs:255` `A_Cut_Past_The_Finer_Cascades_Boxes_Builds_Them_At_Once_And_A_Walk_Keeps_The_Budget` | A cut builds the finer cascades at once and a walk keeps the budget | CPU |
+| 3DEngine | `SceneFieldTests.Cut.cs:12` `After_A_Cut_The_Lift_Holds_While_The_Meshes_The_New_View_Brings_Arrive_And_Ends_Once_Frames_Bring_None` | The lift after a cut holds and ends | CPU |
+| 3DEngine | `SceneFieldTests.Regions.cs:13` `A_Mesh_That_Settles_In_A_Built_Cascade_Builds_The_Cells_Within_Its_Band_From_The_Meshes_Near_Them_Alone` | A settling mesh builds the cells within its band, the changed box exactly | CPU |
+| 3DEngine | `SceneFieldTests.Shifts.cs:14` `A_Move_Of_The_Eye_By_Whole_Cells_Shifts_Its_Cascade_And_Builds_The_Slab_It_Brings_In_Alone` | A whole-cell move shifts the cascade and builds the slab it brings in | CPU |
+| 3DEngine | `SceneFieldTests.Shifts.cs:39` `The_Field_Is_Not_Whole_While_The_Last_Cascades_Shift_Holds_Its_Slab_Empty` | The field is not whole while the last cascade's slab is empty | CPU |
+| 3DEngine | `SceneFieldTests.Whole.cs:14` `The_Field_Is_Whole_Once_Every_Mesh_That_Came_Is_Built_In_And_Stays_So_While_A_Move_Of_The_Eye_Builds_It_Again` | Whole, built and frames built through arrivals and a move | CPU |
+| 3DEngine | `SceneFieldTests.Far.cs:13` `A_Far_Cascade_Reaches_Its_Distance_Ahead_In_Cells_Of_Its_Own_And_Is_Left_Out_Of_The_Count` | The far cascade's cells and its place about the eye | CPU |
+| 3DEngine | `SceneFieldTests.Far.cs:46` `The_Far_Cascade_Is_Built_After_The_Counted_Ones_Under_The_Budget_With_The_Meshes_Past_Them` | The far cascade built after the counted ones under the budget | CPU |
+| 3DEngine | `SceneFieldTests.Far.cs:137` `The_Last_Cascade_Of_Probes_Stands_In_The_Far_Cascade_With_As_Many_Directions_As_The_One_Before` | The last cascade of probes stands in the far cascade | CPU |
+| 3DEngine | `GlobalIlluminationTests.Ahead.cs:12` `The_Field_Held_Ahead_Lies_Around_The_Point_Half_Its_Finest_Cascade_Before_The_Eye` | The field held ahead lies about the point half its finest cascade before the eye | Vulkan |
+| BevyCSharp | `SceneFieldTests.cs:44` `ACascadeLiesAroundTheEyeAndMovesOnlyPastItsGrid` | Each cascade's corner about the eye, BevyCSharp's own snap | CPU |
+| BevyCSharp | `SceneFieldTests.cs:64` `AMeshDrawnTheSameForEightFramesIsBuiltAndStampedUntilThen` | A mesh built after eight still frames and stamped until then, the opposite of 3DEngine's | CPU |
+| BevyCSharp | `SceneFieldTests.cs:90` `AStillMeshReplacedInPlaceStaysInTheFieldUntilTheOneReplacingItSettles` | A mesh replaced in place kept until its replacement settles, by generation | CPU |
+| BevyCSharp | `SceneFieldTests.cs:115` `TheBudgetBuildsTheFinestDirtyCascadesFirst` | The finest dirty cascades built first | CPU |
+| BevyCSharp | `SceneFieldTests.cs:134` `AMeshDrawnTwiceInOnePlaceIsToldAndTheFramesWithoutItsCopyAreReadByPlace` | A mesh drawn twice in one place told, the frames without its copy read by place | CPU |
+| BevyCSharp | `SceneFieldTests.cs:152` `AMovingMeshIsStampedIntoTheBricksAroundItAndTheyArePutBackWhenItLeaves` | A moving mesh stamped into the bricks about it, the same numbers as 3DEngine's | CPU |
+| BevyCSharp | `SceneFieldTests.Budget.cs:52` `FiveHundredMeshesArrivingInOneFrameAreBuiltOverSeveralFramesUnderTheTriangleBudgetTheNearestFirst` | 500 meshes built in parts, nearest first | CPU |
+| BevyCSharp | `SceneFieldTests.Budget.cs:89` `ABuildInProgressTakesInAMeshThatSettlesAndStartsAgainForASplattedOneThatLeaves` | A build in progress takes in a settled mesh and restarts | CPU |
+| BevyCSharp | `SceneFieldTests.Budget.cs:144` `AFinerCascadeTheEyeMovesPastIsBuiltBeforeACoarserBuildInProgressWhichStartsAgainAfter` | A finer cascade the eye passes is built first | CPU |
+| BevyCSharp | `GlobalIlluminationTests.cs:49` `AFarCascadesCellsReachItsDistanceAheadOfTheEye` | The far cascade's cells and the probes' cascade | CPU |
+
+The two engines part on purpose in two places, each stated by a test. BevyCSharp stamps a mesh until
+it settles where 3DEngine stamps nothing (3DEngine's `SceneFieldTests.cs:52` against BevyCSharp's
+`SceneFieldTests.cs:64`), and each cascade's corner differs by BevyCSharp's lead (3DEngine's
+`SceneFieldTests.cs:34` against BevyCSharp's `SceneFieldTests.cs:44`). The module keeps one form of
+each, and the other engine's test changes with it.
+
+- **BevyCSharp has the code and no test** for the bricks' own shapes (3DEngine's
+  `SceneFieldTests.cs:194`), the read by place and the walking figure (`:225`,
+  `SceneFieldTests.Figures.cs:10`, `:37`), the cap on shapes (`:260`), a stamped shape's color
+  (`:501`), the far cascade built under the budget (`SceneFieldTests.Far.cs:46`) and the field held
+  ahead (`GlobalIlluminationTests.Ahead.cs:12`). Each is a port of the 3DEngine test named.
+- **3DEngine has no test** of a mesh drawn twice in one place (BevyCSharp's
+  `SceneFieldTests.cs:134`) and no code for it either.
+- **3DEngine's own**, held by their own tests, are the regions, the shifts, the lift after a cut and
+  the pool's capacity.
+
+### The triangles' pool
+
+| Engine | Test | What it holds | Device |
+|---|---|---|---|
+| 3DEngine | `SceneFieldTests.cs:212` `An_Edge_Is_Open_Where_No_Other_Triangle_Shares_Its_Ends_Whatever_Vertices_Hold_Them` | An edge open where no other triangle shares its ends | CPU |
+| 3DEngine | `SceneFieldTests.cs:276` `A_Moving_Mesh_That_Does_Not_Bend_Is_Stamped_As_The_Parts_Its_Triangles_Are_Cut_Into` | A moving mesh that does not bend stamped as its parts | CPU |
+| 3DEngine | `SceneFieldTests.Budget.cs:81` `The_Pool_Takes_Twice_Its_Build_Where_The_Device_Has_Room_And_Less_Where_It_Is_Short` | The pool's capacity, exactly, by the device's room | CPU |
+| BevyCSharp | `field_triangles.rs:157` `an_edge_is_open_where_no_other_triangle_shares_its_ends` | An edge open where no other triangle shares its ends, the same quad as 3DEngine's | Rust |
+| BevyCSharp | `field_triangles.rs:165` `a_mesh_weighs_the_triangles_the_pool_reads` | The triangles a mesh hands the pool | Rust |
+| BevyCSharp | `field_triangles.rs:179` `a_mesh_emits_from_the_area_of_its_triangles` | A mesh's emitting area, a cube within 1e-4 and a sphere within 2% | Rust |
+| BevyCSharp | `scene_field.rs:650` `a_draw_lies_where_the_managed_side_reads_it` | A draw's layout where the managed side reads it | Rust |
+| BevyCSharp | `SceneFieldTests.cs:25` `ADrawLiesWhereTheBridgeWritesIt` | The same layout from the managed side | CPU |
+
+The area a mesh emits from (`field_triangles.rs:179`) has no 3DEngine test, its share held only for
+boxes (`GlowLightsTests.cs:68`, `:90`).
+
+### `field_splat` and `field_resolve`
+
+| Engine | Test | What it holds | Device |
+|---|---|---|---|
+| 3DEngine | `SceneFieldTests.cs:361` `The_Field_Built_On_The_GPU_Holds_The_Distances_To_Its_Meshes` | A box's distances read back, worst under 0.01, and its paint | Vulkan |
+| 3DEngine | `SceneFieldTests.cs:514` `A_Sphere_Holds_Its_Distances_On_Every_Side_Its_Poles_Too` | A sphere's distances on every side, the poles too, worst under 0.03 | Vulkan |
+| 3DEngine | `SceneFieldTests.cs:626` `No_Cell_Away_From_Every_Mesh_Reads_As_Near_A_Surface` | No cell away from every mesh read as near a surface over three cascades | Vulkan |
+| 3DEngine | `SceneFieldTests.cs:691` `A_Closed_Wall_Thinner_Than_A_Cell_Stops_A_Ray_And_An_Open_Plane_Puts_No_Wedge_Below_Its_Rim` | A closed wall thinner than a cell stops a ray, an open plane puts no wedge under its rim | Vulkan |
+| 3DEngine | `SceneFieldTests.Sheets.cs:14` `A_Double_Sided_Sheet_Thinner_Than_A_Cell_Is_Met_At_Its_Plane_Wherever_It_Lies_Between_The_Cells` | A double-sided sheet met at its plane within a tenth of a cell, the reader done again on the CPU | Vulkan |
+| 3DEngine | `SceneFieldTests.Sheets.cs:80` `Two_Double_Sided_Sheets_Crossing_Where_Four_Cells_Meet_Are_Both_Met_In_Those_Cells` | Two crossing sheets both met, the first and second planes | Vulkan |
+| 3DEngine | `SceneFieldTests.Sheets.cs:138` `A_Closed_Room_Of_Double_Sided_Sheets_Stays_Dark_Inside` | A closed room of double-sided sheets stays dark inside | Vulkan |
+| 3DEngine | `SceneFieldTests.Far.cs:79` `A_Sheet_Under_The_Far_Cascades_Wide_Cells_Rises_No_Slab_In_Them` | A sheet under the far cascade's wide cells rises no slab | Vulkan |
+| 3DEngine | `SceneFieldTests.cs:320` `A_Skinned_Mesh_Is_Held_As_The_Boxes_Of_Its_Joints_Where_Its_Pose_Puts_Them` | A skinned mesh held as its joints' boxes | Vulkan |
+| 3DEngine | `SceneFieldTests.Regions.cs:40` `The_Cells_Built_Again_Where_A_Mesh_Was_Replaced_In_Place_Hold_What_A_Whole_Build_Of_The_Scene_Holds` | A region built again holds what a whole build holds, distances bit for bit | Vulkan |
+| 3DEngine | `SceneFieldTests.Shifts.cs:73` `A_Shifted_Cascade_Holds_The_Field_A_Build_Of_The_Whole_Cascade_At_Its_New_Corner_Holds` | A shifted cascade holds what a whole build at its new corner holds, worst under 0.01 | Vulkan |
+| 3DEngine | `SceneFieldTests.Budgets.cs:13` `A_Budget_Changed_Through_SetSceneField_Keeps_The_Field_And_A_Changed_Cell_Makes_It_Again` | A budget changed keeps the field, a changed cell makes it again | Vulkan |
+| 3DEngine | `SceneFieldTests.Budget.cs:175` `On_The_Device_Five_Hundred_Meshes_Arriving_At_Once_Are_Built_With_No_Frame_Near_The_Field_Time_Of_All_At_Once` | 500 meshes on the device, no budgeted frame near the time of all at once | Vulkan |
+| 3DEngine | `SceneFieldTests.March.cs:12` `A_March_Read_Back_Stops_At_A_Wall_In_The_Cascade_And_Cell_That_Hold_It_And_Leaves_The_Field_Above_It` | A march over the read-back field stops at the wall in its cascade, 1.85 within an eighth | Vulkan |
+| 3DEngine | `SceneFieldTests.Materials.cs:11` `A_Mesh_Whose_Material_Bounces_No_Light_Casts_Its_Shadow_And_Is_Not_Held_In_The_Field` | Meshes whose material sends no indirect light, or that cast no shadow, left out of the field | Vulkan |
+| 3DEngine | `SceneFieldTests.cs:438` `The_Field_Paints_A_Mesh_In_Its_Vertices_Colors_As_The_Model_Pass_Draws_Them` | A mesh painted in its vertices' colors within 0.02 | Vulkan |
+| 3DEngine | `SceneFieldTests.cs:562` `An_Emissive_Sheet_Thinner_Than_A_Cell_On_A_Wall_Emits_Its_Whole_Light_Where_It_Lies` | An emissive sheet thinner than a cell emits its whole light, over 1.8 of 2 | Vulkan |
+| BevyCSharp | `SceneFieldTests.cs:177` `TheFieldBuiltOnTheGpuHoldsTheDistancesToABox` | A box's distances read back, the same bounds as 3DEngine's, and the field's state line | Bevy |
+| BevyCSharp | `SceneFieldTests.cs:222` `ATunnelOneCellWideIsClearInItsMiddle` | A tunnel one cell wide clear in its middle | Bevy |
+| BevyCSharp | `SceneFieldTests.cs:320` `TheBudgetKeepsAFramesBuildsToTheCascadesAsked` | A frame's builds kept to the cascades asked | Bevy |
+| BevyCSharp | `SceneFieldTests.Budget.cs:178` `OnTheGpuFiveHundredMeshesArrivingAtOnceAreBuiltInPartsWithNoSplatNearTheOneOfAllAtOnce` | 500 meshes built in parts hold the distances of one whole build, worst under 1e-3 | Bevy |
+| BevyCSharp | `GlobalIlluminationTests.cs:73` `TheFieldPaintsEachCellItsNearestSurfacesColor` | Each cell painted its nearest surface's color, by bytes | Bevy |
+| BevyCSharp | `GlobalIlluminationTests.Gloss.cs:23` `TheFieldKeepsEachCellsNearestSurfacesGlossBesideItsFace` | Each cell's gloss beside its face, within 0.01 | Bevy |
+| BevyCSharp | `TreeCanopyTests.cs:43` `AForestFloorTakesTheSkyLightItsCanopyLetsThrough` | Leaf cards painted to let the sky's light through | Bevy |
+
+- **BevyCSharp has the code and no test** for a sphere's poles (3DEngine's
+  `SceneFieldTests.cs:514`), the signs over a varied yard (`:626`), a closed wall thinner than a
+  cell (`:691`), the vertices' colors (`:438`), a thin emitter's whole light (`:562`), the far
+  cascade's sheet (`SceneFieldTests.Far.cs:79`) and meshes left out of the field
+  (`SceneFieldTests.Materials.cs:11`). Its double-sided faces, read as a zero crossing half a cell
+  off, have no test, which a port of `SceneFieldTests.Sheets.cs:14` and `:138` to zero crossings
+  closes.
+- **3DEngine has the code and no test** for a build in parts holding the distances of one whole
+  build on the device (BevyCSharp's `SceneFieldTests.Budget.cs:178`, worst under 1e-3, where
+  3DEngine's `SceneFieldTests.Budget.cs:175` reads the time alone), a tunnel one cell wide
+  (BevyCSharp's `SceneFieldTests.cs:222`), the field's gloss read back (BevyCSharp's
+  `GlobalIlluminationTests.Gloss.cs:23`) and the cascades a frame builds on the device (BevyCSharp's
+  `SceneFieldTests.cs:320`).
+- **The shared test** is the box of 2 read back, with the same bounds in both (3DEngine's
+  `SceneFieldTests.cs:361` against BevyCSharp's `SceneFieldTests.cs:177`).
+
+### `field_stamp`
+
+| Engine | Test | What it holds | Device |
+|---|---|---|---|
+| 3DEngine | `GlobalIlluminationTests.cs:255` `A_Red_Wall_That_Moves_Tints_The_Side_Of_A_White_Block_Facing_It_As_A_Still_One_Does` | A moving red wall tints a white block as a still one does, read through the light | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.Moving.cs:15` `An_Emissive_Bar_Too_Long_To_Be_A_Glow_Light_Lights_A_Wall_As_It_Moves_As_It_Does_Held_Still` | A moving emissive bar lights as a still one within 0.6 to 1.8 | Vulkan |
+| BevyCSharp | `SceneFieldTests.cs:258` `AMovingBoxIsStampedWhereItStandsAndTheCellsItLeftAreEmptyAgain` | A moving box stamped where it stands, read back, the cells it left empty again | Bevy |
+
+3DEngine reads a stamped shape through the light alone, so BevyCSharp's read-back of a moving box's
+distances (BevyCSharp's `SceneFieldTests.cs:258`) is the test it lacks. BevyCSharp has no test of a
+moving wall's color through the light (3DEngine's `GlobalIlluminationTests.cs:255`), and a port of
+the moving emitter (`GlobalIlluminationTests.Moving.cs:15`) fails there by design, since
+BevyCSharp's stamp writes no glow.
+
+### `field_counted`
+
+| Engine | Test | What it holds | Device |
+|---|---|---|---|
+| 3DEngine | `GlobalIlluminationTests.Counted.cs:46` `A_Red_Wall_A_Compute_Shader_Wrote_Tints_The_Side_Of_A_White_Block_Facing_It` | A wall a compute shader wrote tints a white block | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.Counted.cs:104` `A_Wall_A_Compute_Shader_Wrote_Bounces_The_Color_Of_Its_Color_Stream_Beside_A_Stream_Of_Its_Own` | The same with a color stream | Vulkan |
+
+3DEngine's own, as the kernel is.
+
+### The readers' modules, `scenefield` and `bcs_field`
+
+| Engine | Test | What it holds | Device |
+|---|---|---|---|
+| 3DEngine | `SceneFieldTests.cs:731` `Particles_Bounce_Off_A_Wall_Behind_The_Camera_Through_The_Field_And_Pass_It_Without` | Particles bounce off a wall behind the camera through the field | Vulkan |
+
+No test in either engine reads the readers alone. 3DEngine's sheet and march tests
+(`SceneFieldTests.Sheets.cs:14`, `:80`, `SceneFieldTests.March.cs:12`) do the readers' work again on
+the CPU over a read-back field, so a fault in the shader's own reader passes them, and the readers
+are held through the pictures that use them. A test that samples a built field through the module's
+reader in a compute dispatch and reads the result back holds them directly, and the move needs it
+before the readers go.
+
+### `gi_trace`, `gi_merge` and `gi_ambient`
+
+| Engine | Test | What it holds | Device |
+|---|---|---|---|
+| 3DEngine | `GlobalIlluminationTests.cs:28` `Each_Quality_Traces_More_Directions_Than_The_One_Below_In_The_Cascades_The_Field_Allows` | Texels a side, tiles and cascades at each quality | CPU |
+| 3DEngine | `GlobalIlluminationTests.cs:106` `Under_A_Uniform_Sky_Every_Face_Of_A_Probe_Reads_The_Same_Light_At_Each_Quality` | Every face of a probe under a uniform sky reads pi within 2%, Low and High | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.cs:226` `A_Red_Wall_Tints_The_Side_Of_A_White_Block_Facing_It` | A red wall tints a white block, red gain over 20 | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.cs:286` `An_Emissive_Panel_Lights_Its_Room_With_No_Light_In_It` | An emissive panel lights the floor of a closed room | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.cs:355` `A_Probe_In_The_Plane_Of_A_Ceiling_Stands_Below_It_And_Holds_Light` | A probe in a ceiling's plane moved into the room | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.cs:580` `A_Lamp_That_Casts_Shadows_Sends_No_Indirect_Light_Into_A_Room_Its_Walls_Close_It_Out_Of` | A lamp beside a closed room lends it no light | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.Walled.cs:11` `A_Probe_Moved_Into_The_Stone_At_A_Lamps_Corner_Is_Walled_In_And_Holds_Nothing` | A probe pushed into stone at a lamp's corner walled in | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.WallFoot.cs:13` `A_Lamp_Outside_A_Closed_Room_Of_Thin_Walls_Lights_None_Of_Its_Floor_Along_A_Walls_Foot` | The floor at a wall's foot no brighter than beside it | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.Board.cs:14` `A_Lit_Board_Outside_A_Closed_Room_Of_Thin_Walls_Lights_Nothing_Inside` | A room of thin walls dark within 15% of its measure | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.Hidden.cs:13` `The_Foot_Of_A_Wall_Takes_None_Of_The_Light_The_Hidden_Probes_Under_Its_Floor_See` | Probes under the floor lend a wall's foot nothing | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.Court.cs:13` `The_Floor_Of_A_Court_Narrower_Than_The_Probes_Apart_Takes_The_Sky_Through_Its_Opening` | A court's floor takes the sky past roofed probes, over 0.26 of the open | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.Carried.cs:15` `A_Floor_Under_A_Solid_Slab_In_Four_Cascades_Takes_The_Sky_Past_Its_Sides_And_Its_Underside_Reflects_Little` | Carried rays light a floor and leave the underside dark | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.Cycle.cs:15` `A_Carried_Probes_Cycle_Is_Kept_Whole_Only_Where_Its_Rays_Move` | The carried cycle's memory at High with ray queries | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.Cycle.cs:44` `A_Carried_Probes_Share_Of_The_Sky_Is_Kept_Through_Its_Cycle_As_Its_Light_Is` | The merged sky still over 32 frames | GPU rays |
+| 3DEngine | `GlobalIlluminationTests.Far.cs:13` `A_Ray_That_Leaves_The_Counted_Cascades_Meets_A_Wall_In_The_Far_Cascade_Before_The_Sky` | The far cascade dims a face toward a far black wall | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.Far.cs:49` `The_Far_Cascades_Probes_Trace_A_Part_Of_Them_A_Frame_And_All_On_A_Frame_It_Moved` | The far cascade traced in parts and whole when it moves | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.FarMove.cs:12` `A_Surface_In_The_Far_Cascades_Band_Keeps_Its_Light_As_The_Cascade_Moves` | A block's underside holds across the far cascade's move | Vulkan |
+| 3DEngine | `CascadeEdgeTests.cs:281` `The_Last_Cascades_Rays_Meet_The_Walls_Of_A_Closed_Room_Wider_Than_Four_Times_Its_Spacing` | No texel of the last cascade marked sky in a closed room | Vulkan |
+| 3DEngine | `CascadeEdgeTests.Corridor.cs:13` `A_Closed_Corridors_Far_End_Takes_None_Of_The_Sky_Its_Probes_Outside_It_Saw` | A closed corridor's far end dark against an open one | Vulkan |
+| 3DEngine | `CascadeEdgeTests.Shift.cs:12` `A_Closed_Corridors_Light_Holds_While_The_Slabs_A_Walk_Brings_Into_The_Field_Are_Built` | A corridor's light holds while a walk's slabs are built | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.Gloss.cs:16` `A_Probe_Facing_A_Sunlit_Wall_Reads_Its_Gloss_Within_Its_Measured_Difference_From_The_Reference` | A face toward a glossy wall against the reference, first bounce | GPU rays |
+| 3DEngine | `GlobalIlluminationTests.Gloss.cs:62` `A_Closed_Room_Of_Smooth_White_Walls_Under_A_Lamp_Holds_Its_Light_Steady` | A closed room of smooth white walls under a lamp holds its light steady | GPU rays |
+| 3DEngine | `GlobalIlluminationTests.Reach.cs:13` `A_Probes_Rays_In_A_Closed_Room_Reach_Where_The_References_Paths_First_Meet_Its_Walls` | Hits within 25% of the reference's first hit | GPU rays |
+| 3DEngine | `GlobalIlluminationTests.LampMarch.cs:13` `A_Lamp_Just_Outside_A_Thin_Wall_Is_Hidden_From_Most_Of_The_Surfaces_A_Probe_Inside_Meets` | A lamp just outside a thin wall hidden from the surfaces a probe inside meets | GPU rays |
+| 3DEngine | `GlobalIlluminationTests.Lintel.cs:13` `A_Probe_Whose_Ray_Meets_A_Lintel_Past_Its_Interval_Takes_No_Sky_The_Probes_Above_See_Under_It` | A face under a lintel 0.8 to 1.1 of the reference | GPU rays |
+| 3DEngine | `GlobalIlluminationTests.Lintel.cs:61` `A_Probe_Under_The_Lintel_Holds_Its_Face_Still_While_The_View_Is_Held` | The spread of twelve readings under a lintel | GPU rays |
+| 3DEngine | `GlobalIlluminationTests.Passage.cs:13` `A_Probe_Deep_In_A_Narrow_Walled_Passage_Reads_The_Sunlit_Court_Through_Its_Opening_As_The_Reference_Does` | A face in a passage 0.75 to 1.25 of the reference | GPU rays |
+| 3DEngine | `GlobalIlluminationTests.Shadowed.cs:13` `A_Probe_Over_A_Walls_Long_Shadow_In_Coarse_Cells_Reads_The_Shaded_Floor_As_The_Reference_Does` | A face in a wall's long shadow 0.75 to 1.25 of the reference | GPU rays |
+| 3DEngine | `GlobalIlluminationTests.Threshold.cs:14` `The_Wall_Above_A_Threshold_On_A_Thin_Floor_Reads_A_Lamp_Under_The_Floor_Within_Its_Measured_Leak` | A thin floor's leak within 15% of its measure | GPU rays |
+| 3DEngine | `GlobalIlluminationTests.Frames.cs:13` `The_Indirect_Light_Goes_Within_Two_Frames_Of_The_Light_That_Went_Out` | The indirect light goes within two frames of the light that went out | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.Frames.cs:70` `A_Lamp_Put_Out_In_A_Room_Apart_Leaves_A_Corridor_Lit_By_Indirect_Light_Alone_As_It_Was` | A corridor holds when a far room's lamp goes out | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.Frames.cs:134` `A_Lamp_Carried_Away_Takes_Its_Indirect_Light_With_It` | The light left where a carried lamp stood halves within four frames | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.Frames.cs:190` `Indirect_Light_Follows_A_Lamp_Brought_Into_The_Room_Within_Two_Frames` | A lamp brought in lights within two frames | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.Dimming.cs:12` `A_Lamp_Dimming_Slowly_Dims_The_View_Evenly_From_One_Frame_To_The_Next` | A dimming light falls without a step three times the median | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.Gain.cs:27` `A_Floor_Lit_By_A_Panel_Takes_More_Of_Its_Walls_Light_As_The_Bounce_Gain_Rises` | Each bounce's gain adds light | Vulkan |
+| 3DEngine | `BounceViewTests.cs:26` `Each_View_Draws_Its_Own_Picture_And_Each_Part_Left_Out_Changes_The_Frame` | Each view and each part left out changes the frame | Vulkan |
+| 3DEngine | `GlobalIlluminationPluginTests.cs:66` `A_Program_Built_Without_The_Plugin_Draws_As_With_Global_Illumination_Off_And_Holds_None_Of_It` | The plugin's frame differs from global illumination off, its absence equals it | Vulkan |
+| BevyCSharp | `GlobalIlluminationTests.cs:21` `EachQualityTracesItsCascadesAndDirections` | Texels a side at each quality, 256 rays a probe | CPU |
+| BevyCSharp | `GlobalIlluminationTests.cs:114` `AProbeBeforeASunlitRedWallTakesItsRedOnTheFaceTowardIt` | A probe's face toward a red wall reads red | Bevy |
+| BevyCSharp | `GlobalIlluminationTests.cs:140` `AProbeInsideASolidBlockHoldsNothing` | A probe inside a solid holds nothing | Bevy |
+| BevyCSharp | `GlobalIlluminationTests.cs:168` `AFarCascadeHoldsAWallPastTheCountedOnes` | The far cascade dims a face toward a far black wall, 3DEngine's bounds | Bevy |
+| BevyCSharp | `GlobalIlluminationTests.cs:196` `AnEmissivePanelLightsTheProbesOfAClosedRoom` | An emissive panel lights a probe's face | Bevy |
+| BevyCSharp | `GlobalIlluminationTests.cs:212` `AStripThinnerThanACellLendsItsLightToTheCellsBesideIt` | A strip the field emits lights a probe's face | Bevy |
+| BevyCSharp | `GlobalIlluminationTests.cs:322` `ARedWallTintsAWhiteBlocksSideTowardIt` | A red wall tints a white block's side toward it in the picture | Bevy |
+| BevyCSharp | `GlobalIlluminationTests.ProbeReading.cs:27` `AProbeInAClosedRoomHoldsItsReferencesLightAtEachBounceItIsHeldAt` | A probe against the reference at 0, 2 and all bounces within 10% | Bevy rays |
+| BevyCSharp | `GlobalIlluminationTests.Bounces.cs:30` `AClosedRoomReadsItsLightPastTheDirectAsItsReferenceThroughEveryBounce` | Closed rooms of 4, 8 and 16, each face within 15% past the direct | Bevy rays |
+| BevyCSharp | `GlobalIlluminationTests.Bounces.cs:63` `AClosedRoomOfSmoothWhiteWallsReadsItsLightPastTheDirectAsItsReference` | Smooth white rooms do not run away | Bevy rays |
+| BevyCSharp | `GlobalIlluminationTests.Bounces.cs:96` `AClosedCornellBoxOnTheWorldsProbesReadsItsLightPastTheDirectAsItsReference` | A closed Cornell box within 6% | Bevy rays |
+| BevyCSharp | `GlobalIlluminationTests.Gloss.cs:75` `ASmoothRoomsProbeReflectsItsSecondBounceAlongEachRaysMirrorWay` | The second bounce off gloss within 12% | Bevy rays |
+| BevyCSharp | `GlobalIlluminationTests.Corridor.cs:27` `ACorridorNarrowerThanTheProbesAboveReadsItsLightPastTheDirectAsItsReference` | Each face of a corridor within 30%, carried rays | Bevy rays |
+| BevyCSharp | `GlobalIlluminationTests.Air.cs:21` `AWallInShadeTakesTheFloorsLightAsItsReferenceDoesUnderALowSun` | A wall in shade takes the floor's light under a low sun through the air, within 30% | Bevy rays |
+| BevyCSharp | `GlobalIlluminationTests.Reach.cs:20` `AFarWallInShadeTakesTheYardsLightAtMedium` | A yard's far wall within 30% at Medium | Bevy rays |
+| BevyCSharp | `GlobalIlluminationTests.Reach.cs:40` `AFarWallInShadeTakesTheYardsLightAtLow` | The same at Low | Bevy rays |
+| BevyCSharp | `GlobalIlluminationTests.Seam.cs:26` `AnAisleReadsAlikeWithACascadesSideOnTheWallBehindTheEye` | Faces read from two eyes within 0.04 | Bevy rays |
+| BevyCSharp | `GlobalIlluminationTests.ThinWalls.cs:28` `ALampOutsideAThinWalledRoomLightsNothingUnderItsWalls` | A room of thin walls dark, each face under 0.005 | Bevy rays |
+| BevyCSharp | `GlobalIlluminationTests.ThinWalls.cs:48` `ALampOutsideAThinWalledRoomIsHiddenFromTheHitsBesideItsWalls` | The same with the screen probes, under 0.04 | Bevy rays |
+| BevyCSharp | `GlobalIlluminationTests.ThinWalls.cs:90` `ALitBoardOutsideAThinWalledRoomLightsNothingInside` | The same with the board, under 0.005 | Bevy rays |
+| BevyCSharp | `GlobalIlluminationTests.ThinWalls.cs:116` `AProbeOnTheMiddleOfAWallThinnerThanACellHoldsNoLight` | A probe on the middle of a wall thinner than a cell holds no light | Bevy rays |
+| BevyCSharp | `GlobalIlluminationTests.Foot.cs:33` `AWallsFootOverAThinFloorReadsEvenWithALampUnderTheFloor` | A wall's foot over a thin floor even, warmth within 0.05 | Bevy rays |
+| BevyCSharp | `GlobalIlluminationTests.Off.cs:17` `AnAppWithGlobalIlluminationOffMakesNoneOfItsPrograms` | Off makes no program and traces nothing | Bevy |
+| BevyCSharp | `GlobalIlluminationTests.Off.cs:49` `GlobalIlluminationTurnedOffTracesNoMoreAndLetsItsFieldGo` | Tracing stops and the plan goes | Bevy rays |
+
+- **BevyCSharp has no test of light that changes over frames**, 3DEngine's
+  `GlobalIlluminationTests.Frames.cs:13`, `:70`, `:134`, `:190` and
+  `GlobalIlluminationTests.Dimming.cs:12`. The fault in BevyCSharp's `follow` lies in that gap. The
+  probe's own light it sums feeds the kept share alone, which reads 1 while the light holds still,
+  and every BevyCSharp test reads a light held still. A port of `Frames.cs:13` at Low closes it.
+- **BevyCSharp has the code and no test** for every face reading pi under a uniform sky (3DEngine's
+  `GlobalIlluminationTests.cs:106`), which its `gi_ambient` states, the walled-in quarter
+  (3DEngine's `GlobalIlluminationTests.Walled.cs:11`) and a probe moved off a ceiling's plane
+  (3DEngine's `GlobalIlluminationTests.cs:355`).
+- **3DEngine has the code and no test** for a probe held against the reference at a chosen number of
+  bounces (BevyCSharp's `GlobalIlluminationTests.ProbeReading.cs:27`), where 3DEngine holds the
+  first bounce alone, and for a probe on the middle of a wall thinner than a cell (BevyCSharp's
+  `GlobalIlluminationTests.ThinWalls.cs:116`). BevyCSharp's sun through the camera's air
+  (`GlobalIlluminationTests.Air.cs:21`) has no 3DEngine test.
+- **The texels a side** at High differ, 8 in 3DEngine's second cascade and 16 in BevyCSharp's, each
+  stated by a test (3DEngine's `GlobalIlluminationTests.cs:28` against BevyCSharp's
+  `GlobalIlluminationTests.cs:21`).
+
+### The probes' readers and the cascades' bands
+
+| Engine | Test | What it holds | Device |
+|---|---|---|---|
+| 3DEngine | `GlobalIlluminationTests.cs:324` `A_Ceiling_In_A_Plane_Of_Probes_Takes_The_Light_Of_The_Probes_Below_It` | A ceiling takes red from the probes | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.Far.cs:115` `The_Screen_Probes_Stand_In_The_Counted_Cascades_And_A_Floor_Past_Them_Takes_The_Far_Probes` | Near probes lit and far probes dark past the field | Vulkan |
+| 3DEngine | `CascadeEdgeTests.cs:31` `The_Floors_Light_Fades_Across_Each_Cascades_End_Rather_Than_Stepping` | No step between rows across a cascade's band under an ambient sky, under 6% | Vulkan |
+| 3DEngine | `CascadeEdgeTests.cs:45` `The_Floors_Reflection_Of_The_Sky_Fades_Across_The_Fields_End_Rather_Than_Stepping` | The same under an environment map | Vulkan |
+| 3DEngine | `CascadeEdgeTests.cs:106` `A_Closed_Rooms_Walls_Stay_Dark_At_Every_Heading_Of_An_Eye_Inside` | A closed room dark at twelve headings | Vulkan |
+| 3DEngine | `CascadeEdgeTests.cs:167` `A_Face_Before_The_Eye_Stays_Dark_Where_The_Eye_Stands_Nearest_The_Last_Cascades_Side` | A face before the eye stays dark where the eye stands nearest the last cascade's side | Vulkan |
+| 3DEngine | `CascadeEdgeTests.cs:230` `A_Closed_Rooms_Floor_Stays_Hidden_From_An_Ambient_Light_Before_The_Last_Cascade_Is_Built` | The first three frames under twice the settled light | Vulkan |
+| 3DEngine | `CascadeEdgeTests.Distant.cs:14` `A_Floor_And_A_Wall_Along_It_Take_Their_Light_Across_The_Fields_Edge_With_No_Step` | Floor and wall even past the field, steps under 1% and 1.5% | Vulkan |
+| BevyCSharp | `GlobalIlluminationTests.cs:361` `AnOpenFloorReadsAsBevysAmbientLightGivesIt` | An open floor reads Bevy's ambient within 4 levels | Bevy |
+| BevyCSharp | `GlobalIlluminationTests.cs:390` `AnOpenFloorReadsAsAnEnvironmentMapLightsIt` | The same under an environment map within 6 | Bevy |
+| BevyCSharp | `GlobalIlluminationTests.cs:420` `AClosedRoomUnderAnEnvironmentMapIsDarkInside` | A closed room under an environment map under a quarter of off | Bevy |
+| BevyCSharp | `GlobalIlluminationTests.Ambient.cs:24` `AnOpenFloorUnderTheSkyReadsItsReferenceNearTheEyeAndAtAGrazingAngle` | An open floor near and grazing within 5% of the reference | Bevy rays |
+| BevyCSharp | `GlobalIlluminationTests.Probes.cs:24` `TheLightBevysLightProbesGaveIsTakenBackAsTheyGaveIt` | The light of Bevy's light probes taken back as they gave it, within 30% | Bevy rays |
+
+BevyCSharp has the bands' fade and no test of a step across a band, which 3DEngine's
+`CascadeEdgeTests.cs:31`, `:45`, `:106`, `:167`, `:230` and `CascadeEdgeTests.Distant.cs:14` hold.
+BevyCSharp's take-back of Bevy's ambient light and light probes (BevyCSharp's
+`GlobalIlluminationTests.cs:361`, `:390`, `:420` and `GlobalIlluminationTests.Probes.cs:24`) is its
+own.
+
+### Light through a surface
+
+| Engine | Test | What it holds | Device |
+|---|---|---|---|
+| 3DEngine | `GlobalIlluminationTests.Foliage.cs:16` `A_Floor_Under_A_Slab_That_Lets_Light_Through_Takes_The_Sky_Light_Its_Share_Lets_Through` | A slab letting all, half or none of the light through, Low and High | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.Foliage.cs:72` `A_Floor_Under_A_Slab_Letting_All_Light_Through_Reflects_The_Sky_As_In_The_Open` | The sky reflected under a slab letting all through | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.Foliage.cs:106` `A_Floor_Under_Leaves_Past_The_Screen_Probes_Reach_Takes_The_Sky_Light_They_Let_Through` | Light past the screen probes' reach under leaves | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.Foliage.cs:156` `A_Floor_Under_A_Canopy_Of_Leaf_Blocks_Takes_The_Sky_Light_Their_Faces_Let_Through` | A canopy of leaf blocks within measured bands | Vulkan |
+| BevyCSharp | `GlobalIlluminationTests.LightThrough.cs:27` `AFloorUnderASlabThatLetsLightThroughTakesTheSkyLightItsShareLetsThrough` | A slab letting all, half or none through, Low and High | Bevy |
+| BevyCSharp | `GlobalIlluminationTests.UniformSky.cs:22` `AGrassPatchUnderAUniformSkyReadsItsReference` | Grass within 15% of the reference | Bevy rays |
+| BevyCSharp | `GlobalIlluminationTests.UniformSky.cs:56` `ALoneAspensLeavesUnderAUniformSkyReadTheirReference` | An aspen within 25% | Bevy rays |
+| BevyCSharp | `GlobalIlluminationTests.UniformSky.cs:78` `ALoneAspenLitFromBehindLetsThroughTheSunItsReferenceDoes` | A backlit aspen within 10% | Bevy rays |
+| BevyCSharp | `GlobalIlluminationTests.UniformSky.cs:100` `AForestFloorUnderAUniformSkyReadsItsReference` | A forest floor within 30% | Bevy rays |
+| BevyCSharp | `GlobalIlluminationTests.CrownScatter.cs:32` `ProbesAboutAFrontLitCrownHoldTheLightItsLeavesScatter` | Probes in a crown 0.75 to 1.25 of the reference | Bevy rays |
+
+BevyCSharp has no test of the sky reflected under a slab that lets all light through (3DEngine's
+`GlobalIlluminationTests.Foliage.cs:72`) or of light past the screen probes' reach under leaves
+(3DEngine's `GlobalIlluminationTests.Foliage.cs:106`). 3DEngine reads its foliage against measured
+bands, where BevyCSharp reads grass, aspens, a forest floor and a crown against a reference traced
+in the run (`GlobalIlluminationTests.UniformSky.cs`, `GlobalIlluminationTests.CrownScatter.cs`).
+
+### Rough reflection
+
+| Engine | Test | What it holds | Device |
+|---|---|---|---|
+| 3DEngine | `RoughReflectionTests.cs:88` `A_Rough_Metal_Wall_Reflects_The_Light_The_Probes_Hold_By_Its_Specular_Share` | The probes hold a metal box's light within 12.1%, the wall's specular share within 0.5% | GPU rays |
+| 3DEngine | `GlobalIlluminationTests.Feet.cs:13` `The_Foot_Of_A_Rough_Wall_Reflects_None_Of_The_Sky_The_Probes_Under_Its_Floor_See` | A rough wall's foot darker than above | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.Frames.cs:484` `A_Room_Sealed_From_The_Sky_Reflects_None_Of_It_Where_An_Open_Floor_Reflects_It` | An open floor takes the sky's blue, a sealed room none | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.cs:506` `A_Polished_Floor_Reflects_A_Red_Block_On_It_Through_The_Window_Where_Global_Illumination_Is_On` | A mirror floor reflects red | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.cs:537` `A_Reflection_Of_A_Surface_The_Frame_Before_Hid_Shows_The_Surface_And_Not_What_Hid_It` | A reflection of a surface the frame before hid shows that surface | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.cs:650` `A_Mirror_Shows_A_Block_Its_Lamp_Is_Shut_Away_From_In_The_Dark` | A mirror shows a block its lamp is shut away from in the dark | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.cs:729` `A_Mirror_Reflects_A_Block_Behind_The_Camera_Through_The_Field` | A mirror reflects a block behind the camera through the field | Vulkan |
+| BevyCSharp | `GlobalIlluminationTests.cs:456` `AMirrorFloorReflectsARedWallStandingOnIt` | A mirror floor reflects red | Bevy |
+| BevyCSharp | `GlobalIlluminationTests.cs:494` `AClosedRoomReflectsNoSky` | A closed room reflects no sky, under a quarter of off | Bevy |
+| BevyCSharp | `GlobalIlluminationTests.ThinWalls.cs:72` `ALampOutsideAThinWalledRoomOfGlossyFacesIsReflectedNowhereInside` | A glossy room of thin walls dark | Bevy rays |
+
+BevyCSharp has no test of the specular share to half a percent (3DEngine's
+`RoughReflectionTests.cs:88`), its own bounds being loose (BevyCSharp's
+`GlobalIlluminationTests.cs:494`).
+
+### The screen probes
+
+| Engine | Test | What it holds | Device |
+|---|---|---|---|
+| 3DEngine | `GlobalIlluminationTests.cs:133` `A_Floor_Seen_At_A_Slant_Takes_The_Light_Of_The_Screens_Probes_Along_Its_Slope` | No steep fall over four rows from the screen probes | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.cs:168` `The_Screens_Probes_Hold_Light_On_A_Floor_Past_The_Fields_First_Cascade` | Floor probes past the first cascade hold light | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.cs:458` `A_Room_Drawn_Into_A_Render_Texture_Takes_Global_Illumination_As_The_Window_Does` | A window and a texture alike with and without the screen probes | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.ScreenProbes.cs:13` `Low_Leaves_The_Screens_Probes_Out_And_Their_Debug_Toggle_Leaves_Them_Out_At_Any_Quality` | No screen probes at Low, the cascades alone light | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.ScreenProbes.cs:168` `A_Screen_Probe_Fed_A_Value_That_Is_Not_A_Number_Leaves_The_Light_It_Blends_Into_Finite` | A NaN fed three frames leaves no black | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.ScreenProbes.cs:225` `The_Back_Of_A_Two_Sided_Wall_Takes_The_Screens_Probes_As_Its_Front_Does` | A wall's back face changes as its front | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.History.cs:13` `Leaving_The_Screen_Probes_Frames_Before_Out_Of_A_Still_View_Keeps_Its_Light` | History off within 8% of kept | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.Frames.cs:234` `Global_Illumination_Holds_Still_As_The_Camera_Slides` | A sliding camera adds under 0.15 levels a frame | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.Frames.cs:311` `In_A_Still_View_Each_Screen_Probe_Takes_The_Frame_Befores_Light_From_Where_It_Stood` | Every held probe's alpha 1.9375 | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.Frames.cs:352` `The_Light_That_Bounces_Settles_By_The_Fifth_Frame_After_A_Walk_Or_A_Turn` | A walk and a turn change under 0.12 levels by the fifth frame | Vulkan |
+| BevyCSharp | `GlobalIlluminationTests.ScreenProbes.cs:19` `AFrameWithTheScreensProbesLeftOutDrawsTheCascadesLightAlone` | Probes unread equal probes left out, pixel for pixel | Bevy |
+| BevyCSharp | `GlobalIlluminationTests.ScreenProbes.cs:165` `AScreenProbeFedAValueThatIsNotANumberLeavesTheLightItBlendsIntoFinite` | A NaN leaves no black | Bevy |
+| BevyCSharp | `GlobalIlluminationTests.ProbeReading.cs:103` `AScreenProbeInAClosedRoomSumsItsReferencesLightAlongItsWays` | A screen probe's sum within 10% of the reference | Bevy rays |
+| BevyCSharp | `GlobalIlluminationTests.ScreenTile.cs:16` `TheScreenProbesTileHoldsUpTo1080RowsAndGrowsWithTheHeightPastThem` | The tile from the picture's height | CPU |
+| BevyCSharp | `GlobalIlluminationTests.ScreenTile.cs:42` `APicturesScreenProbesStandEveryTileItsHeightGives` | The tile drawn at 8 or 11 | Bevy |
+| BevyCSharp | `BounceRoomsTests.cs:178` `WithTheScreenProbesAViewReadsTheSameWithItsCameraMovedByAFewFloatSteps` | A camera moved by a few float steps changes the picture under 0.001 | Bevy rays |
+
+- **BevyCSharp has the code and no test** for the filter's frame before (3DEngine's
+  `GlobalIlluminationTests.Frames.cs:234`, `:311`, `:352` and
+  `GlobalIlluminationTests.History.cs:13`), a probe past the first cascade (3DEngine's
+  `GlobalIlluminationTests.cs:168`), a floor's slope (`:133`) and the back of a two-sided wall
+  (3DEngine's `GlobalIlluminationTests.ScreenProbes.cs:225`).
+- **3DEngine has the code and no test** for probes left unread against probes left out, pixel for
+  pixel (BevyCSharp's `GlobalIlluminationTests.ScreenProbes.cs:19`), and a camera moved by a few
+  steps of the float (BevyCSharp's `BounceRoomsTests.cs:178`).
+
+### The glow lights
+
+| Engine | Test | What it holds | Device |
+|---|---|---|---|
+| 3DEngine | `GlowLightsTests.cs:28` `An_Emitter_No_Longer_Than_Twice_The_First_Cascades_Spacing_Is_Carried` | Which emitters are carried | CPU |
+| 3DEngine | `GlowLightsTests.cs:41` `The_Lights_Written_Are_The_Nearest_The_Eye_With_Their_Boxes_And_Reach` | The 64 nearest written with their reach and box | CPU |
+| 3DEngine | `GlowLightsTests.cs:68` `Touching_Emitters_That_Give_Off_The_Same_Light_Are_One_Light` | A gathered light's share | CPU |
+| 3DEngine | `GlowLightsTests.cs:90` `A_Mesh_Of_Many_Blocks_Is_Cut_Into_Its_Parts_With_The_Faces_They_Show` | A mesh split into its parts | CPU |
+| 3DEngine | `GlowLightsTests.cs:143` `An_Emissive_Rods_Light_On_The_Floor_Falls_With_No_Step` | A rod's light within 5% of a traced table | Vulkan |
+| 3DEngine | `GlowLightsTests.cs:165` `An_Emissive_Block_Lights_The_Floor_Around_It_As_A_Path_Traced_Reference_Does` | An emitter's floor rings within 6% of a traced table at each quality | Vulkan |
+| 3DEngine | `GlowLightsTests.cs:185` `An_Emissive_Block_That_Is_Part_Of_A_Mesh_Of_Many_Lights_The_Floor_As_A_Block_Alone_Does` | A mesh of two blocks read from 40 blocks as from 5 | Vulkan |
+| 3DEngine | `GlowLightsTests.cs:268` `A_Row_Of_Lamps_Lights_The_Floor_Under_A_Block_Floating_Below_It_As_Beside_It` | The floor under a floating block | Vulkan |
+| 3DEngine | `GlowLightsTests.cs:343` `A_Wall_Sees_Four_Joined_Lamps_Past_A_Pillar_As_A_Path_Traced_Reference_Does` | A pillar's shares within 0.05 of the reference's | Vulkan |
+| 3DEngine | `GlowLightsTests.cs:420` `A_Room_Lit_By_Six_Small_Emitters_Reads_As_A_Path_Traced_Reference_Does` | One and six emitters within 10% of a live reference | GPU rays |
+| 3DEngine | `GlowLightsTests.cs:483` `A_Bulb_Hung_High_Lights_The_Floor_Under_It_As_Its_Lower_Face_Does` | A bulb within 20% of its closed form | Vulkan |
+| 3DEngine | `GlowPillarTests.cs:25` `A_Lamps_Light_Past_A_Pillars_Edge_Rises_On_The_Wall_Behind_Without_A_Step` | No steep step beside a pillar | Vulkan |
+| 3DEngine | `GlowPenumbraTests.cs:30` `A_Turn_Of_A_Few_Pixels_Moves_The_Penumbra_With_The_World` | No strays in a penumbra and its settling | Vulkan |
+| 3DEngine | `GlowPenumbraTests.cs:89` `With_No_Screen_Probe_The_Floor_Behind_The_Wall_Stays_In_Its_Shadow` | The model pass's own march with the screen probes off | Vulkan |
+| 3DEngine | `GlowFarFromOriginTests.cs:145` `A_Glow_Lights_Light_On_A_Wall_Far_From_The_Origin_Is_As_Smooth_As_At_The_Origin` | A lantern pocket far from the origin reads as near it | Vulkan |
+| 3DEngine | `GlowStillTests.cs:74` `A_Still_View_Holds_Its_Glow_Lights_Light_From_Frame_To_Frame` | The blend held still over 30 frames | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.ScreenProbes.cs:51` `At_Low_A_Glow_Light_Is_Read_From_Probes_Standing_For_It_Alone` | Probes for the glow lights alone, marched against read within 6 | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.ScreenProbes.cs:105` `Far_From_The_Worlds_Origin_Glow_Lights_Leave_No_More_Of_The_Land_Black_Than_Near_It` | A village's torches far and near | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.Walled.cs:67` `Two_Blocks_Meeting_Along_An_Edge_Close_It_To_A_Glow_Lights_Light` | A glowstone walled in lends nothing past the wall | Vulkan |
+| 3DEngine | `GlobalIlluminationTests.cs:199` `An_Emissive_Strip_Thinner_Than_A_Cell_Lights_Its_Room` | A strip carried as a glow light lights the floor | Vulkan |
+| BevyCSharp | `GlobalIlluminationTests.cs:227` `TouchingGlowingBlocksAreOneGlowLight` | A gathered light's share and a long block dropped | CPU |
+| BevyCSharp | `GlobalIlluminationTests.cs:254` `AGlowingBlockLightsTheFloorBesideIt` | Glow lights on and off | Bevy |
+| BevyCSharp | `GlobalIlluminationTests.ScreenProbes.cs:87` `WithTheScreensProbesLeftOutAGlowLightIsReadFromProbesStandingForItAlone` | Probes for the glow lights alone, 3DEngine's twin | Bevy |
+| BevyCSharp | `GlobalIlluminationTests.ScreenProbes.cs:236` `FarFromTheWorldsOriginGlowLightsLeaveNoMoreOfTheLandBlackThanNearIt` | A village's torches far and near | Bevy |
+| BevyCSharp | `GlobalIlluminationTests.ScreenProbes.cs:305` `AStillViewOfAWallLitByAGlowLightHoldsItsLightFromFrameToFrame` | A still glow room changes under 0.1 levels | Bevy |
+| BevyCSharp | `GlobalIlluminationTests.Edges.cs:21` `TwoBlocksMeetingAlongAnEdgeCloseItToAGlowLightsLight` | A glowstone walled in lends nothing past the wall | Bevy |
+| BevyCSharp | `GlobalIlluminationTests.Emitters.cs:20` `ARoomLitBySixEmittersReadsAsItsReference` | Six emitters, each face within 10% | Bevy rays |
+| BevyCSharp | `GlobalIlluminationTests.Emitters.cs:46` `ARoomLitByOneEmitterKeepsItsReading` | A room lit by one emitter keeps its reading, within 14% | Bevy rays |
+| BevyCSharp | `GlobalIlluminationTests.Emitters.cs:71` `ARoomLitByABallReadsAsItsReference` | A ball emitter within 10% | Bevy rays |
+
+BevyCSharp has no unit test of `GlowLights.Write` (3DEngine's `GlowLightsTests.cs:41`), whose faint
+level differs, 1/300 in 3DEngine and 0.001 in BevyCSharp, and none of the traced tables of a rod,
+the floor's rings, a pillar and a bulb (`:143`, `:165`, `:343`, `:483`), the penumbra's tests or the
+lantern pocket far from the origin (`GlowFarFromOriginTests.cs:145`). 3DEngine has no test of a
+ball's share by its area (BevyCSharp's `GlobalIlluminationTests.Emitters.cs:71`).
+
+### The light on the picture
+
+| Engine | Test | What it holds | Device |
+|---|---|---|---|
+| 3DEngine | `BounceRoomsTests.Each.cs:53` `Each_Room_Reads_Within_Its_Measured_Difference_From_Its_Reference` | The nine bounce rooms at three qualities against their stored references, bounds 0.02 to 0.34 | GPU rays |
+| 3DEngine | `BounceRoomsTests.cs:36` `The_Grazing_Floor_At_Low_Keeps_Its_Difference_With_A_Far_Cascade_Set` | The grazing floor at Low with a far cascade, under 0.06 | GPU rays |
+| 3DEngine | `BounceReferenceTests.cs:180` `A_Lone_Slab_Under_A_Lamp_Reads_In_The_Frame_As_In_The_Reference` | A lone slab under a lamp against a reference traced in the run, within 1% | GPU rays |
+| 3DEngine | `BounceReferenceTests.cs:218` `A_Slab_Colored_In_Its_Vertices_Reads_In_The_Frame_As_In_The_Reference` | The same with colors in the vertices | GPU rays |
+| 3DEngine | `BounceReferenceTests.cs:253` `A_Slab_Whose_Colors_Are_Written_In_Place_Bounces_Them_Onto_A_Wall_As_The_Reference_Does` | The same with colors written in place | GPU rays |
+| 3DEngine | `BounceReferenceTests.Textures.cs:11` `A_Slab_Of_Two_Colors_Reads_Each_In_The_Reference_As_In_The_Frame` | A two-color texture within 3% a pixel | GPU rays |
+| 3DEngine | `BounceReferenceTests.Textures.cs:35` `A_Slab_Bent_By_Its_Normal_Map_Reads_In_The_Reference_As_In_The_Frame` | A normal map under the sun within 2% | GPU rays |
+| 3DEngine | `ReferenceFrameTests.GlobalIllumination.cs:11` `A_Cornell_Box_Lit_By_Light_That_Bounces_Matches_Its_Reference` | The Cornell box at High against a stored picture, 5% of pixels may differ | Vulkan |
+| 3DEngine | `ReferenceFrameTests.GlobalIllumination.cs:49` `A_Room_Of_A_Game_Lit_By_The_Sun_Through_Its_Windows_Matches_Its_Reference` | A library lit by the sun and an environment | Vulkan |
+| 3DEngine | `ReferenceFrameTests.GlobalIllumination.cs:90` `Glossy_Surfaces_Reflecting_Through_The_Field_Match_Their_Reference` | A glossy hall at High | Vulkan |
+| 3DEngine | `ReferenceFrameTests.GlobalIllumination.cs:137` `A_Room_Of_Wick_Lit_By_Its_Lamp_And_A_Wick_Matches_Its_Reference` | A house at Low | Vulkan |
+| 3DEngine | `LightTermsTests.cs:27` `A_Sunlit_Pixels_Light_Is_The_Sum_Of_Its_Terms_The_Suns_The_Largest` | The light's terms sum to the drawn light within 5% | Vulkan |
+| 3DEngine | `BounceRoomsTests.cs:102` `The_Thin_Rooms_Corner_Takes_No_Light_From_The_Lamp_Outside` | The thin room's corner takes no light from the lamp outside | Vulkan |
+| BevyCSharp | `BounceRoomsTests.cs:91` `EachRoomLiesWithinItsMeasuredDistanceFromItsReference` | The nine bounce rooms at three qualities against their stored references, the screen probes unread, bounds 0.02 to 0.41 | Bevy rays |
+| BevyCSharp | `BounceRoomsTests.cs:151` `WithTheScreenProbesEachRoomLiesWithin3DEnginesBound` | The same with the screen probes, bounds 0.03 to 0.42 | Bevy rays |
+| BevyCSharp | `BounceRoomsTests.cs:197` `ALitRoomsFloorLiesWithinTheBoundOfItsReference` | The Cornell floor within 16% of a reference traced in the run | Bevy rays |
+| BevyCSharp | `GlobalIlluminationTests.Forward.cs:21` `ASurfaceDrawnForwardKeepsTheLightBevyGaveIt` | A surface drawn forward keeps the light Bevy gave it, within 5% | Bevy |
+| BevyCSharp | `GlobalIlluminationTests.Forward.cs:140` `ALeafInShadeTakesTheProbesLightAsTheSurfaceBesideIt` | A leaf against a card within 12% | Bevy |
+| BevyCSharp | `GlobalIlluminationTests.Forward.cs:161` `ALeafGivesBackTheLightBevyLetsThroughItFromAllAround` | A leaf gives back the light Bevy lets through it, under 0.35 of off | Bevy |
+
+3DEngine's stored pictures (`ReferenceFrameTests.GlobalIllumination.cs`) run on lavapipe and allow
+2% of the pixels, 5% for the Cornell box, more than 24 levels apart. The distances to the
+path-traced references in both engines run on a GPU with ray queries alone.
+
+### The contact shadow
+
+| Engine | Test | What it holds | Device |
+|---|---|---|---|
+| 3DEngine | `ModelShadowTests.cs:59` `With_Contact_Shadows_Off_A_Shadow_The_Map_Holds_Keeps_Its_Hard_Edge_With_The_Field_On` | The field's contact shadow beside the map's hard edge and past its reach | Vulkan |
+| 3DEngine | `ReferenceFrameTests.SceneField.cs:43` `A_Scene_Lit_Through_Its_Distance_Field_Matches_Its_Reference` | A scene lit through its field against a stored picture | Vulkan |
+| BevyCSharp | `SceneFieldShadowTests.cs:89` `TheFieldsShadowIsAsDeepAsTheShadowMapsOwnWhereBothDarken` | The field's shadow as deep as the map's, within 4 levels | Bevy |
+| BevyCSharp | `SceneFieldShadowTests.cs:108` `PastTheShadowMapTheFieldLeavesWhatTheMapHoldsAsItWas` | Past the map the field leaves what the map holds | Bevy |
+| BevyCSharp | `SceneFieldShadowTests.cs:130` `ASunUnderTheHorizonHasNoLightTakenBackThroughTheField` | A sun under the horizon takes no light back | Bevy |
+| BevyCSharp | `SceneFieldShadowTests.cs:205` `AProgramsOwnDrawOnTheCameraStaysBesideTheFieldsShadows` | A program's own draw stays beside the field's shadows | Bevy |
+
+3DEngine has no test of the field's shadow as deep as the map's in levels (BevyCSharp's
+`SceneFieldShadowTests.cs:89`) or of a sun under the horizon (`:130`). BevyCSharp has no test that
+the field darkens the ground past the map's reach (3DEngine's `ModelShadowTests.cs:59`) and no
+stored picture of a scene lit through its field (`ReferenceFrameTests.SceneField.cs:43`).
+
+### The reference
+
+| Engine | Test | What it holds | Device |
+|---|---|---|---|
+| 3DEngine | `BounceReferenceTests.cs:28` `Inside_A_Closed_Emissive_Box_The_Reference_Shows_Its_Light_Over_One_Less_Its_Color` | An emissive box reads 1/(1-rho) within 2% | GPU rays |
+| 3DEngine | `BounceReferenceTests.cs:40` `In_The_Emissive_Box_No_Bounce_Shows_The_Walls_Own_Light_And_One_Bounce_Adds_Their_Color` | 0 bounces read 1 and one bounce 1+rho | GPU rays |
+| 3DEngine | `BounceReferenceTests.cs:52` `A_Probe_Inside_The_Emissive_Box_Has_Its_Light_Over_One_Less_Its_Color_Arriving_From_Every_Way` | A probe in the emissive box within 3% | GPU rays |
+| 3DEngine | `BounceReferenceTests.cs:74` `A_Screen_Probe_Inside_The_Emissive_Box_Reads_Each_Ray_As_The_Reference_Does` | A screen probe's rays against the reference | GPU rays |
+| 3DEngine | `BounceReferenceTests.cs:113` `A_Probe_Beside_A_Block_Carried_As_A_Glow_Light_Reads_None_Of_Its_Emission_In_The_Reference` | A glow block left out of the probes' reference and kept in the picture's | GPU rays |
+| 3DEngine | `BounceReferenceTests.cs:316` `A_Floor_Under_A_Slab_Letting_Half_The_Light_Through_Reads_In_The_Reference_The_Sky_Its_Depth_Keeps` | A slab letting half through keeps 0.336 of the sky | GPU rays |
+| 3DEngine | `BounceReferenceTests.Gloss.cs:15` `A_Smooth_Metal_Plane_Under_The_Sky_Reads_The_Sky_Times_Its_Fresnel` | A metal plane under the sky 0.87 to 1.0 | GPU rays |
+| 3DEngine | `BounceReferenceTests.Gloss.cs:29` `A_Rough_Dielectric_At_A_Grazing_View_Reads_Fresnels_Share_Of_The_Sky_Over_Its_Diffuse` | A rough dielectric at a grazing view 0.59 to 0.72 | GPU rays |
+| 3DEngine | `BounceReferenceTests.Gloss.cs:43` `A_Metal_Wall_Under_The_Sun_Mirrors_It_Onto_The_Floor_Beside_It_Where_Every_Face_Is_Glossy` | A metal wall mirrors the sun onto the floor | GPU rays |
+| 3DEngine | `RoughReflectionTests.cs:71` `In_A_Box_Of_Metal_The_Reference_Reflects_The_Boxs_Light_Where_Its_Specular_Share_Is_Traced` | A metal box with and without specular | GPU rays |
+| BevyCSharp | `GiReferenceTests.cs:160` `AReferenceTracedAfterAnotherHoldsItsOwnPathsAlone` | A second reference holds its own paths | Bevy rays |
+| BevyCSharp | `GiReferenceTests.cs:205` `TheReferencesSunIsDimmedThroughTheAirAsThePictures` | The reference's sun dimmed through the air as the picture's, within 8% | Bevy rays |
+| BevyCSharp | `GiReferenceTests.cs:266` `ACutOutCardLetsTheReferencesPathsThroughWhereItsAlphaIsUnderTheCutoff` | Cut-out cards | Bevy rays |
+| BevyCSharp | `GiReferenceTests.cs:355` `AReferenceMeetsTheLevelOfAMeshItsDistanceFromTheEyeGives` | The reference meets a mesh where its distance says | Bevy rays |
+| BevyCSharp | `GiReferenceTests.cs:416` `AGrassPatchReadsInTheReferenceTheLightThePictureGivesIt` | Grass 0.85 to 1.15 | Bevy rays |
+| BevyCSharp | `GiReferenceTests.cs:540` `ACutOutCardsNormalMapTurnsItsLightInTheReferenceAsInThePicture` | A normal map 0.9 to 1.1 | Bevy rays |
+| BevyCSharp | `GiReferenceTests.cs:616` `ASmoothMetalPlaneReflectsTheSkyInTheReference` | A metal plane under the sky 0.85 to 1.05 | Bevy rays |
+| BevyCSharp | `GiReferenceTests.cs:633` `ARoughDielectricAtAGrazingViewReadsFresnelsShareOfTheSkyOverItsDiffuse` | A rough dielectric at a grazing view 0.59 to 0.72 | Bevy rays |
+| BevyCSharp | `GiReferenceTests.cs:701` `TheReferenceBindsTheMasksTheDevicesTexturesAStageLeaveRoomFor` | The reference binds the masks | CPU |
+
+The smooth metal plane and the rough dielectric are twins, the same plane 4 by 4 read at 128 by 128,
+the dielectric's bound the same in both, 0.59 to 0.72, and the metal's 0.87 to 1.0 in 3DEngine
+against 0.85 to 1.05 in BevyCSharp. Each tests its own tracer and neither tests one against the
+other.
+
+### The views
+
+| Engine | Test | What it holds | Device |
+|---|---|---|---|
+| 3DEngine | `ReferenceFrameTests.SceneField.cs:55` `A_Cascade_Of_The_Distance_Field_Matches_Its_Reference` | A cascade of the field against a stored picture | Vulkan |
+| BevyCSharp | `SceneFieldShadowTests.cs:22` `TheWindowsSliceAcrossABoxIsRedInsideBlackAtItsFacesAndGrayBeyond` | A slice across a box red inside, black at its faces, gray beyond | Bevy |
+| BevyCSharp | `GiReferenceTests.cs:31` `ThePictureIsReadWithGlobalIlluminationOff` | The picture read before and after with global illumination off | Bevy |
+
+Each engine's view is its own tool, held by its own test.
+
+## Rooms both engines draw alike
+
+The nine bounce rooms are built alike in both, in 3DEngine's `BounceRoomsTests.cs:611-748` and its
+example `3DEngine.Examples/Shaders/ShadersBounceRooms.cs:27-170`, and in BevyCSharp's
+`BounceRoomsTests.cs:301-475`, which says it took them from 3DEngine (BevyCSharp's
+`BounceRoomsTests.cs:20-24`). They hold the same geometry, colors, roughness of 0.5, lights' places,
+ranges and shadows and the same sun with no sky, and both read them at 160 by 90 averaged to 80 by
+45 against stored references of 4,096 paths a pixel by the same distance. The two engines' stored
+references, each traced by its own tracer, agree. BevyCSharp's mean light over 3DEngine's is 0.971
+to 1.026 a view, and the sum of their difference over 3DEngine's light is 0.001 to 0.049 a view, the
+most in the corridor. They are the pair the two engines' pictures are compared by, and no test
+compares them. What differs in how each lights them:
+
+- **Units.** 3DEngine draws at an exposure of 1, a light's strength being the light a white surface
+  facing it returns. BevyCSharp draws in Bevy's units at an exposure of `1 / (1.2 * 2^9.7)`, the
+  sun's lux and the lamps' lumens worked from the same strengths (BevyCSharp's
+  `BounceRoomsTests.cs:447-470`).
+- **The diffuse term.** 3DEngine's model pass and reference take Lambert's, and Bevy's lighting and
+  BevyCSharp's reference take Burley's.
+- **The field.** 3DEngine centers it on each room's middle (`SetSceneFieldCenter`), and BevyCSharp
+  lays it about the camera.
+- **The direct light.** 3DEngine's model pass draws it, and in BevyCSharp Bevy's lighting draws it
+  under `gi_light`'s take-back.
+- **The screen probes.** 3DEngine's distance test reads them. BevyCSharp's `BounceRoomsTests.cs:91`
+  leaves them unread and its `BounceRoomsTests.cs:151` reads them.
+- **The bounds.** BevyCSharp's test named for 3DEngine's bound (`BounceRoomsTests.cs:151`) carries
+  numbers of its own, 0.42 against 3DEngine's 0.164 in view 3 at High, 0.17 against 0.106 in view 4
+  and 0.09 against 0.036 in view 7.
+
+Room 1 is the Cornell box in both, and 3DEngine also draws it as its example and its stored picture
+`cornell_box.png`. BevyCSharp's closed Cornell box (`GlobalIlluminationTests.Bounces.cs:239`) has no
+3DEngine twin.
+
+Smaller rooms built alike in the two engines' tests, each a pair whose readings can be set side by
+side:
+
+| Room | 3DEngine | BevyCSharp |
+|---|---|---|
+| a red wall, a white block and a floor, a lamp at 0.5, 2.6, 0.8 | `GlobalIlluminationTests.cs:233-238` | `GlobalIlluminationTests.ScreenProbes.cs:179-192` |
+| a closed room 5.6 wide with a strip 2 by 0.06 by 0.06 | `GlobalIlluminationTests.cs:206-211` | `GlobalIlluminationTests.ScreenProbes.cs:104-117` |
+| a room of thin walls in cells of 0.5, a lamp outside and a board | `GlobalIlluminationTests.WallFoot.cs:44-49`, `GlobalIlluminationTests.Board.cs:42-48` | `GlobalIlluminationTests.ThinWalls.cs:280-308` |
+| a stone room with a stepped wall and a glowstone at 15, 5, -14 | `GlobalIlluminationTests.Walled.cs:94-105` | `GlobalIlluminationTests.Edges.cs:41-53` |
+| a black wall 200 wide and 40 ahead | `GlobalIlluminationTests.Far.cs:24-25` | `GlobalIlluminationTests.cs:179` |
+| ground and a slab 20 by 1 by 20 at 2.5 or 5.5 | `GlobalIlluminationTests.Foliage.cs:41-42` | `GlobalIlluminationTests.LightThrough.cs:36-37` |
+| a desert village of 56 torches near the origin and 10,000 out | `GlobalIlluminationTests.ScreenProbes.cs:141-143` | `GlobalIlluminationTests.ScreenProbes.cs:259-273` |
+| a mirror floor and a red block or wall | `GlobalIlluminationTests.cs:516-520` | `GlobalIlluminationTests.cs:467-476` |
+| a closed room under an environment map | `GlobalIlluminationTests.Frames.cs:508-511`, `CascadeEdgeTests.cs:139-146` | `GlobalIlluminationTests.cs:431-440`, `:505-520` |
+| a box of 2 for the field | `SceneFieldTests.cs:366-375` | `SceneFieldTests.cs:180-185` |
+| a plane 4 by 4 under the sky for the reference | `BounceReferenceTests.Gloss.cs:15`, `:29` | `GiReferenceTests.cs:616`, `:633` |
+
+The panel room (4 by 3 in 3DEngine, 6 by 3 in BevyCSharp) and the six emitters (6 wide and gray 170
+in 3DEngine, 8 wide, linear 0.787 and roughness 0.9 in BevyCSharp) share a purpose and not a form.
+Sponza comes from one source in both, as different packs lit in different ways, and no test loads it
+in either. The only reference the two engines hold byte for byte is tonemapping's, eight pictures
+alike in both (SHARED.md).
+
+## The order of the move
+
+The kernels move least bound first, each with the tests named above in both engines.
+
+1. **The field's plan and the triangles' pool.** C# and Rust on the CPU, tested on the CPU in both
+   and in CI. The module settles the two forms first, the stamp before a mesh settles and the lead,
+   3DEngine's being the later.
+2. **The glow lights' choice and layout** (`GlowLights`). On the CPU, with 3DEngine's tests and a
+   port of `GlowLightsTests.cs:41` to BevyCSharp once the faint level is one.
+3. **`field_splat`, `field_resolve` and `field_stamp` with the readers' module**, which every later
+   kernel imports. Their WGSL differences, the atomics, the emission left unpacked, the dispatch
+   that clears and the still images read as textures, become the module's two bindings. The box of 2
+   is the test both engines share, and the readers' own test is written before them.
+4. **`gi_trace`, `gi_merge` and `gi_ambient` with the probes' readers**, `gi`, `cascades` and
+   `probelight` against `bcs_gi`. They are held by the nine bounce rooms in both against one set of
+   references the module keeps, and by a port of `Frames.cs:13` to BevyCSharp, which the fault in
+   its `follow` fails.
+5. **`lightthrough` and `roughreflect`**, small modules the probes import.
+6. **`gi_screen`, `gi_screen_filter` and `gi_screen_glow` with `glow`.** They are bound to each
+   engine's depth and view through the screen's view the interface names.
+7. **The light on the picture** moves least. Its shared functions move, `distantAround`,
+   `reflectedAt` and the glow lights' read, and the model pass's terms and `gi_light`'s take-back
+   stay their engine's.
+8. **The contact shadow's march** moves as a function, and where it is traced and how its result is
+   applied stay each engine's.
+9. **`gi_reference`** stays with each engine, bound to its own ray scene, materials and diffuse
+   term, and the module keeps the references the two trace.
