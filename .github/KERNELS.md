@@ -1247,7 +1247,7 @@ committed and BevyCSharp at `36840712`. Each field and function carries what it 
 engine today, as `3DEngine: name file:line | BevyCSharp: name file:line`, with `lacks` where an
 engine has none. A file is named alone, as `scenefield.slang`, where its name is its engine's own.
 Where the two engines hold one thing in two forms both are shown and the difference is said, and no
-choice is made between them. The engines' sessions choose at their items 265 and 138.
+choice is made between them. The choice is made when the kernels move.
 
 ### 1. The field's images
 
