@@ -2,27 +2,28 @@
 
 Reviewed up to `040353c`, item 7, the interface written out, the ten things an engine gives a kernel
 as declarations with each field's name in each engine and both forms shown where they differ, a
-section of .github/KERNELS.md, pushed at 02:29 on 2026-11-14; it keeps the form, one sentence of it
-naming the engines' items by number, to be mended. Before it `13d21db`, item 6, what holds each
-kernel today, 262 tests of the two engines tabled a pair with their devices and gaps, the rooms both
-draw alike and the order of the move, a section of .github/KERNELS.md, pushed at 02:15 on
-2026-11-14; it keeps the form. Before it `7806020`, item 5, the two engines' radiance cascades read
-side by side in .github/KERNELS.md, each kernel paired with its like, where each pair differs, what
-stays an engine's own and the interface of ten things an engine gives a kernel, a document alone
-that starts no run, pushed at 00:10 on 2026-11-14; it keeps the form. Before it `8cc387d`, item 2,
-pushed at 12:31 on 2026-10-31 with `8811a8e`, item 1, after the owner's first commit, its run green
-at 12:35 on the three systems in about three minutes, the first of this repository. Both commits
-keep the form, the three-mark subject, one sentence, the owner's identity as author and committer,
-no trailer (N 7.2 and N 7.6 kept at the first commit); the library references no engine (N 2.1). The
-documents are the engines' with the engine's name replaced and the engine-only lines dropped,
-COMMITS.md the game's with N 7.1's pointer rule in place of the legacy branch line, .gitignore with
-the dump folder, .claude and .ref; AGENTS.md's devlog row carries no link until DEVLOG.md exists and
-its table of areas gains the rows item 2 adds. The skeleton sets ImportDirectoryBuildTargets false,
-since a submodule under modules/ would inherit an engine's Directory.Build.targets, makes a missing
-summary an error, loads the assembly by name in its one test, and build/version.sh prints 0.1.0; the
-strict build 0 warnings and 0 errors, the test passing. After it `ff4bfe3`, the norm and the
-review's head alone, pushed at 14:51 on 2026-11-03, with no run since the build passes over the
-review's files; it keeps the form. Before it `cbc0d97`, the owner's first commit alone.
+section of .github/KERNELS.md, pushed at 02:29 on 2026-11-14; it keeps the form, and `21761ff` and
+`ad7841e` after it, pushed at 02:30 and at 02:31, take three sentences that named an item by number
+out of the document. Before it `13d21db`, item 6, what holds each kernel today, 262 tests of the two
+engines tabled a pair with their devices and gaps, the rooms both draw alike and the order of the
+move, a section of .github/KERNELS.md, pushed at 02:15 on 2026-11-14; it keeps the form. Before it
+`7806020`, item 5, the two engines' radiance cascades read side by side in .github/KERNELS.md, each
+kernel paired with its like, where each pair differs, what stays an engine's own and the interface
+of ten things an engine gives a kernel, a document alone that starts no run, pushed at 00:10 on
+2026-11-14; it keeps the form. Before it `8cc387d`, item 2, pushed at 12:31 on 2026-10-31 with
+`8811a8e`, item 1, after the owner's first commit, its run green at 12:35 on the three systems in
+about three minutes, the first of this repository. Both commits keep the form, the three-mark
+subject, one sentence, the owner's identity as author and committer, no trailer (N 7.2 and N 7.6
+kept at the first commit); the library references no engine (N 2.1). The documents are the engines'
+with the engine's name replaced and the engine-only lines dropped, COMMITS.md the game's with N
+7.1's pointer rule in place of the legacy branch line, .gitignore with the dump folder, .claude and
+.ref; AGENTS.md's devlog row carries no link until DEVLOG.md exists and its table of areas gains the
+rows item 2 adds. The skeleton sets ImportDirectoryBuildTargets false, since a submodule under
+modules/ would inherit an engine's Directory.Build.targets, makes a missing summary an error, loads
+the assembly by name in its one test, and build/version.sh prints 0.1.0; the strict build 0 warnings
+and 0 errors, the test passing. After it `ff4bfe3`, the norm and the review's head alone, pushed at
+14:51 on 2026-11-03, with no run since the build passes over the review's files; it keeps the form.
+Before it `cbc0d97`, the owner's first commit alone.
 
 ## Now
 
