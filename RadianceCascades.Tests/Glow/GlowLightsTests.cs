@@ -16,7 +16,7 @@ public sealed partial class GlowLightsTests
     // The forms these tests hold, a light reaching as far as a surface takes a 300th of its light
     // or of what a surface half a probe spacing from it takes, the lights ranked by what each sends
     // about the eye, and a head ahead of the lights.
-    private static readonly GlowForms Ranked = new() { FaintThousandth = false, NearestFirst = false, LightsAlone = false };
+    private static readonly GlowOptions Ranked = new();
 
     // The box around a mesh's positions in its own space.
     private static FieldBox BoxOf(TestMesh mesh) => FieldBox.Of(mesh.Positions);
@@ -51,7 +51,7 @@ public sealed partial class GlowLightsTests
         var drawn = Enumerable.Range(0, 70).Select(i => (new SceneFieldPlan.Instance(1, vertices, Matrix4x4.CreateTranslation(i * 2, 0.5f, 0),
             false, Vector3.One, new Vector3(4, 2, 1)), false)).ToList();
         var bytes = new byte[GlowLights.Size];
-        var found = GlowLights.Write(bytes, drawn, new Vector3(200, 0, 0), 0.25f, BoxOf, _ => 1, Ranked);
+        var found = GlowLights.Write(bytes, drawn, new Vector3(200, 0, 0), 0.25f, BoxOf, _ => 1, options: Ranked);
 
         found.Should().Be(70);
         var floats = MemoryMarshal.Cast<byte, float>(bytes.AsSpan()).ToArray();
@@ -125,7 +125,7 @@ public sealed partial class GlowLightsTests
         float[] Placed(Vector3 place)
         {
             var (bytes, places, origin) = (new byte[GlowLights.Size], new GlowPlaces(), Near(place));
-            GlowLights.Write(bytes, Lamps(place), place + new Vector3(0, 2, 6), 0.25f, BoxOf, _ => 1, Ranked, places, origin: origin);
+            GlowLights.Write(bytes, Lamps(place), place + new Vector3(0, 2, 6), 0.25f, BoxOf, _ => 1, places, origin: origin, options: Ranked);
             GlowLights.Place(bytes, origin, places);
             return MemoryMarshal.Cast<byte, float>(bytes.AsSpan()).ToArray();
         }

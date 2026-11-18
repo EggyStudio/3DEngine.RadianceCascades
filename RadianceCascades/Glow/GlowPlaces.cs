@@ -27,7 +27,7 @@ public sealed class GlowPlaces
 
     /// <summary>
     /// How many places the lights the last frame wrote take, up to the last taken, as the head's
-    /// count holds it.
+    /// count holds it, and where the count is given when the block carries the lights alone.
     /// </summary>
     public int Count { get; private set; }
 

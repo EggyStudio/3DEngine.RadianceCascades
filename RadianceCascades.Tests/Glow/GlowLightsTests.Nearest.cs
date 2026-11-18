@@ -15,7 +15,7 @@ public sealed partial class GlowLightsTests
     /// </summary>
     public sealed class Nearest
     {
-        private static readonly GlowForms Forms = new() { FaintThousandth = true, NearestFirst = true, LightsAlone = true };
+        private static readonly GlowOptions Options = new() { Faint = 0.001f, ReachFloor = false, NearestFirst = true, LightsAlone = true };
 
         [Fact]
         [Trait("Category", "Unit")]
@@ -31,7 +31,7 @@ public sealed partial class GlowLightsTests
             var lantern = (new SceneFieldPlan.Instance(2, vertices, Matrix4x4.CreateTranslation(0, 0.5f, 10), false, Vector3.One, new Vector3(40, 30, 20)), false);
             var (bytes, places) = (new byte[GlowLights.Most * GlowLights.Bytes], new GlowPlaces());
 
-            GlowLights.Write(bytes, [lantern, sign], Vector3.Zero, 0.25f, mesh => FieldBox.Of(mesh.Positions), _ => 1, Forms, places).Should().Be(2);
+            GlowLights.Write(bytes, [lantern, sign], Vector3.Zero, 0.25f, mesh => FieldBox.Of(mesh.Positions), _ => 1, places, options: Options).Should().Be(2);
 
             places.Count.Should().Be(2, "the two lights take the first two places, which the lights alone do not hold");
             var floats = MemoryMarshal.Cast<byte, float>(bytes.AsSpan()).ToArray();

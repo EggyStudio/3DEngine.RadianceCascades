@@ -21,7 +21,7 @@ public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull wh
             {
                 // A built cascade a still mesh came into or left is built again whole where the
                 // engine's kernels build no region.
-                if (Forms.WholeBuilds) (_dirty[c], _changed[c]) = (true, With(_changed[c], bounds));
+                if (Options.WholeBuilds) (_dirty[c], _changed[c]) = (true, With(_changed[c], bounds));
                 else _regions[c] = With(_regions[c], bounds);
             }
     }

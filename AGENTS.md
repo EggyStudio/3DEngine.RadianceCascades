@@ -1,6 +1,6 @@
 # RadianceCascades
 
-RadianceCascades is a library both engines, 3DEngine and BevyCSharp, take as a git submodule, for
+RadianceCascades is a library for any engine that binds it, taken as a git submodule, for
 the CPU side of radiance cascades, their layout, the placement of their probes, the build of the
 scene field and the rules of the merge, and their Slang shaders. It references no engine, no
 engine's package and no engine's bridge (NORM.md, N 2.1). What it needs of a renderer, a world, a

@@ -398,3 +398,18 @@ takes no share where BevyCSharp's took 0.05. `Write` returns the lights found, t
 being in `GlowPlaces.Count`. A form is added for any of them that BevyCSharp's rooms read apart.
 Nine of 3DEngine's CPU tests of the glow lights come with it, twelve cases, and one under
 BevyCSharp's forms; the rest draw, or read the engine's shaders, and stay.
+
+The sweep, in the commit carrying this line, with Tools at its head `7cb9e97`, the README check
+given the library again and the sixth fact, no tracked text naming an engine. `FieldForms` and
+`GlowForms` are `FieldPlanOptions` and `GlowOptions`, sealed records of settings each at a default,
+every summary saying what the setting does and its remarks what it trades, and the constructor and
+`GlowLights.Write` take them last, null for the defaults. `Ahead` and the constant `Lead` are the
+one setting `Lead`, 0 for none. The way the eye looks stays a parameter of `Update` and
+`OriginAround`, since a lead needs a way to lie along. `FaintThousandth` is `Faint`, a share, with
+`ReachFloor` beside it, and `StampsArrivals` is `StampArrivals`. `DrewTwice` is `DrawnTwiceInPlace`.
+
+The diagnostics stay as they are, since `Waiting` sums with LINQ and `Unsettled` builds an array, so
+one value gathering them would allocate each frame an engine reads it where a single property read
+does not. KERNELS.md leaves the repository, and the README's binding section holds the settings'
+table, each with its default, what it does and what it trades. The sheet is made again with its
+title line and gray, from the settings.

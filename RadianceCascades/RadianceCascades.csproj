@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <!-- The library both engines reference from their own projects, which knows no engine (N 2.1).
-         The assembly and the package take the 3DEngine prefix, which makes the name unique, and the
-         namespace stays the module's own. -->
+    <!-- The library an engine references from a project of its own, which knows no engine (N 2.1).
+         The assembly and the package take a prefix that makes their name unique, and the namespace
+         stays the module's own. -->
     <PropertyGroup>
         <AssemblyName>3DEngine.RadianceCascades</AssemblyName>
         <PackageId>3DEngine.RadianceCascades</PackageId>

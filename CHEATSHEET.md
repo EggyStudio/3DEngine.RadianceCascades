@@ -20,8 +20,7 @@ int MaxShapes = 256;                                     // How many shapes are 
 int BrickCells = 4;                                      // The cells along each side of a brick a stamp writes
 int SnapCells = 8;                                       // How many of its cells a cascade's corner moves by at least
 int DefaultTriangleBudget = 32768;                       // How many triangles the builds splat a frame at most unless the engine says
-float Lead = 0.35f;                                      // The share of its width a cascade's middle lies ahead of the eye where Ahead is set
-SceneFieldPlan(int cascades, float cellSize, int budget, Func<TMesh, FieldBox> bounds, Func<TMesh, int> triangles, FieldForms forms, Func<TMesh, FieldPart[]?>? parts = null, Func<SceneFieldPlan<TMesh, TTag>.Instance<TMesh, TTag>, Vector3>? tint = null, int triangleBudget = 32768, float farCell = 0f, Func<SceneFieldPlan<TMesh, TTag>.Instance<TMesh, TTag>, bool>? carried = null);
+SceneFieldPlan(int cascades, float cellSize, int budget, Func<TMesh, FieldBox> bounds, Func<TMesh, int> triangles, Func<TMesh, FieldPart[]?>? parts = null, Func<SceneFieldPlan<TMesh, TTag>.Instance<TMesh, TTag>, Vector3>? tint = null, int triangleBudget = 32768, float farCell = 0f, Func<SceneFieldPlan<TMesh, TTag>.Instance<TMesh, TTag>, bool>? carried = null, FieldPlanOptions? options = null);
 int BaseTriangleBudget { get; }                          // The triangle budget the field was made with, which TriangleBudget is raised from
 int BuildingTriangles { get; }                           // The triangles of the meshes the build in progress splats over its frames, or none
 (int, FieldCells)? Unbuilt { get; }                      // The cascade a shift moved and the cells it brought in, which hold nothing until the shift's build ends in a later frame, or null where no shift waits
@@ -31,7 +30,7 @@ int Arriving { get; }                                    // How many meshes draw
 bool Whole { get; }                                      // Whether the field holds every mesh in reach, every cascade built and every mesh that came built in, so a ray that leaves it meeting nothing met no mesh there
 bool Built { get; }                                      // Whether the field holds the scene as it stands, Whole with no build in progress and none waiting, every cascade built where the eye has it, so only what moves is stamped as boxes, which a picture of the scene waits for
 int FramesBuilt { get; }                                 // How many frames running the field has been Built, 0 while it is not
-FieldForms Forms { get; }                                // The forms the engine chose where the plan holds two
+FieldPlanOptions Options { get; }                        // The settings the plan was made with
 int Cascades { get; }                                    // How many cascades, the far one among them where there is one
 int Counted { get; }                                     // How many cascades there are but the far one, each twice as coarse as the one before
 float FarCell { get; }                                   // The width of a cell of the far cascade, the last, or 0 where there is none
@@ -46,7 +45,7 @@ List<(int, int)> BrickRanges { get; }                    // The shapes that come
 List<int> BrickShapes { get; }                           // The shapes of each brick one run after another, by their place in Shapes
 int StillCount { get; }                                  // How many meshes are still
 bool ReadByPlace { get; }                                // Whether the last frame drew the meshes the frame before did in the same order, and was read by place
-bool DrewTwice { get; }                                  // Whether a frame has drawn a mesh twice in one place, the same mesh, matrix and material, which no frame read by place may, since the plan counts each mesh's frames once
+bool DrawnTwiceInPlace { get; }                          // Whether a frame has drawn a mesh twice in one place, the same mesh, matrix and material, which no frame read by place may, since the plan counts each mesh's frames once
 Vector3 Eye { get; }                                     // The eye the cascades lie around this frame, as Update was last given it
 int Spent { get; }                                       // How much of the triangle budget this frame's builds spent, each mesh its triangles by the share of its bounds within the cells built, an eighth of them at least
 long Frame { get; }                                      // The frames the plan has been updated for
@@ -60,7 +59,7 @@ int CascadeOfProbes(int probes, int cascades);           // The cascade the prob
 float CellOf(int cascade);                               // The width of a cell of a cascade
 float FarCellFor(float reach, int cascades, float cellSize);  // The width of a cell of a far cascade for reach, 0.85 of its width, at least twice as wide as the last counted cascade's of cascades from cellSize, or 0 for a reach of none or past every finite distance
 Vector3? BuiltOrigin(int cascade);                       // Where a cascade lies as it was last built, its corner, or null for one not yet built
-Vector3 OriginAround(int cascade, Vector3 eye, Vector3 ahead = default);  // Where a cascade's corner would lie around eye, its middle on the snap's grid nearest the eye, or where Ahead is set, ahead of it along ahead, a unit direction or zero
+Vector3 OriginAround(int cascade, Vector3 eye, Vector3 ahead = default);  // Where a cascade's corner would lie around eye, its middle on the snap's grid nearest the eye, or where Lead is above 0, that share of its width ahead of it along ahead, a unit direction or zero
 void Rebuild(int frames);                                // Marks every cascade to be built again at each of the next frames frames, as many a frame as the budget allows, so a profile over them times a build
 void Update(Vector3 eye, IReadOnlyList<ValueTuple<SceneFieldPlan<TMesh, TTag>.Instance<TMesh, TTag>, bool>> drawn, Vector3 ahead = default);
 int Move(double x, double y, double z);                  // Moves every place the plan keeps by a whole step, in doubles, as a program moved every place it hands the engine by it
@@ -75,11 +74,12 @@ FieldBox With(FieldBox other);                           // The box around this 
 FieldBox Transformed(Matrix4x4 world);                   // The box around this one's eight corners moved by world
 FieldBox Of(ReadOnlySpan<Vector3> positions);            // The box around positions, or a box of no size at the origin for none
 
-record struct FieldForms                                 // The forms the plan holds two ways, each the engine's to name, none taken for it
-bool Ahead { get; init; }                                // Whether a cascade's middle lies Lead of its width ahead of the eye the way it looks, its corner snapped down and stepped clear of the eye, so more of it holds what the eye sees, where otherwise it lies around the eye on the snap nearest it, so a turn builds nothing again
-bool StampsArrivals { get; init; }                       // Whether a mesh that came and has not moved, and a still one that waits for its cascades, are stamped as boxes until they are built, where otherwise only a mesh that moved is, since a box stands in badly for a mesh larger than what it holds, as a building's outer walls
-bool WholeBuilds { get; init; }                          // Whether every build is of a whole cascade, for field kernels that build no region and shift no cascade, where otherwise a cascade the eye moved by whole cells shifts and what came or went within a built one is built as a region of it
-bool RepaintWaits { get; init; }                         // Whether a still mesh painted again where it stands is still at once only where it had stood still for SettleFrames frames since it settled, and otherwise stays in the field as it was until its new paint settles, as one replaced in place does, so a mesh painted each frame is not built in each frame, where otherwise the mesh painted again goes on from the frames the one painted had
+record FieldPlanOptions                                  // How the field's plan places its cascades, stamps what has not settled, builds and settles a mesh painted again, each setting at a default an engine may leave
+FieldPlanOptions();
+float Lead { get; init; }                                // The share of its width a cascade's middle lies ahead of the eye along the way it looks, its corner snapped down and stepped clear of the eye, or 0 for a cascade around the eye on the snap nearest it
+bool StampArrivals { get; init; }                        // Whether a mesh that came and has not moved, and a still one waiting for its cascades, are stamped as boxes until they are built, where by default only a mesh that moved is
+bool WholeBuilds { get; init; }                          // Whether every build is of a whole cascade, where by default a cascade the eye moved by whole cells shifts and what came or went within a built cascade is built as a region of it
+bool RepaintWaits { get; init; }                         // Whether a still mesh painted again where it stands is still at once only where it had stood still for SettleFrames frames since it settled, staying in the field as it was until its new paint settles, where by default it goes on from the frames the mesh painted had
 
 record struct FieldPart                                  // A part of a mesh stamped as a box of its own, the box around the part's vertices at rest in the mesh's own space, and where the part's pose moves that space to, a joint's matrix for a skinned mesh's limb and none for a part of a mesh that does not bend
 FieldPart(FieldBox Rest, Matrix4x4 Pose);
@@ -95,10 +95,12 @@ bool[] OpenEdges(ReadOnlySpan<Vector3> positions, ReadOnlySpan<uint> indices);  
 int PoolCapacity(int wanted, int needed, ulong? free);   // How many triangles a pool is made for, twice wanted, those of the build in progress, rounded up to a power of two, so its later parts fit, or where the device has less than twice that free, as many as half what it has free holds and those of this frame's meshes, needed, at least
 FieldPart[]? Cut(ReadOnlySpan<Vector3> positions, ReadOnlySpan<uint> indices);  // A mesh that does not bend cut by its triangles into up to eight parts, each the box around its triangles, so a moving table or car is stamped as its shape rather than the box around all of it, or null for a mesh of fewer than 16 triangles, as a box or a slab, which is its one box
 
-record struct GlowForms                                  // The forms the glow lights hold two ways, each the engine's to name, none taken for it
-bool FaintThousandth { get; init; }                      // Whether a light reaches as far as a surface there takes a thousandth of the light it emits, where otherwise it reaches as far as a surface takes a 300th, or as far as a surface takes a 300th of what one half the first cascade's probe spacing from it takes where that is farther, so a lamp's small bulb reaches the floor under it however bright it burns
-bool NearestFirst { get; init; }                         // Whether the Most lights written are those nearest the eye, where otherwise they are those that send the most about the eye, each one's light times the surface it emits from over its squared distance from the eye, so a bright lantern down the street is written before a faint emitter beside the eye
-bool LightsAlone { get; init; }                          // Whether the block is the lights alone from its first byte, Most of Bytes each, the places they take and the bits of those kept from the frame before handed apart through GlowPlaces, where otherwise a head of Head bytes lies ahead of them with the count of places taken, the box every light's reach lies in and those bits
+record GlowOptions                                       // How far the glow lights reach, which of the carried emitters are written, and where the block carries its count, each setting at a default an engine may leave
+GlowOptions();
+float Faint { get; init; }                               // The share of a light's own light a surface takes at its reach, past which the light is let go, a 300th by default
+bool ReachFloor { get; init; }                           // Whether a light reaches at least as far as a surface takes Faint of what one half the first cascade's probe spacing from it takes, so a lamp's small bulb reaches the floor under it however dim it burns, on by default
+bool NearestFirst { get; init; }                         // Whether the Most lights written are those nearest the eye, where by default they are those that send the most about the eye, each one's light times the surface it emits from over its squared distance from the eye
+bool LightsAlone { get; init; }                          // Whether the block is the lights alone from its first byte, the places they take and the bits of those kept from the frame before handed apart through GlowPlaces, where by default a head of Head bytes lies ahead of the lights with their count, the box every light's reach lies in and those bits
 
 class GlowLights                                         // The small emissive surfaces, which global illumination carries as lights of their own rather than by the rays that meet them, which of them are lights, and the block the glow kernel reads them from, each light 80 bytes as the kernel's GlowLight reads it
 int Most = 64;                                           // How many carried emitters are lights at most, as the glow kernel's MostGlowLights
@@ -108,7 +110,7 @@ int Head = 48;                                           // The bytes ahead of t
 int Size = 5168;                                         // The bytes the head and the lights take
 bool Carries(Vector3 emission, IReadOnlyList<GlowPart> parts, Matrix4x4 world, float firstCell);  // Whether an instance emitting emission is carried as lights, every part of its mesh carried as Carries carries a box
 bool Carries(Vector3 emission, FieldBox box, Matrix4x4 world, float firstCell);  // Whether an instance emitting emission is carried as a light, its box in the world no longer than twice the first cascade's probe spacing
-int Write<TMesh, TTag>(Span<byte> bytes, IReadOnlyList<ValueTuple<SceneFieldPlan<TMesh, TTag>.Instance<TMesh, TTag>, bool>> drawn, Vector3 eye, float firstCell, Func<TMesh, FieldBox> boxOf, Func<TMesh, float> shareOf, GlowForms forms, GlowPlaces? places = null, Func<TMesh, IReadOnlyList<GlowPart>>? partsOf = null, FrameOrigin origin = default);
+int Write<TMesh, TTag>(Span<byte> bytes, IReadOnlyList<ValueTuple<SceneFieldPlan<TMesh, TTag>.Instance<TMesh, TTag>, bool>> drawn, Vector3 eye, float firstCell, Func<TMesh, FieldBox> boxOf, Func<TMesh, float> shareOf, GlowPlaces? places = null, Func<TMesh, IReadOnlyList<GlowPart>>? partsOf = null, FrameOrigin origin = default, GlowOptions? options = null);
 void Place(Span<byte> bytes, FrameOrigin origin, GlowPlaces? places = null);  // The lights Write wrote with their middles and the box about their reach taken against origin, a place no light holds left empty
 List<GlowLight> Gather<TMesh, TTag>(IReadOnlyList<ValueTuple<SceneFieldPlan<TMesh, TTag>.Instance<TMesh, TTag>, bool>> drawn, float firstCell, Func<TMesh, FieldBox> boxOf, Func<TMesh, float> shareOf, Func<TMesh, IReadOnlyList<GlowPart>>? partsOf = null, FrameOrigin origin = default);
 GlowPart[] PartsOf(Vector3[]? corners, FieldBox box, float share);  // The parts of a mesh, its triangles joined where they share a corner, from its corners three a triangle in its own space, or the mesh whole, box with share, where its triangles are all joined or it has none
@@ -170,7 +172,7 @@ Vector3 Key { get; init; }                               // Its middle in world 
 class GlowPlaces                                         // The place each glow light is written in, kept from frame to frame
 GlowPlaces();
 ReadOnlySpan<uint> Kept { get; }                         // The places whose light is the one the frame before had there, a bit a place, the first 32 in the first uint, as the head holds them
-int Count { get; }                                       // How many places the lights the last frame wrote take, up to the last taken, as the head's count holds it
+int Count { get; }                                       // How many places the lights the last frame wrote take, up to the last taken, as the head's count holds it, and where the count is given when the block carries the lights alone
 void Move(double x, double y, double z);                 // Knows every light by its middle moved by a whole step the program moved its world by, worked in doubles, so each light keeps its place through the move
 void Forget();                                           // Lets every place go, for a frame that writes no glow light
 ```

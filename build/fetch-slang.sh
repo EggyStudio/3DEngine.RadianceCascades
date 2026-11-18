@@ -2,16 +2,16 @@
 #
 # Downloads the Slang compiler this checkout builds its shaders with, into build/tools/slang.
 #
-# The module's Slang is compiled by its tests to SPIR-V and to WGSL, the two targets the engines
-# build it for, so a checkout needs slangc before those tests can run. The tests look for it at
+# The module's Slang is compiled by its tests to SPIR-V, WGSL, HLSL and Metal, so a checkout needs
+# slangc before those tests can run. The tests look for it at
 # build/tools/slang/bin/slangc, walking up from the tests' folder, so nothing has to be put on the
 # PATH. RADIANCECASCADES_SLANGC wins when it is set.
 #
 # An engine that takes the module compiles the module's Slang with the slangc of its own checkout,
 # so this copy serves the module's tests alone.
 #
-# The version is pinned to the one both engines pin, so the tests compile the SPIR-V and the WGSL
-# the engines do. Pass --force to download it again over what is there.
+# The version is pinned, so every checkout's tests compile the same SPIR-V and WGSL. Pass --force
+# to download it again over what is there.
 #
 # Usage:
 #   build/fetch-slang.sh

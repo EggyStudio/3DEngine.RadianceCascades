@@ -16,7 +16,7 @@ public sealed class GlowLightRankTests
     // The forms the test holds, the lights ranked by what each sends about the eye, each reaching
     // as far as a surface takes a 300th of its light or of what one half a probe spacing off takes,
     // and a head ahead of the lights.
-    private static readonly GlowForms Ranked = new() { FaintThousandth = false, NearestFirst = false, LightsAlone = false };
+    private static readonly GlowOptions Ranked = new();
 
     [Fact]
     public void A_Bright_Lamp_Farther_Than_Seventy_Faint_Ones_Is_Lit_And_The_Faintest_Are_Not()
@@ -31,7 +31,7 @@ public sealed class GlowLightRankTests
             false, Vector3.One, new Vector3(0.04f)), false));
         var lantern = (new SceneFieldPlan.Instance(2, vertices, Matrix4x4.CreateTranslation(0, 0.5f, 20), false, Vector3.One, new Vector3(40, 30, 20)), false);
         var bytes = new byte[GlowLights.Size];
-        GlowLights.Write(bytes, [.. faint, lantern], Vector3.Zero, 0.25f, mesh => FieldBox.Of(mesh.Positions), _ => 1, Ranked).Should().Be(71);
+        GlowLights.Write(bytes, [.. faint, lantern], Vector3.Zero, 0.25f, mesh => FieldBox.Of(mesh.Positions), _ => 1, options: Ranked).Should().Be(71);
 
         var floats = MemoryMarshal.Cast<byte, float>(bytes.AsSpan()).ToArray();
         floats[0].Should().Be(GlowLights.Most);

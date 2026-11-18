@@ -1,5 +1,5 @@
 # Every push and pull request. The module is built with warnings failing the build (NORM.md, N 6.1)
-# and its tests run on Linux, Windows and macOS, the systems the engines ship for (N 6.2).
+# and its tests run on Linux, Windows and macOS, the desktop systems a game ships for (N 6.2).
 name: build
 
 # Documents are left out, the README apart, whose commands a reader follows.
@@ -23,8 +23,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # The images the engines' own jobs run on, Linux and macOS named rather than the latest
-        # labels, so a new release under a label changes nothing with no commit to show for it.
+        # Linux and macOS named rather than the latest labels, so a new release under a label
+        # changes nothing with no commit to show for it.
         os: [ubuntu-24.04, windows-latest, macos-15]
     runs-on: ${{ matrix.os }}
     # The build took 6 seconds and the test 2 on a desktop with the packages restored and slangc
@@ -42,7 +42,7 @@ jobs:
           dotnet-version: '10.0.x'
 
       # The compiler the tests compile the library's Slang with, kept between runs under the
-      # script's hash as the engines keep theirs, and downloaded by the script where none is kept.
+      # script's hash, and downloaded by the script where none is kept.
       - uses: actions/cache@v6
         with:
           path: build/tools/slang

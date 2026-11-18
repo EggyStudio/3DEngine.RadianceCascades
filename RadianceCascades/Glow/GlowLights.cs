@@ -25,9 +25,9 @@ namespace RadianceCascades;
 /// its parts, its triangles joined where they share a corner, and is carried where each part is,
 /// each a light of its own (<see cref="PartsOf"/>), and a mesh given whole is one light of its box.
 /// How far a light reaches, and which <see cref="Most"/> of the carried emitters are lights each
-/// frame, are forms of <see cref="GlowForms"/>. One past them lights nothing a probe carries to a
-/// floor, its cells marked all the same, so a level of more lamps than that lights only those. The
-/// field marks a mesh whole, so a mesh of many parts past them lights none of the ground around
+/// frame, are settings of <see cref="GlowOptions"/>. One past them lights nothing a probe carries
+/// to a floor, its cells marked all the same, so a level of more lamps than that lights only those.
+/// The field marks a mesh whole, so a mesh of many parts past them lights none of the ground around
 /// those parts.
 /// </para>
 /// </remarks>
@@ -51,19 +51,19 @@ public static partial class GlowLights
     public const int Bytes = 80;
 
     /// <summary>
-    /// The bytes ahead of the lights, the count and the least corner of the box every light's
-    /// reach lies in, the box's most corner, and a bit a place saying whether it holds the frame
-    /// before's light, as the glow kernel's <c>GlowLightsHead</c>.
+    /// The bytes ahead of the lights, the count and the least corner of the box every light's reach
+    /// lies in, the box's most corner, and a bit a place saying whether it holds the frame before's
+    /// light, as the glow kernel's <c>GlowLightsHead</c>.
     /// </summary>
     /// <remarks>
-    /// The block has no head where <see cref="GlowForms.LightsAlone"/> is set, and its lights start
-    /// at its first byte.
+    /// The block has no head where <see cref="GlowOptions.LightsAlone"/> is set, and its lights
+    /// start at its first byte.
     /// </remarks>
     public const int Head = 32 + KeptVectors * 16;
 
     /// <summary>The bytes the head and the lights take.</summary>
     /// <remarks>
-    /// Where <see cref="GlowForms.LightsAlone"/> is set the block is <see cref="Most"/> times
+    /// Where <see cref="GlowOptions.LightsAlone"/> is set the block is <see cref="Most"/> times
     /// <see cref="Bytes"/> long.
     /// </remarks>
     public const int Size = Head + Most * Bytes;
@@ -72,17 +72,8 @@ public static partial class GlowLights
     // side and the reach's floor are measured in.
     private const int ProbeSpacing = 8;
 
-    // The light a surface at the reach takes from one, a 300th of the light it emits, past which
-    // the light is let go, over a quarter of the box's surface as the box's mean face seen from
-    // afar. A share of its own light, so every light keeps the same share of its light whatever its
-    // brightness, where a light let go at a fixed level reaches less far the dimmer it is, and six
-    // emitters of a sixth of one's light each less far still, so a closed room lit by six takes
-    // far less light than one lit by one.
-    private const float Faint = 1f / 300;
-
-    // The share where GlowForms.FaintThousandth is set, a thousandth, which keeps the reach of one
-    // bright emitter as far as a camera exposed for the room it lights sees it.
-    private const float Thousandth = 0.001f;
+    // The settings a block is written with where the engine gives none.
+    private static readonly GlowOptions Defaults = new();
 
     // How far from an emitter, in the first cascade's probe spacings, a surface's light is the one
     // the reach is measured against where that reaches further than the emitter's own light does.
@@ -124,16 +115,18 @@ public static partial class GlowLights
     }
 
     /// <summary>
-    /// Writes the lights the carried emitters among <paramref name="drawn"/> make, those the forms
-    /// rank first about <paramref name="eye"/>, into <paramref name="bytes"/>, and gives how many
-    /// there were in all, written or not.
+    /// Writes the lights the carried emitters among <paramref name="drawn"/> make, those ranked
+    /// first about <paramref name="eye"/>, into <paramref name="bytes"/>, and gives how many there
+    /// were in all, written or not.
     /// </summary>
     /// <remarks>
-    /// A place no light takes, up to the last taken, is left a light of no reach. Where
-    /// <see cref="GlowForms.LightsAlone"/> is set no head is written, so the count of places taken
-    /// is <paramref name="places"/>' <see cref="GlowPlaces.Count"/>, or the lesser of the count
-    /// given back and <see cref="Most"/> where there are no places, and the bits of those kept are
-    /// its <see cref="GlowPlaces.Kept"/>.
+    /// A light reaches as far as a surface there takes <see cref="GlowOptions.Faint"/> of its
+    /// light, over a quarter of its box's surface as the box's mean face seen from afar. A place no
+    /// light takes, up to the last taken, is left a light of no reach. Where
+    /// <see cref="GlowOptions.LightsAlone"/> is set no head is written, so the count of places
+    /// taken is <paramref name="places"/>' <see cref="GlowPlaces.Count"/>, or the lesser of the
+    /// count given back and <see cref="Most"/> where there are no places, and the bits of those
+    /// kept are its <see cref="GlowPlaces.Kept"/>.
     /// </remarks>
     /// <typeparam name="TMesh">
     /// What the engine knows a mesh's vertices by, as its plan does.
@@ -141,7 +134,7 @@ public static partial class GlowLights
     /// <typeparam name="TTag">The engine's own of each draw, as its plan carries it.</typeparam>
     /// <param name="bytes">
     /// The head's bytes, <see cref="Head"/>, and the lights', <see cref="Size"/> in all, or the
-    /// lights' alone where <see cref="GlowForms.LightsAlone"/> is set.
+    /// lights' alone where <see cref="GlowOptions.LightsAlone"/> is set.
     /// </param>
     /// <param name="drawn">The meshes the field gathered this frame.</param>
     /// <param name="eye">The eye, about which the lights are ranked.</param>
@@ -154,7 +147,6 @@ public static partial class GlowLights
     /// <see cref="ShareOf(Vector3[], FieldBox)"/> works out from its corners and
     /// <see cref="ShareOf(double, FieldBox)"/> from its area.
     /// </param>
-    /// <param name="forms">The forms the engine chose where the glow lights hold two.</param>
     /// <param name="places">
     /// The places the lights kept the frame before, which a light still among them is written in
     /// again, or null to write them in the order they are ranked in.
@@ -167,23 +159,27 @@ public static partial class GlowLights
     /// their middles kept in <paramref name="places"/> for <see cref="Place"/>, those written being
     /// in world numbers.
     /// </param>
+    /// <param name="options">
+    /// The settings the block is written with, or null for the defaults.
+    /// </param>
     public static int Write<TMesh, TTag>(Span<byte> bytes, IReadOnlyList<(SceneFieldPlan<TMesh, TTag>.Instance Instance, bool Skinned)> drawn, Vector3 eye,
-        float firstCell, Func<TMesh, FieldBox> boxOf, Func<TMesh, float> shareOf, GlowForms forms, GlowPlaces? places = null,
-        Func<TMesh, IReadOnlyList<GlowPart>>? partsOf = null, FrameOrigin origin = default)
+        float firstCell, Func<TMesh, FieldBox> boxOf, Func<TMesh, float> shareOf, GlowPlaces? places = null,
+        Func<TMesh, IReadOnlyList<GlowPart>>? partsOf = null, FrameOrigin origin = default, GlowOptions? options = null)
         where TMesh : notnull where TTag : IEquatable<TTag>
     {
         var lights = Gather(drawn, firstCell, boxOf, shareOf, partsOf, origin);
-        Rank(lights, eye, firstCell, forms);
+        options ??= Defaults;
+        Rank(lights, eye, firstCell, options);
         var floats = MemoryMarshal.Cast<byte, float>(bytes);
         var count = Math.Min(lights.Count, Most);
         Span<int> placeOf = stackalloc int[Most];
         var used = places?.Place(lights, count, placeOf) ?? count;
-        var start = forms.LightsAlone ? 0 : Head / 4;
+        var start = options.LightsAlone ? 0 : Head / 4;
         floats.Slice(start, used * Bytes / 4).Clear();
         // The box no light reaches past, empty where there is none, so a point outside it, as one
         // of the far land, takes no light without being weighed against each.
         var (low, high) = (new Vector3(float.MaxValue), new Vector3(float.MinValue));
-        var faint = forms.FaintThousandth ? Thousandth : Faint;
+        var faint = options.Faint;
         for (int n = 0; n < count; n++)
         {
             if (places is null) placeOf[n] = n;
@@ -192,7 +188,7 @@ public static partial class GlowLights
             places?.Note(placeOf[n], lights[n].Middle, origin);
             var surface = 4 * FacesSurface(new Vector3(x.Length(), y.Length(), z.Length()), faces == 0 ? All : faces) * share;
             var reach = MathF.Sqrt(surface / (4 * faint));
-            if (!forms.FaintThousandth) reach = MathF.Max(reach, MeasuredAt * ProbeSpacing * firstCell / MathF.Sqrt(faint));
+            if (options.ReachFloor) reach = MathF.Max(reach, MeasuredAt * ProbeSpacing * firstCell / MathF.Sqrt(faint));
             var light = floats.Slice(start + placeOf[n] * Bytes / 4, Bytes / 4);
             (light[0], light[1], light[2], light[3]) = (middle.X, middle.Y, middle.Z, reach);
             (low, high) = (Vector3.Min(low, middle - new Vector3(reach)), Vector3.Max(high, middle + new Vector3(reach)));
@@ -203,7 +199,7 @@ public static partial class GlowLights
             // as the glow kernel's glowShare and glowFaces read them.
             (light[16], light[17], light[18], light[19]) = (glow.X, glow.Y, glow.Z, share + 2 * faces);
         }
-        if (!forms.LightsAlone)
+        if (!options.LightsAlone)
         {
             (floats[0], floats[7]) = (used, 0);
             (floats[1], floats[2], floats[3]) = (low.X, low.Y, low.Z);
@@ -217,11 +213,11 @@ public static partial class GlowLights
 
     // The lights ranked by what each sends about the eye, its luminance times the surface it emits
     // from over its distance from the eye squared, a cell's at least, so a bright lantern down the
-    // street is lit before a faint emitter beside the eye, or nearest the eye first where the forms
-    // say. Both measure from the middle in world numbers, as the eye is given.
-    private static void Rank(List<GlowLight> lights, Vector3 eye, float firstCell, GlowForms forms)
+    // street is lit before a faint emitter beside the eye, or nearest the eye first where the
+    // settings say. Both measure from the middle in world numbers, as the eye is given.
+    private static void Rank(List<GlowLight> lights, Vector3 eye, float firstCell, GlowOptions options)
     {
-        if (forms.NearestFirst)
+        if (options.NearestFirst)
         {
             lights.Sort((a, b) => Vector3.DistanceSquared(a.Key, eye).CompareTo(Vector3.DistanceSquared(b.Key, eye)));
             return;
@@ -244,7 +240,7 @@ public static partial class GlowLights
     /// </summary>
     /// <remarks>
     /// It reads the count from the head, so it places a block written with one, where
-    /// <see cref="GlowForms.LightsAlone"/> is cleared.
+    /// <see cref="GlowOptions.LightsAlone"/> is cleared.
     /// </remarks>
     public static void Place(Span<byte> bytes, FrameOrigin origin, GlowPlaces? places = null)
     {

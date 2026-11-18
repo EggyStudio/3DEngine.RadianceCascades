@@ -17,8 +17,7 @@ public sealed class BindingTests
         // reference, and its own of a draw is an int it never sets.
         var plan = new SceneFieldPlan<Vector3[], int>(cascades: 4, cellSize: 0.25f, budget: 1,
             bounds: positions => FieldBox.Of(positions),
-            triangles: positions => positions.Length / 3,
-            forms: new FieldForms { Ahead = false, StampsArrivals = false, WholeBuilds = false, RepaintWaits = false });
+            triangles: positions => positions.Length / 3);
 
         // A floor eight meters a side, two triangles, its corners in its own space.
         Vector3[] floor = [new(-4, 0, -4), new(4, 0, -4), new(4, 0, 4), new(-4, 0, -4), new(4, 0, 4), new(-4, 0, 4)];

@@ -8,7 +8,7 @@
         <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
         <!-- As a submodule under an engine's modules folder, the module would otherwise take the
              engine's Directory.Build.targets from the folders above, since MSBuild searches upward
-             for one apart from this file. Both engines have one. -->
+             for one apart from this file. -->
         <ImportDirectoryBuildTargets>false</ImportDirectoryBuildTargets>
     </PropertyGroup>
 

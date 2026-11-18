@@ -23,7 +23,7 @@ internal static class Slangc
     /// </summary>
     /// <remarks>
     /// The search goes past the repository's root, so a checkout of the module as an engine's
-    /// submodule finds the engine's slangc where it has none of its own, at the version both pin.
+    /// submodule finds the engine's slangc where it has none of its own.
     /// </remarks>
     internal static string? Path { get; } = Find();
 

@@ -22,13 +22,9 @@ public sealed partial class SceneFieldPlanTests
 
     // A plan that reads a mesh as the box around its positions and a triangle for every three of
     // them, the counts the tests' numbers were worked out with, unless a test gives its own.
-    // The forms these tests hold, a cascade around the eye, arrivals not stamped, regions and
-    // shifts built, and a mesh painted again going on from the frames it had.
-    private static readonly FieldForms Around = new() { Ahead = false, StampsArrivals = false, WholeBuilds = false, RepaintWaits = false };
-
     private static SceneFieldPlan NewPlan(int cascades, float cellSize, int budget, Func<SceneFieldPlan.Instance, Vector3>? tint = null,
         int triangleBudget = SceneFieldPlan.DefaultTriangleBudget, Func<TestMesh, int>? triangles = null, float farCell = 0) =>
-        new(cascades, cellSize, budget, mesh => FieldBox.Of(mesh.Positions), triangles ?? (mesh => mesh.Positions.Length / 3), Around, tint: tint,
+        new(cascades, cellSize, budget, mesh => FieldBox.Of(mesh.Positions), triangles ?? (mesh => mesh.Positions.Length / 3), tint: tint,
             triangleBudget: triangleBudget, farCell: farCell);
 
     [Fact]

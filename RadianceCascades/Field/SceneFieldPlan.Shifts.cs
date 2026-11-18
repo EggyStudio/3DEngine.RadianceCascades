@@ -16,7 +16,7 @@ public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull wh
     // corner moved half the cascade or more, past which the kept cells are fewer than the slab's.
     private Job? ShiftOf(int cascade, Vector3 target)
     {
-        if (_forced || Forms.WholeBuilds || _built[cascade] is not { } built || _changed[cascade] is not null) return null;
+        if (_forced || Options.WholeBuilds || _built[cascade] is not { } built || _changed[cascade] is not null) return null;
         var cell = CellOf(cascade);
         var moved = (target - built) / cell;
         int[] cells = [(int)MathF.Round(moved.X), (int)MathF.Round(moved.Y), (int)MathF.Round(moved.Z)];

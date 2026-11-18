@@ -25,7 +25,7 @@ public sealed partial class SceneFieldPlanTests
         /// </summary>
         internal readonly record struct NumberedMesh(uint Mesh, uint Generation, FieldBox Bounds);
 
-        private static readonly FieldForms Forms = new() { Ahead = true, StampsArrivals = true, WholeBuilds = true, RepaintWaits = true };
+        private static readonly FieldPlanOptions Options = new() { Lead = 0.35f, StampArrivals = true, WholeBuilds = true, RepaintWaits = true };
 
         private static readonly FieldBox CubeBounds = new(new Vector3(-1), new Vector3(1));
 
@@ -33,7 +33,7 @@ public sealed partial class SceneFieldPlanTests
         // a test gives no count, as the tests' numbers were worked out with.
         private static SceneFieldPlan NewPlan(int cascades, float cellSize, int budget, int triangleBudget = SceneFieldPlan.DefaultTriangleBudget,
             Func<NumberedMesh, int>? triangles = null) =>
-            new(cascades, cellSize, budget, mesh => mesh.Bounds, triangles ?? (_ => 1000), triangleBudget: triangleBudget, forms: Forms);
+            new(cascades, cellSize, budget, mesh => mesh.Bounds, triangles ?? (_ => 1000), triangleBudget: triangleBudget, options: Options);
 
         // A draw of a mesh that has no inside, its gloss none, its roughness, metallic share and
         // reflectance each 0, as the draws the tests were written with carry it.
@@ -205,7 +205,7 @@ public sealed partial class SceneFieldPlanTests
             (SceneFieldPlan.Instance, bool)[] twice = [At(Vector3.Zero), At(Vector3.Zero), At(Vector3.UnitX, mesh: 2)];
             plan.Update(Vector3.Zero, twice);
             plan.Update(Vector3.Zero, twice);
-            Assert.True(plan.DrewTwice);
+            Assert.True(plan.DrawnTwiceInPlace);
             Assert.False(plan.ReadByPlace);
 
             (SceneFieldPlan.Instance, bool)[] once = [At(Vector3.Zero), At(Vector3.UnitX, mesh: 2)];
@@ -213,7 +213,7 @@ public sealed partial class SceneFieldPlanTests
             Assert.False(plan.ReadByPlace);
             plan.Update(Vector3.Zero, once);
             Assert.True(plan.ReadByPlace);
-            Assert.True(plan.DrewTwice, "told once, the field keeps gathering each mesh once");
+            Assert.True(plan.DrawnTwiceInPlace, "told once, the field keeps gathering each mesh once");
         }
 
         [Fact]

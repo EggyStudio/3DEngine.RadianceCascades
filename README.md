@@ -2,10 +2,10 @@
 
 # RadianceCascades
 
-RadianceCascades is a library both engines, 3DEngine and BevyCSharp, take as a git submodule, for
-the CPU side of radiance cascades, their layout, the placement of their probes, the build of the
-scene field and the rules of the merge, and their Slang shaders. It references no engine, and each
-engine implements the interfaces it declares where it binds the module.
+RadianceCascades is a library for any engine that binds it, taken as a git submodule, for the CPU
+side of radiance cascades, their layout, the placement of their probes, the build of the scene field
+and the rules of the merge, and their Slang shaders. It references no engine, window or graphics
+API, and an engine gives it what it cannot work out where it binds the module.
 
 ## Taking it into an engine
 
@@ -37,7 +37,7 @@ The tests take the checks every module keeps from the Tools module, a git submod
 its library alone, which takes nothing of Tools', and clones with no recursion into it.
 
 With the .NET 10 SDK, and slangc for the tests that compile the library's Slang to SPIR-V and to
-WGSL, which `build/fetch-slang.sh` downloads into `build/tools` at the version both engines pin:
+WGSL, which `build/fetch-slang.sh` downloads into `build/tools` at the version the script pins:
 
 ```bash
 build/fetch-slang.sh
@@ -61,9 +61,9 @@ parameters and the functions its constructor takes.
 | `TTag` | Its own of each draw, an `IEquatable<TTag>` carried to the builds and compared with the rest of the draw, so a draw whose tag changes is its mesh painted again |
 | `bounds` | The box around a mesh's vertices in its own space, a `FieldBox` |
 | `triangles` | How many triangles a mesh has |
-| `forms` | A `FieldForms` with each of its four forms named |
+| `options` | Where it gives them, the plan's settings, a `FieldPlanOptions`, each at a default it may leave, as the table below says |
 | `parts`, `tint`, `carried` | Where it gives them, the parts a rigid mesh is stamped as, each a `FieldPart`, which `FieldTriangles.Cut` cuts, the color a mesh's boxes are multiplied by, and whether it carries an emissive mesh as a glow light |
-| `GlowForms` | For `GlowLights.Write`, a `GlowForms` with each of its three forms named, the box around a mesh's vertices, and its surface over its box's, which `GlowLights.ShareOf` works out from its corners or its area |
+| `GlowOptions` | For `GlowLights.Write`, the box around a mesh's vertices, its surface over its box's, which `GlowLights.ShareOf` works out from its corners or its area, and where it gives them, the glow lights' settings, a `GlowOptions` |
 | `GlowPart` | Where it gives them, the parts an emissive mesh is carried as, each a `GlowPart`, which `GlowLights.PartsOf` cuts from its corners, and whose boxes `GlowLights.Carries` reads for the plan's `carried` |
 | `FrameOrigin` | Where it takes its places against an origin of its own, the frame's origin in doubles, which the glow lights are gathered against and `GlowLights.Place` places them against, `FrameOrigin.Zero` where it takes none |
 
@@ -88,13 +88,18 @@ The conventions the module stands on:
 - Emission is in the engine's own unit of light, which the plan carries and neither scales nor
   reads.
 
-An engine new to the module names every form false. A cascade then lies around the eye, so a turn
-builds nothing again, a mesh that came stands in for nothing until it is built, since its box stands
-in badly where it is larger than what it holds, and regions and shifts are built, where the engine's
-field kernels build them. Those are the forms most of the plan's tests hold. `RepaintWaits` set
-keeps a mesh painted again every frame, as one whose paint is animated, from being built in each
-frame, and fewer tests hold it. `WholeBuilds` set is for field kernels that build only whole
-cascades.
+Each setting has a default an engine may leave, and each trades one thing for another.
+
+| Setting | Default | What it does | What it trades |
+|---|---|---|---|
+| `FieldPlanOptions.Lead` | 0 | A cascade's middle lies that share of its width ahead of the eye along the way it looks | More of a cascade holds what the eye sees, and a turn of the eye builds the cascade again whole |
+| `FieldPlanOptions.StampArrivals` | false | A mesh that came and has not moved is stamped as a box until it is built | The mesh stands in the field from its first frame, where a box stands in badly for a mesh larger than what it holds |
+| `FieldPlanOptions.WholeBuilds` | false | Every build is of a whole cascade | The field's kernels build no region and shift no cascade, and each move past a snap or change within a cascade builds it again whole |
+| `FieldPlanOptions.RepaintWaits` | false | A still mesh painted again settles at once only once it has stood still for eight frames | A mesh painted every frame is not built in each frame, and a new paint soon after a mesh settled waits a few frames |
+| `GlowOptions.Faint` | a 300th | A glow light reaches as far as a surface takes this share of its light | A smaller share reaches farther, and more lights are weighed at each point |
+| `GlowOptions.ReachFloor` | true | A light reaches at least as far as a surface half the first cascade's probe spacing from it | A small bulb lights the floor under it however dim it burns, past where its own light would end |
+| `GlowOptions.NearestFirst` | false | The 64 lights written are those nearest the eye, not those that send the most about it | Faint emitters beside the eye take the places of a bright lantern down the street |
+| `GlowOptions.LightsAlone` | false | The block is the lights alone, the count and the kept bits handed apart through `GlowPlaces` | A kernel reads a plain array, without the head's box that passes a point outside every light's reach |
 
 The smallest binding, with `using System.Numerics;` and `using RadianceCascades;`, is a floor drawn
 each frame and its triangles laid out for the splat. The kernels that splat a build's meshes into
@@ -105,8 +110,7 @@ its cascade and stamp the shapes into the bricks are the engine's.
 // reference, and its own of a draw is an int it never sets.
 var plan = new SceneFieldPlan<Vector3[], int>(cascades: 4, cellSize: 0.25f, budget: 1,
     bounds: positions => FieldBox.Of(positions),
-    triangles: positions => positions.Length / 3,
-    forms: new FieldForms { Ahead = false, StampsArrivals = false, WholeBuilds = false, RepaintWaits = false });
+    triangles: positions => positions.Length / 3);
 
 // A floor eight meters a side, two triangles, its corners in its own space.
 Vector3[] floor = [new(-4, 0, -4), new(4, 0, -4), new(4, 0, 4), new(-4, 0, -4), new(4, 0, 4), new(-4, 0, 4)];

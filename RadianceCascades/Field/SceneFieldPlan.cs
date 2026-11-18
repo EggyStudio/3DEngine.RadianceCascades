@@ -147,17 +147,11 @@ public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull wh
         Vector3 Color = default, Vector3 Emission = default, FieldPart[]? Parts = null, float Roughness = 1, float Metallic = 0, float LightThrough = 0,
         float Reflectance = 0.5f, float Transmission = 0, TTag? Tag = default);
 
-    /// <summary>
-    /// The share of its width a cascade's middle lies ahead of the eye where
-    /// <see cref="FieldForms.Ahead"/> is set.
-    /// </summary>
-    public const float Lead = 0.35f;
-
-    /// <summary>The forms the engine chose where the plan holds two.</summary>
-    public FieldForms Forms { get; }
+    /// <summary>The settings the plan was made with.</summary>
+    public FieldPlanOptions Options { get; }
 
     // The way the eye looks this frame, as Update was last given it, which a cascade lies ahead
-    // along where Forms.Ahead is set.
+    // along by Options.Lead.
     private Vector3 _ahead;
 
     /// <summary>
@@ -261,7 +255,6 @@ public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull wh
     /// The box around a mesh's vertices in its own space, which the caller may keep.
     /// </param>
     /// <param name="triangles">How many triangles a mesh has.</param>
-    /// <param name="forms">The forms the engine chose where the plan holds two.</param>
     /// <param name="parts">
     /// The parts a mesh that does not bend is stamped as, or null for its one box, which the caller
     /// may keep.
@@ -276,15 +269,16 @@ public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull wh
     /// <param name="farCell">
     /// The width of a cell of the far cascade after the others, or 0 for none.
     /// </param>
+    /// <param name="options">The settings the plan is made with, or null for the defaults.</param>
     /// <param name="carried">
     /// Whether global illumination carries an emissive mesh as a glow light, whose box is stamped
     /// with none of its emission.
     /// </param>
-    public SceneFieldPlan(int cascades, float cellSize, int budget, Func<TMesh, FieldBox> bounds, Func<TMesh, int> triangles, FieldForms forms,
+    public SceneFieldPlan(int cascades, float cellSize, int budget, Func<TMesh, FieldBox> bounds, Func<TMesh, int> triangles,
         Func<TMesh, FieldPart[]?>? parts = null, Func<Instance, Vector3>? tint = null, int triangleBudget = DefaultTriangleBudget,
-        float farCell = 0, Func<Instance, bool>? carried = null)
+        float farCell = 0, Func<Instance, bool>? carried = null, FieldPlanOptions? options = null)
     {
-        Forms = forms;
+        Options = options ?? new();
         _parts = parts ?? (_ => null);
         _tint = tint ?? (_ => Vector3.One);
         _carried = carried ?? (_ => false);
@@ -381,7 +375,7 @@ public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull wh
     /// one such pair would have every frame read whole, which costs the plan several times what a
     /// frame read by place does.
     /// </remarks>
-    public bool DrewTwice { get; private set; }
+    public bool DrawnTwiceInPlace { get; private set; }
 
     /// <summary>
     /// The cascade the probes of cascade <paramref name="probes"/> of <paramref name="cascades"/>
@@ -429,7 +423,8 @@ public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull wh
 
     /// <summary>
     /// Where a cascade's corner would lie around <paramref name="eye"/>, its middle on the snap's
-    /// grid nearest the eye, or where <see cref="FieldForms.Ahead"/> is set, ahead of it along
+    /// grid nearest the eye, or where <see cref="FieldPlanOptions.Lead"/> is above 0, that share of
+    /// its width ahead of it along
     /// <paramref name="ahead"/>, a unit direction or zero.
     /// </summary>
     /// <remarks>
@@ -443,12 +438,12 @@ public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull wh
     {
         var cell = CellOf(cascade);
         var step = cell * SnapCells;
-        if (!Forms.Ahead)
+        if (Options.Lead == 0)
         {
             var snapped = new Vector3(MathF.Floor(eye.X / step + 0.5f), MathF.Floor(eye.Y / step + 0.5f), MathF.Floor(eye.Z / step + 0.5f)) * step;
             return snapped - new Vector3(Resolution / 2 * cell);
         }
-        var middle = eye + ahead * (Lead * Resolution * cell);
+        var middle = eye + ahead * (Options.Lead * Resolution * cell);
         var below = new Vector3(MathF.Floor(middle.X / step), MathF.Floor(middle.Y / step), MathF.Floor(middle.Z / step)) * step;
         var corner = below - new Vector3(Resolution / 2 * cell);
         return new Vector3(Clear(corner.X, eye.X), Clear(corner.Y, eye.Y), Clear(corner.Z, eye.Z));
@@ -478,7 +473,7 @@ public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull wh
     /// <param name="drawn">The meshes drawn this frame, each with whether it is skinned.</param>
     /// <param name="ahead">
     /// The way the eye looks, a unit direction, which the cascades lie ahead along where
-    /// <see cref="FieldForms.Ahead"/> is set.
+    /// <see cref="FieldPlanOptions.Lead"/> is above 0.
     /// </param>
     public void Update(Vector3 eye, IReadOnlyList<(Instance Instance, bool Skinned)> drawn, Vector3 ahead = default)
     {
@@ -532,7 +527,7 @@ public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull wh
                 else if (frames < Settled)
                 {
                     var arrived = _orderMovedAt[i] == Never;
-                    if (!arrived || Forms.StampsArrivals) moving.Add(instance);
+                    if (!arrived || Options.StampArrivals) moving.Add(instance);
                     if (arrived) Arriving++;
                     unsettled.Add(instance);
                 }
@@ -578,7 +573,7 @@ public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull wh
                     _departedAt[(_order[i].Vertices, _order[i].World)] = (_seen.GetValueOrDefault(_order[i]), _movedBefore.GetValueOrDefault(_order[i], Never), _order[i]);
                 }
             // Each mesh's frames drawn the same, a skinned one never still. Where the engine has a
-            // mesh painted again wait (Forms.RepaintWaits), it counts from none, and is still at
+            // mesh painted again wait (Options.RepaintWaits), it counts from none, and is still at
             // once only where the one painted had stood still for as many frames as a mesh takes
             // to settle, stamped then as that one was, not at all where the cascades held it.
             List<(Instance Painted, bool Stands)>? repainted = null;
@@ -591,9 +586,9 @@ public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull wh
                 var movedAt = skinned ? Never : painted ? was.MovedAt
                     : !_seen.ContainsKey(instance) && _departed.Contains(instance.Vertices) ? _frame : _movedBefore.GetValueOrDefault(instance, Never);
                 if (movedAt != Never) _movedNow[instance] = movedAt;
-                var before = painted && !Forms.RepaintWaits ? was.Frames : _seen.GetValueOrDefault(instance);
+                var before = painted && !Options.RepaintWaits ? was.Frames : _seen.GetValueOrDefault(instance);
                 var frames = skinned ? 0 : before >= Settled || before + 1 >= SettleAfter(movedAt) ? Settled : before + 1;
-                if (Forms.RepaintWaits && painted && frames < Settled && _still.TryGetValue(was.Gone, out var still) && _frame - still.Added >= SettleFrames)
+                if (Options.RepaintWaits && painted && frames < Settled && _still.TryGetValue(was.Gone, out var still) && _frame - still.Added >= SettleFrames)
                 {
                     frames = Settled;
                     (repainted ??= []).Add((instance, !_pending.Contains(was.Gone) || _replacing.Contains(was.Gone)));
@@ -603,7 +598,7 @@ public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull wh
                 // A mesh that came and has not moved casts nothing until it is built (_movedIn),
                 // but where the engine has such meshes stamped until then.
                 var arrived = !skinned && movedAt == Never && (painted || !_departedWorlds.Contains(instance.World));
-                if (!arrived || Forms.StampsArrivals) moving.Add(instance);
+                if (!arrived || Options.StampArrivals) moving.Add(instance);
                 if (arrived) Arriving++;
                 if (!skinned) unsettled.Add(instance);
             }
@@ -667,7 +662,7 @@ public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull wh
                     && bounds.Overlaps(CascadeBox(c, origin).Grown(Band * CellOf(c)));
             if (waiting)
             {
-                if (_movedIn.Contains(instance) || Forms.StampsArrivals) moving.Add(instance);
+                if (_movedIn.Contains(instance) || Options.StampArrivals) moving.Add(instance);
             }
             else
             {
@@ -825,7 +820,7 @@ public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull wh
     // Whether a mesh drawn where a still one stood replaces it, one of other vertices, or where the
     // engine has a mesh painted again wait, any other draw, the same mesh painted again among them.
     private bool Other(in Instance instance, in Instance still) =>
-        Forms.RepaintWaits ? !instance.Equals(still) : !EqualityComparer<TMesh>.Default.Equals(instance.Vertices, still.Vertices);
+        Options.RepaintWaits ? !instance.Equals(still) : !EqualityComparer<TMesh>.Default.Equals(instance.Vertices, still.Vertices);
 
     // A mesh drawn the same for SettleFrames frames running, which the cascades around it are built
     // again with and which, where it moved before it settled, is stamped until they have been.
@@ -897,7 +892,7 @@ public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull wh
         }
         _orderCount = drawn.Count;
         _orderWhole = seen.Count == drawn.Count;
-        DrewTwice |= !_orderWhole;
+        DrawnTwiceInPlace |= !_orderWhole;
         for (int i = 0; i < drawn.Count; i++)
         {
             var (instance, skinned) = drawn[i];
