@@ -90,8 +90,8 @@ public readonly record struct FieldCells(int X0, int Y0, int Z0, int X1, int Y1,
 /// <summary>
 /// A mesh stamped as a box, from its own space to the world, the box's middle and half extents
 /// there, the least scale from there to the world, the mesh's color in linear light, the share of
-/// light that passes a unit of its depth, and its emission, linear, none where the engine carries
-/// the mesh as a glow light.
+/// light that passes a unit of its depth, its emission, linear, none where the engine carries the
+/// mesh as a glow light, its gloss, and the share of its diffuse light it sends through.
 /// </summary>
 /// <param name="World">From the box's own space to the world.</param>
 /// <param name="Center">The box's middle in its own space.</param>
@@ -100,8 +100,12 @@ public readonly record struct FieldCells(int X0, int Y0, int Z0, int X1, int Y1,
 /// <param name="Color">The mesh's color, linear.</param>
 /// <param name="LightThrough">The share of light that passes a unit of its depth.</param>
 /// <param name="Emission">The mesh's emission, linear.</param>
+/// <param name="Gloss">The mesh's perceptual roughness, metallic share and reflectance.</param>
+/// <param name="Transmission">
+/// The share of its diffuse light the mesh sends through to its far side.
+/// </param>
 public readonly record struct FieldShape(Matrix4x4 World, Vector3 Center, Vector3 Extents, float Scale, Vector3 Color = default, float LightThrough = 0,
-    Vector3 Emission = default)
+    Vector3 Emission = default, Vector3 Gloss = default, float Transmission = 0)
 {
     /// <summary>
     /// From the world into its own space, or nothing where its matrix has no inverse.

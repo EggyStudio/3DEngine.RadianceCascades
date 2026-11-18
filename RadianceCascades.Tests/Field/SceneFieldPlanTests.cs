@@ -74,8 +74,9 @@ public sealed partial class SceneFieldPlanTests
     public void A_Still_Mesh_Waiting_For_Its_Cascades_Is_Stamped_Only_Where_It_Moved_Before_It_Settled()
     {
         // Two cascades and a budget of one mesh's triangles a frame, so a mesh that settles waits a
-        // frame for the second cascade's region to be built with it, as Sponza's meshes waited 330
-        // frames at the default budget, the box of its outer walls filling the building meanwhile.
+        // frame for the second cascade's region to be built with it. A large scene's meshes wait
+        // hundreds of frames at the default budget, and the box of a building's outer walls would
+        // fill the building meanwhile.
         var plan = NewPlan(2, 0.25f, 1, triangleBudget: 12, triangles: _ => 12);
         var eye = new Vector3(0.1f, 0.1f, 0.1f);
         plan.Update(eye, []);

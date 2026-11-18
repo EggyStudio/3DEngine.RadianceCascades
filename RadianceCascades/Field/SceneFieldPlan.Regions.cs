@@ -18,7 +18,12 @@ public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull wh
     {
         for (int c = 0; c < Cascades; c++)
             if (c != followed && _built[c] is { } origin && bounds.Overlaps(CascadeBox(c, origin).Grown(Band * CellOf(c))))
-                _regions[c] = With(_regions[c], bounds);
+            {
+                // A built cascade a still mesh came into or left is built again whole where the
+                // engine's kernels build no region.
+                if (Forms.WholeBuilds) (_dirty[c], _changed[c]) = (true, With(_changed[c], bounds));
+                else _regions[c] = With(_regions[c], bounds);
+            }
     }
 
     // The finest cascade to be built whole or to have a region built, or -1 for none.
@@ -37,7 +42,7 @@ public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull wh
     {
         // A cascade the eye moved by whole cells shifts, what changed within it built after as its
         // region, which the shift leaves where it lies in the world.
-        if (_dirty[cascade] && ShiftOf(cascade, OriginAround(cascade, eye)) is { } shift)
+        if (_dirty[cascade] && ShiftOf(cascade, OriginAround(cascade, eye, _ahead)) is { } shift)
         {
             _dirty[cascade] = false;
             Gather(shift, eye);
@@ -46,7 +51,7 @@ public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull wh
         Job job;
         if (_dirty[cascade] || _built[cascade] is not { } origin || _regions[cascade] is not { } region)
         {
-            var at = OriginAround(cascade, eye);
+            var at = OriginAround(cascade, eye, _ahead);
             var reach = CascadeBox(cascade, at).Grown(Band * CellOf(cascade));
             job = new Job { Cascade = cascade, Origin = at, Reach = reach, Changed = _built[cascade] is null ? reach : With(_changed[cascade], _regions[cascade]) };
         }

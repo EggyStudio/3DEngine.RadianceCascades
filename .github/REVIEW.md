@@ -363,3 +363,14 @@ Sponza, giving for each room the probes in air, those moved off a surface and th
 how much of the finest cascade's work goes where nothing is read, and how many of the probes item
 141's near wall reads stand inside its walls. It runs on the GPU, so it is taken with the engines'
 coders through N 7.9's lock as the read's first measurement.
+
+Part 2b, the plan's second forms, in the commit carrying this line. `FieldForms` is a public record
+of four members, `Ahead`, `StampsArrivals`, `WholeBuilds` and `RepaintWaits`, each a way the two
+engines' plans part, its defaults 3DEngine's and every member set BevyCSharp's. It fits the two
+engines alone and is named here as Decision 7 asks, and its rows in KERNELS.md's table of the forms
+held twice close by the field's kernels, when it goes or narrows. The instance and the shape carry a
+reflectance and a share sent through, and the plan gains `Lead`, `DrewTwice` and the way the eye
+looks. 10 of BevyCSharp's 16 tests of its plan hold with every member set, each member failing one
+of them when cleared, and six stay in BevyCSharp, five on its GPU and one of its bridge's layout.
+The budget's lift after a cut, which BevyCSharp's plan lacks, comes to it with the module, none of
+its tests reaching it.

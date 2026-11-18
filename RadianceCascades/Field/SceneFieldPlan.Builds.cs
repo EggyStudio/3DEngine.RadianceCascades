@@ -155,9 +155,9 @@ public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull wh
             {
                 if (job.Restart) Gather(job, eye);
             }
-            else if (job.Restart || job.Origin != OriginAround(c, eye))
+            else if (job.Restart || job.Origin != OriginAround(c, eye, _ahead))
             {
-                job.Origin = OriginAround(c, eye);
+                job.Origin = OriginAround(c, eye, _ahead);
                 job.Reach = CascadeBox(c, job.Origin).Grown(Band * CellOf(c));
                 Gather(job, eye);
             }

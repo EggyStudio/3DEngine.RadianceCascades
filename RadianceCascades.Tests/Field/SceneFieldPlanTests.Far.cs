@@ -12,8 +12,8 @@ public sealed partial class SceneFieldPlanTests
     [Trait("Category", "Unit")]
     public void A_Far_Cascade_Reaches_Its_Distance_Ahead_In_Cells_Of_Its_Own_And_Is_Left_Out_Of_The_Count()
     {
-        // Ore's field, four cascades of half a block reaching 256 across, and a far cascade to the
-        // 384 blocks the game draws.
+        // Four cascades of half a unit reaching 256 across, and a far cascade to a view of 384
+        // units.
         var cell = SceneFieldPlan.FarCellFor(384, 4, 0.5f);
         var plan = NewPlan(4, 0.5f, 1, farCell: cell);
         plan.Counted.Should().Be(4);

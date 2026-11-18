@@ -1823,3 +1823,18 @@ BevyCSharp, a file at a time:
 - The frame before's sun map. Nothing keeps Bevy's directional maps for the global queue, which runs
   before the cameras, so a map behind `ISunReach` takes work in `render/views.rs` and
   `render/images.rs`, or the module leaves the map to the engine that has one.
+
+## The forms held twice
+
+The field's plan holds four ways the two engines' plans part, each a member of `FieldForms`
+(`RadianceCascades/Field/FieldForms.cs`) an engine sets, the default 3DEngine's and the member set
+BevyCSharp's. Each stays until what its row names chooses one form for both, and the other
+engine's test changes with it. A row stays open no longer than the two parts of the move after the
+one that brought it.
+
+| Member | Default | Set | What chooses | Brought by, closed by |
+|---|---|---|---|---|
+| `Ahead` | A cascade around the eye on the snap nearest it | Its middle 0.35 of its width ahead of the eye, snapped down and stepped clear of the eye | The plan's tests of a cascade's corner in both forms (`A_Cascade_Lies_Around_The_Eye_And_Moves_Only_Past_Its_Grid` in each), and a pair of pictures of one room in BevyCSharp before and after, with the cascades a turn of the eye builds again counted | The plan, the field's kernels |
+| `StampsArrivals` | A mesh that came and has not moved stands in for nothing until it is built | It is stamped as its box until then, as a still mesh waiting for its cascades is | The plan's tests of a mesh drawn the same for eight frames in each form, and a pair of pictures of a scene's first frames in BevyCSharp before and after | The plan, the field's kernels |
+| `WholeBuilds` | A cascade the eye moved by whole cells shifts, and what came or went within a built one is built as a region of it | Every build is of a whole cascade | BevyCSharp binding the module's field kernels, which build regions and shift cascades, its tests of the plan's builds held in the default form | The plan, the field's kernels |
+| `RepaintWaits` | A mesh painted again where it stands goes on from the frames the one painted had | It is still at once only where the one painted had stood still for eight frames since it settled, and stays as it was until then | A test of a mesh painted again each frame, written before the choice, counting the builds each form makes, beside 3DEngine's tests of a mesh painted again and BevyCSharp's `AMeshPaintedAgainWhereItStandsHasNotMovedAndKeepsItsPlaceInTheField` | The plan, the field's kernels |
