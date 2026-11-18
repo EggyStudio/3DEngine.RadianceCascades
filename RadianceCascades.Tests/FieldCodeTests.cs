@@ -77,6 +77,16 @@ public sealed class FieldCodeTests
     }
 
     [CpuKernelFact]
+    public void A_Faces_Way_Read_Back_From_Its_Eight_Bits_Lies_Within_Fourteen_And_A_Half_Degrees_Of_It()
+    {
+        // The largest over 65,536 ways is 14.15 degrees, near the octahedron's folded corners,
+        // where a square of its sixteen by sixteen spans the most of the sphere.
+        var degrees = Enumerable.Repeat(180f, 256 * 256).ToArray();
+        CpuKernel.Run("way_cpu.slang", (16, 16, 1), degrees);
+        Assert.True(degrees.Max() <= 14.5f, $"a way read back {degrees.Max()} degrees from itself");
+    }
+
+    [CpuKernelFact]
     public void Two_Meshes_Coplanar_Faces_Give_A_Cell_Two_Codes_Of_Which_The_Lesser_Instance_Keeps_It()
     {
         // Two squares in one plane, of instances 9 and 4, overlapping over the cells about the

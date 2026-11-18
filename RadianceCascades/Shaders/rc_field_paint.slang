@@ -67,8 +67,11 @@ public float3 paintAt<F : IFieldCells>(F field, float3 p)
 }
 
 // How far a cell's own surface may pass from a point, in cells, for the cell's paint to count at
-// it, past the way's eight bits' error across half a cell and short of a second surface of the same
-// way four tenths of a cell off.
+// it, short of a second surface of the same way four tenths of a cell off. A face's way read back
+// from its eight bits leans up to 14 degrees from it, so across the cells about a point a surface
+// held through it may pass up to a third of a cell off at the coarsest ways, and such a cell is
+// left out, the cells that face the point's way lending the color where none holds a surface
+// through it.
 public static const float PaintReach = 0.3;
 
 // The color of the field at p on a surface facing n, with in gloss the gloss of the same cells

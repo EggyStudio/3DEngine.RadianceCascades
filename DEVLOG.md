@@ -21,6 +21,10 @@ and resolved on the CPU from the library's Slang.
 
 Commits that day
 
+- `6115a5e` A hit reads its color from the cells of the field about it that face its way and hold a
+  surface through it, so a floor over another of another color a tenth of a unit below reads its
+  own, held by tests run on the CPU, with a reading of the cells about a box and a thin sheet, and
+  Tools pinned at its head with the cheatsheet and the devlog written again.
 - `d573ea7` The library's Slang holds what a cell of the field keeps of the triangles near it and
   the distance the resolve makes of it, and tests run on the CPU build a box of two within a 1024th
   of a cell, part two meshes' coplanar faces by their instances and keep a thin sheet's plane on
@@ -35,10 +39,6 @@ Commits that day
   are settings each at a default with what it does and trades, the cascade's lead one of them, the
   read of two engines' copies leaves the repository, and the tests take the shared check of every
   tracked text.
-- `7622814` The tests take the checks every module keeps from the Tools submodule in place of their
-  own copy, five facts with the cheat sheet the built library writes among them, the README links
-  the devlog and the cheat sheet, and a clone without the submodule stops with the command that
-  fetches it.
 - `ff7571b` The module holds the glow lights' choice and layout, which emitters are carried and cut
   into parts, the 64 that send the most about the eye written into a block of its own against the
   frame's origin, with three ways the engines part behind a record of forms each engine names, ten

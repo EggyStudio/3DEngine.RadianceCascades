@@ -427,3 +427,18 @@ four tenths of a cell off, and falls back to the cells that face the hit's way a
 blend where none holds a surface through it. The red wall on a white floor and a slab half a cell
 thick, red above and white below, read their own colors under both reads. A second surface nearer
 than 0.3 of a cell to the first still blends in, which no test here reads.
+
+The paint's reach, in the commit carrying this line. No measurement chose 0.3 of a cell; it lies
+between two bounds. Above it the found case's second surface lies 0.4 of a cell off the hit. Below
+it a face's way read back from its eight bits leans up to 14.15 degrees from it over 65,536 ways,
+the largest near the octahedron's folded corners
+(`FieldCodeTests.A_Faces_Way_Read_Back_From_Its_Eight_Bits_Lies_Within_Fourteen_And_A_Half_Degrees_Of_It`),
+so across the cells about a hit, up to 1.41 cells along the surface, a surface held through it may
+pass up to 0.35 of a cell off at the coarsest ways. My first reading took four degrees for every
+way, which is the lean of the sheet's own way alone; the sheet is drawn again saying so. Such a cell
+is left out and the cells facing the hit's way lend the color, so no hit of one surface reads
+another, but a second surface 0.3 to 0.35 of a cell off may still blend in at those ways. A floor a
+twentieth of a unit over another, a fifth of a cell, blends a quarter of the lower in, 0.74 of the
+white with 0.26 of the green as the cells' weights give, which
+`FieldPaintTests.A_Floor_Over_Another_Of_Unlike_Color_A_Twentieth_Below_Blends_A_Quarter_Of_It_In`
+states, so a change to the read shows there.

@@ -54,6 +54,23 @@ public sealed class FieldPaintTests
     }
 
     [CpuKernelFact]
+    public void A_Floor_Over_Another_Of_Unlike_Color_A_Twentieth_Below_Blends_A_Quarter_Of_It_In()
+    {
+        // The case the read leaves, a white floor at 0.06 over a green floor a twentieth of a unit
+        // below, a fifth of a cell, nearer than the reach a cell's surface counts within, so the
+        // cells between hold the green through the hit and lend it their share. This states what
+        // the read gives, so a change to it shows here.
+        var floors = Square(new(0, 0.06f, 0), new(2, 0, 0), new(0, 0, -2), White)
+            .Concat(Square(new(0, 0.01f, 0), new(2, 0, 0), new(0, 0, -2), Green));
+        var read = Read(floors, (new(0.3f, 0.06f, 0.1f), Vector3.UnitY));
+        // The hit lies 0.74 of the way from the lower row of cells' middles to the upper, so the
+        // lower's green takes 0.26 of the blend.
+        var blend = White * 0.74f + Green * 0.26f;
+        var off = Vector3.Abs(read[0] - blend);
+        Assert.True(MathF.Max(off.X, MathF.Max(off.Y, off.Z)) <= 0.02f, $"the upper floor's hit read {read[0]} where the blend is {blend}");
+    }
+
+    [CpuKernelFact]
     public void A_Red_Wall_On_A_White_Floor_Reads_Red_On_The_Wall_And_White_On_The_Floor_Within_A_Cell_Of_The_Corner()
     {
         var corner = Square(new(1, 0, 0), new(1, 0, 0), new(0, 0, -2), White)
