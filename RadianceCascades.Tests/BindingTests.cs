@@ -46,29 +46,4 @@ public sealed class BindingTests
         Assert.Equal(FieldTriangles.White | 1u << 24, triangles[3]);
         Assert.True(triangles[11] == FieldTriangles.White, "the edge back from the third corner is the diagonal both triangles share");
     }
-
-    [Fact]
-    public void The_Readmes_Binding_Block_Is_The_Hosts_Line_For_Line()
-    {
-        // The first C# block of the README's section and the lines of this file between the two
-        // markers above, their common indent taken off.
-        var readme = File.ReadAllText(Path.Combine(Repository.Root, "README.md")).ReplaceLineEndings("\n");
-        var at = readme.IndexOf("\n## Binding it in your engine\n", StringComparison.Ordinal);
-        Assert.True(at >= 0, "the README has a section Binding it in your engine");
-        var next = readme.IndexOf("\n## ", at + 1, StringComparison.Ordinal);
-        var section = next < 0 ? readme[at..] : readme[at..next];
-        var open = section.IndexOf("```csharp\n", StringComparison.Ordinal);
-        Assert.True(open >= 0, "the section holds a C# block");
-        open += "```csharp\n".Length;
-        var block = section[open..section.IndexOf("```\n", open, StringComparison.Ordinal)].TrimEnd('\n').Split('\n');
-
-        var source = File.ReadAllText(Path.Combine(Repository.Root, "RadianceCascades.Tests", "BindingTests.cs")).ReplaceLineEndings("\n").Split('\n');
-        var from = Array.FindIndex(source, line => line.Trim() == "// The README's block from here");
-        var to = Array.FindIndex(source, line => line.Trim() == "// The end marker.");
-        var hosted = source[(from + 1)..to];
-        var indent = hosted.Where(line => line.Trim().Length > 0).Min(line => line.Length - line.TrimStart().Length);
-        hosted = [.. hosted.Select(line => line.Length >= indent ? line[indent..] : line.TrimStart())];
-
-        Assert.Equal(hosted, block);
-    }
 }

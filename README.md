@@ -1,3 +1,5 @@
+[Devlog](https://github.com/EggyStudio/RadianceCascades/blob/main/DEVLOG.md) [Cheat sheet](https://github.com/EggyStudio/RadianceCascades/blob/main/CHEATSHEET.md)
+
 # RadianceCascades
 
 RadianceCascades is a library both engines, 3DEngine and BevyCSharp, take as a git submodule, for
@@ -28,6 +30,11 @@ before the engine's commit that moves its pointer, so the engine's history never
 this repository does not have.
 
 ## Building and testing
+
+The tests take the checks every module keeps from the Tools module, a git submodule under
+`modules/Tools`, so a clone fetches it with `git clone --recurse-submodules`, or with
+`git submodule update --init` in a clone made without it. An engine that takes the module builds
+its library alone, which takes nothing of Tools', and clones with no recursion into it.
 
 With the .NET 10 SDK, and slangc for the tests that compile the library's Slang to SPIR-V and to
 WGSL, which `build/fetch-slang.sh` downloads into `build/tools` at the version both engines pin:
