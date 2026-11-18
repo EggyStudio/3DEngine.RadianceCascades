@@ -167,6 +167,23 @@ session pushes.
     read of where the two copies differ is written three ways, this module's Reply holding the
     interface.
 
+7. **The module is agnostic enough that a stranger binds it in an engine of their own from its
+    README alone (2026-11-18 17:28).** It asks a README section, Binding it in your engine, with
+    every interface the module declares, the conventions it stands on and the smallest binding that
+    works, a small host in the tests that implements those interfaces with no engine and that the
+    section's steps are run against, a test that fails where the library references an engine, a
+    window or a graphics API, the form in the Tools module's ReferenceTests.cs, and no engine's name
+    in a public member or its summary. The two engines appear in the README as examples. A public
+    shape that fits the two engines alone is named in a Reply before it changes. The Slang kernels
+    are the part an engine in any language can take, so the README says how to compile them without
+    the C# library.
+
+8. **The package id and the assembly are 3DEngine.RadianceCascades and the namespace stays
+    RadianceCascades (2026-11-18 17:28).** The prefix gives a unique name. A package is published
+    when the time is right and on the owner's word, for a reader who takes the module alone. The
+    engines keep taking the module as a git submodule, compiled with them and carried inside each
+    engine's one package. Folders and project file names stay.
+
 ## Replies
 
 Decision 6's first Reply, this file read against the tree at `6b7bcd8`, the last commit here and on

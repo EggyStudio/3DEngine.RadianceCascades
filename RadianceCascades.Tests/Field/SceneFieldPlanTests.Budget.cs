@@ -1,0 +1,245 @@
+using System.Numerics;
+using Xunit;
+using SceneFieldPlan = RadianceCascades.SceneFieldPlan<RadianceCascades.Tests.Field.TestMesh, int>;
+
+namespace RadianceCascades.Tests.Field;
+
+// The builds' budget of triangles a frame, hundreds of meshes arriving in one frame built over as
+// many frames as it takes, nearest the eye first, each frame under the budget on the plan's counts,
+// the pool sized for the build in progress, the budget raised where the frame has room and lifted
+// after a cut, and a build in progress taking in a mesh that came and starting again for one that
+// left.
+public sealed partial class SceneFieldPlanTests
+{
+    // The sections a voxel game streams in at once, as the reading that stalled a frame had them,
+    // 500 of 1,024 triangles each, flat boxes four meters a side on a grid of 25 by 20 about the
+    // eye.
+    private const int Sections = 500, SectionTriangles = 1024;
+
+    private static readonly TestMesh Section =
+        new([.. Enumerable.Range(0, 8).Select(c => new Vector3((c & 1) == 0 ? 0 : 4, (c & 2) == 0 ? 0 : 1, (c & 4) == 0 ? 0 : 4))]);
+
+    private static Vector3 SectionAt(int i) => new((i % 25 - 12) * 4, 0, (i / 25 - 10) * 4);
+
+    private static List<(SceneFieldPlan.Instance, bool)> AllSections() =>
+        [.. Enumerable.Range(0, Sections).Select(i => (new SceneFieldPlan.Instance(1, Section, Matrix4x4.CreateTranslation(SectionAt(i)), false), false))];
+
+    // Runs a plan until it has settled the sections and built every cascade with them, and answers
+    // the triangle budget each frame spent from the frame they settled in, and the parts of each
+    // cascade's build in order.
+    private static (List<int> Frames, Dictionary<int, List<SceneFieldPlan.Build>> Parts) BuildSections(int triangleBudget)
+    {
+        var plan = NewPlan(4, 0.25f, 4, triangleBudget: triangleBudget, triangles: _ => SectionTriangles);
+        var eye = new Vector3(0, 2, 0);
+        var drawn = AllSections();
+        var (frames, parts) = (new List<int>(), new Dictionary<int, List<SceneFieldPlan.Build>>());
+        for (int frame = 1; frame < 200; frame++)
+        {
+            plan.Update(eye, drawn);
+            if (frame < SceneFieldPlan.SettleFrames) continue;
+            frames.Add(plan.Spent);
+            foreach (var build in plan.Builds) (parts.TryGetValue(build.Cascade, out var list) ? list : parts[build.Cascade] = []).Add(build);
+            if (plan.Builds.Count == 0 && plan.Waiting == 0) break;
+        }
+        return (frames, parts);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void Five_Hundred_Meshes_Arriving_In_One_Frame_Are_Built_Over_Several_Frames_Under_The_Triangle_Budget_The_Nearest_First()
+    {
+        // All at once, as the cascades' budget alone has it, the frame they settle in splats every
+        // cascade's reach, 500 meshes into the coarsest alone.
+        var (whole, wholeParts) = BuildSections(int.MaxValue);
+        whole[0].Should().BeGreaterThanOrEqualTo(Sections * SectionTriangles, "the frame the sections settled in built them all into four cascades");
+        wholeParts.Values.Should().OnlyContain(list => list.Count == 1 && list[0].First && list[0].Last, "each cascade in one build of one part");
+
+        const int budget = 65_536;
+        var (frames, parts) = BuildSections(budget);
+        frames.Should().OnlyContain(splatted => splatted <= budget, "no frame splats more than the budget");
+        frames.Count(splatted => splatted > 0).Should().BeGreaterThanOrEqualTo(whole[0] / budget, "the builds go on over as many frames as the budget takes");
+
+        foreach (var (cascade, list) in parts)
+        {
+            list[0].First.Should().BeTrue();
+            list.Skip(1).Where(part => part.First).Should().BeEmpty($"cascade {cascade}'s build starts once");
+            list[^1].Last.Should().BeTrue();
+            list.SkipLast(1).Where(part => part.Last || part.Changed != null).Should().BeEmpty("the passes read the cascade as it was until its last part");
+            list.SelectMany(part => part.Instances).Select(instance => instance.World.Translation)
+                .Should().BeEquivalentTo(wholeParts[cascade][0].Instances.Select(instance => instance.World.Translation),
+                    $"cascade {cascade} is built from the meshes one build would have built it from");
+        }
+
+        // Each part's meshes are as near the eye as the next part's or nearer.
+        var eye = new Vector3(0, 2, 0);
+        float Distance(SceneFieldPlan.Instance instance) => Vector3.DistanceSquared(instance.World.Translation + new Vector3(2, 0.5f, 2), eye);
+        foreach (var list in parts.Values.Where(list => list.Count > 1))
+            for (int part = 0; part + 1 < list.Count; part++)
+                list[part].Instances.Max(Distance).Should().BeLessThanOrEqualTo(list[part + 1].Instances.Min(Distance), "nearest the eye first");
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void The_Pool_Takes_Twice_Its_Build_Where_The_Device_Has_Room_And_Less_Where_It_Is_Short()
+    {
+        // Sponza's build in progress, 3.75 million triangles, 48 bytes each, and the frame's part
+        // of it.
+        const int building = 3_750_000, frame = 600_000;
+        FieldTriangles.PoolCapacity(building, frame, null).Should().Be(8_388_608, "where the driver does not say, twice the build rounded up to a power of two");
+        FieldTriangles.PoolCapacity(building, frame, 2UL << 30).Should().Be(8_388_608, "2 GB free holds twice the pool's 403 MB");
+        FieldTriangles.PoolCapacity(building, frame, 400UL << 20).Should().Be(building, "400 MB free holds the build's triangles once, not twice");
+        FieldTriangles.PoolCapacity(building, frame, 200UL << 20).Should().Be(2_184_533, "200 MB free holds as many as half of it does");
+        FieldTriangles.PoolCapacity(building, frame, 40UL << 20).Should().Be(frame, "40 MB free takes the frame's meshes at least, which the device may yet not hold");
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void A_Build_In_Progress_Takes_In_A_Mesh_That_Settles_And_Starts_Again_For_A_Splatted_One_That_Leaves()
+    {
+        // A budget of one mesh's triangles, so a build of ten meshes takes ten frames, the meshes
+        // in a row going away from the eye.
+        var plan = NewPlan(1, 1, 1, triangleBudget: 10, triangles: _ => 10);
+        var eye = new Vector3(0, 2, 6);
+        var row = Enumerable.Range(0, 10).Select(k => At(new Vector3(0, 0, 4 - 2 * k))).ToList();
+        plan.Update(eye, []);
+        plan.Builds.Should().ContainSingle("the empty cascade is built at once");
+        for (int frame = 1; frame < SceneFieldPlan.SettleFrames; frame++) plan.Update(eye, row);
+
+        // The frame they settle in starts the build with the nearest, and a newcomer drawn from the
+        // frame after settles while the build runs, nearer the eye than the meshes left.
+        plan.Update(eye, row);
+        plan.Builds.Should().ContainSingle().Which.Should().Match<SceneFieldPlan.Build>(b => b.First && !b.Last && b.Instances.Length == 1);
+        plan.Builds[0].Instances[0].World.Translation.Should().Be(new Vector3(0, 0, 4), "the nearest the eye first");
+        var newcomer = At(new Vector3(0, 0, 2.5f));
+        var parts = new List<SceneFieldPlan.Build>();
+        for (int frame = 0; frame < 30 && (parts.Count == 0 || !parts[^1].Last); frame++)
+        {
+            plan.Update(eye, [.. row, newcomer]);
+            parts.AddRange(plan.Builds);
+        }
+        parts.Should().NotBeEmpty();
+        parts.Where(part => part.First).Should().BeEmpty("the build goes on whole, taking the newcomer in");
+        parts[^1].Last.Should().BeTrue();
+        parts.SelectMany(part => part.Instances).Select(i => i.World.Translation).Should().Contain(new Vector3(0, 0, 2.5f));
+        plan.Update(eye, [.. row, newcomer]);
+        plan.Builds.Should().BeEmpty("the build that took the newcomer in leaves nothing for after");
+
+        // The farthest leaves, and the cells around where it stood are built again from the meshes
+        // near them alone, the nearest the eye first. The first of them the build splats then
+        // leaves too, outside those cells, and the build grows to hold its cells and starts again
+        // without it.
+        var left = row.Take(9).Append(newcomer).ToList();
+        plan.Update(eye, left);
+        plan.Builds.Should().ContainSingle().Which.Should().Match<SceneFieldPlan.Build>(b => b.First && !b.Last && b.Cells != null);
+        var splatted = plan.Builds[0].Instances[0].World.Translation;
+        splatted.Z.Should().BeLessThan(0, "the meshes near the one that left alone, the nearest the eye of them first");
+        left.RemoveAll(entry => entry.Item1.World.Translation == splatted);
+        plan.Update(eye, left);
+        plan.Builds.Should().ContainSingle().Which.First.Should().BeTrue("a mesh the build splatted left, so it starts again");
+        var again = plan.Builds.SelectMany(b => b.Instances).Select(i => i.World.Translation).ToList();
+        for (int frame = 0; frame < 30 && !plan.Builds[^1].Last; frame++)
+        {
+            plan.Update(eye, left);
+            again.AddRange(plan.Builds.SelectMany(b => b.Instances).Select(i => i.World.Translation));
+        }
+        again.Should().NotContain(splatted, "the build holds none that left").And.OnlyContain(at => left.Any(entry => entry.Item1.World.Translation == at));
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void A_Finer_Cascade_The_Eye_Moves_Past_Is_Built_Before_A_Coarser_Build_In_Progress_Which_Starts_Again_After()
+    {
+        // Two cascades and a budget of one mesh a frame, so the coarser's build of the sections it
+        // reaches takes many frames.
+        var plan = NewPlan(2, 0.25f, 2, triangleBudget: SectionTriangles, triangles: _ => SectionTriangles);
+        var eye = new Vector3(0, 2, 0);
+        var drawn = AllSections();
+        // The finer's 36 sections take as many frames from the eighth, and the coarser's begin
+        // after.
+        for (int frame = 0; frame < 80; frame++) plan.Update(eye, drawn);
+        plan.Builds.Should().ContainSingle().Which.Cascade.Should().Be(1, "the coarser cascade's build is under way");
+        plan.Builds[0].First.Should().BeFalse();
+
+        // The eye passes the finer cascade's grid, which is built at once, and the coarser's build
+        // starts again the frame after it ends.
+        eye += new Vector3(2.5f, 0, 0);
+        plan.Update(eye, drawn);
+        plan.Builds.Should().NotBeEmpty();
+        plan.Builds[0].Should().Match<SceneFieldPlan.Build>(b => b.Cascade == 0 && b.First, "the finer cascade comes first");
+        var after = new List<SceneFieldPlan.Build>(plan.Builds);
+        for (int frame = 0; frame < 60 && !after.Any(b => b.Cascade == 1); frame++)
+        {
+            plan.Update(eye, drawn);
+            after.AddRange(plan.Builds);
+        }
+        after.First(b => b.Cascade == 1).First.Should().BeTrue("the coarser cascade's build starts again");
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void The_Triangle_Budget_Is_Raised_Where_The_Frame_Has_Room_And_Falls_Back_Where_It_Has_None()
+    {
+        // A budget of four sections a frame, every cascade built again each frame, the frame
+        // waiting eight milliseconds and the field costing two of them.
+        const int budget = 4096;
+        var plan = NewPlan(2, 0.25f, 2, triangleBudget: budget, triangles: _ => SectionTriangles);
+        var drawn = AllSections();
+        var eye = new Vector3(0, 2, 0);
+        plan.Rebuild(2000);
+        var budgets = new List<int>();
+        for (int frame = 0; frame < 300; frame++)
+        {
+            plan.Raise(8, 2);
+            plan.Update(eye, drawn);
+            budgets.Add(plan.TriangleBudget);
+        }
+        budgets.Max().Should().BeGreaterThan(budget, "the frame has room");
+        budgets.Should().OnlyContain(raised => raised >= budget && raised <= budget * SceneFieldPlan.MostRaise);
+        budgets.Zip(budgets.Skip(1)).Should().OnlyContain(pair => pair.Second <= pair.First * 2, "the budget at most doubles a step");
+
+        // The frame waits none, and the budget halves back to the base.
+        for (int frame = 0; frame < SceneFieldPlan.RaiseFrames * 8; frame++)
+        {
+            plan.Raise(0, 2);
+            plan.Update(eye, drawn);
+        }
+        plan.TriangleBudget.Should().Be(budget);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void A_Cut_Past_The_Finer_Cascades_Boxes_Builds_Them_At_Once_And_A_Walk_Keeps_The_Budget()
+    {
+        // The sections built under a small budget, then the eye cut 40 units along, past the first
+        // two cascades' boxes of 16 and 32 units. Built under the budget, the cut's view lay in the
+        // coarser cascades over the frames the finer ones took, which hold none of a room's walls,
+        // as Sponza's vestibule took the court's sky after a cut to its door. A walk of a snap
+        // after it keeps each frame under the budget.
+        const int budget = 16_384;
+        var plan = NewPlan(4, 0.25f, 4, triangleBudget: budget, triangles: _ => SectionTriangles);
+        var eye = new Vector3(0, 2, 0);
+        var drawn = AllSections();
+        for (int frame = 0; frame < 400 && !plan.Built; frame++)
+            plan.Update(eye, drawn);
+        plan.Built.Should().BeTrue("the sections are built before the cut");
+
+        eye += new Vector3(40, 0, 0);
+        var frames = 0;
+        do
+        {
+            plan.Update(eye, drawn);
+            frames++;
+        }
+        while (frames < 50 && (plan.BuiltOrigin(0) != plan.OriginAround(0, eye) || plan.BuiltOrigin(1) != plan.OriginAround(1, eye)));
+        frames.Should().Be(1, "the cascades the cut went past are built in its frame");
+
+        for (int frame = 0; frame < 400 && !plan.Built; frame++)
+            plan.Update(eye, drawn);
+        for (int step = 0; step < 8; step++)
+        {
+            eye += new Vector3(0.5f, 0, 0);
+            plan.Update(eye, drawn);
+            plan.Spent.Should().BeLessThanOrEqualTo(budget, "a walk's shifts keep the budget");
+        }
+    }
+}
