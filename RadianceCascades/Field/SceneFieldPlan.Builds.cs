@@ -6,7 +6,7 @@ namespace RadianceCascades;
 // over as many frames as it takes, nearest the eye first, and the still meshes that come and go
 // while it runs taken in. A build is of a whole cascade, or of the cells around what came or went
 // within a built one (SceneFieldPlan.Regions.cs).
-public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull
+public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull where TTag : IEquatable<TTag>
 {
     // A cascade's build that runs over frames, its corner and reach, the still meshes left to splat
     // into it, nearest the eye first by the distance each was put in at, the box around what came
@@ -128,7 +128,7 @@ public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull
         (Splatted, Spent) = (0, 0);
         var rebuilt = new bool[Cascades];
         var lifted = Array.IndexOf(_jumped, true) >= 0 || _afterCut >= 0;
-        var (cascades, triangles) = lifted ? (Cascades, Math.Max(TriangleBudget, BaseTriangleBudget * MostRaise)) : (Budget, TriangleBudget);
+        var (cascades, triangles) = lifted ? (Cascades, Math.Max(TriangleBudget, MostBudget)) : (Budget, TriangleBudget);
         while (cascades > 0 && triangles > 0)
         {
             // A finer cascade gone dirty or changed comes first, and the coarser build in progress

@@ -5,7 +5,7 @@ namespace RadianceCascades;
 // A cascade the eye moved by whole cells along one axis shifted as a clipmap is, the cells it keeps
 // moved on the GPU and the slab of cells it brings in built alone from the still meshes within the
 // band of them, rather than the whole cascade built again from every still mesh within its band.
-public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull
+public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull where TTag : IEquatable<TTag>
 {
     // Whether Rebuild marked every cascade to be built whole this frame.
     private bool _forced;

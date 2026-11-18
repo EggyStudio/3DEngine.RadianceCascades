@@ -2,7 +2,7 @@ namespace RadianceCascades;
 
 // The triangle budget raised where the frame has room, the time it waits for the target frame rate,
 // so the field builds faster in a frame that waits and as the budget says in one that does not.
-public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull
+public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull where TTag : IEquatable<TTag>
 {
     /// <summary>
     /// The most the triangle budget is raised to, as a multiple of
@@ -44,8 +44,12 @@ public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull
     {
         Budget = Math.Max(1, cascades);
         BaseTriangleBudget = Math.Max(1, triangles);
-        TriangleBudget = Math.Clamp(TriangleBudget, BaseTriangleBudget, BaseTriangleBudget * MostRaise);
+        TriangleBudget = Math.Clamp(TriangleBudget, BaseTriangleBudget, MostBudget);
     }
+
+    // The most the triangle budget is raised to, MostRaise times the base worked out in a long and
+    // held to the most an int holds, since an engine may give int.MaxValue for a budget of none.
+    private int MostBudget => (int)Math.Min((long)BaseTriangleBudget * MostRaise, int.MaxValue);
 
     // The triangles the builds splatted since the budget was last set, and over how many frames.
     private long _splattedSince;

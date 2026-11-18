@@ -46,16 +46,24 @@ namespace RadianceCascades;
 /// </para>
 /// <para>
 /// The plan reads no mesh's data. <typeparamref name="TMesh"/> is what the engine knows a mesh's
-/// vertices by, told apart by its own equality, and the plan asks the engine for the box around
-/// them, their triangles and their parts. <typeparamref name="TTag"/> is the engine's own of each
-/// draw, carried to the builds unread, as the textures a traced reference reads.
+/// vertices by, and the plan asks the engine for the box around them, their triangles and their
+/// parts. <typeparamref name="TTag"/> is the engine's own of each draw, as the textures a traced
+/// reference reads, carried to the builds and compared with the rest of the draw, so a draw whose
+/// tag changes is its mesh painted again where it stands.
+/// </para>
+/// <para>
+/// Both are compared through <see cref="EqualityComparer{T}.Default"/>, which tells a class with
+/// no equality of its own, an array among them, by its reference, and boxes a struct on every
+/// comparison unless it implements <see cref="IEquatable{T}"/>, which a struct
+/// <typeparamref name="TMesh"/> does so as not to be boxed. <typeparamref name="TTag"/> implements
+/// it, so a tag made again for each draw, as a record is, is the same tag where its values are.
 /// </para>
 /// </remarks>
 /// <typeparam name="TMesh">What the engine knows a mesh's vertices by.</typeparam>
 /// <typeparam name="TTag">
-/// The engine's own of each draw, which the plan carries and never reads.
+/// The engine's own of each draw, which the plan carries and compares and reads nothing of.
 /// </typeparam>
-public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull
+public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull where TTag : IEquatable<TTag>
 {
     /// <summary>The cells along each side of a cascade.</summary>
     public const int Resolution = 64;
@@ -124,7 +132,10 @@ public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull
     /// <param name="LightThrough">
     /// The share of light that passes a unit of the surface's depth.
     /// </param>
-    /// <param name="Tag">The engine's own of the draw, carried to the builds unread.</param>
+    /// <param name="Tag">
+    /// The engine's own of the draw, carried to the builds and compared with the rest of it, so a
+    /// draw whose tag changes is the mesh painted again.
+    /// </param>
     public readonly record struct Instance(int Mesh, TMesh Vertices, Matrix4x4 World, bool DoubleSided,
         Vector3 Color = default, Vector3 Emission = default, FieldPart[]? Parts = null, float Roughness = 1, float Metallic = 0, float LightThrough = 0,
         TTag? Tag = default);
@@ -779,7 +790,7 @@ public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull
     private static bool Same(in Instance a, in Instance b, bool placed) =>
         a.Mesh == b.Mesh && EqualityComparer<TMesh>.Default.Equals(a.Vertices, b.Vertices) && (!placed || a.World == b.World) && a.DoubleSided == b.DoubleSided
         && a.Color == b.Color && a.Emission == b.Emission && ReferenceEquals(a.Parts, b.Parts) && a.Roughness == b.Roughness && a.Metallic == b.Metallic
-        && a.LightThrough == b.LightThrough;
+        && a.LightThrough == b.LightThrough && EqualityComparer<TTag>.Default.Equals(a.Tag, b.Tag);
 
     // The meshes drawn, read in place where they are a list or an array, as the field's are.
     private static ReadOnlySpan<(Instance Instance, bool Skinned)> Span(IReadOnlyList<(Instance Instance, bool Skinned)> drawn) => drawn switch

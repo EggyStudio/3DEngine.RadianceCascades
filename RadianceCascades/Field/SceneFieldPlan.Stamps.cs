@@ -3,7 +3,7 @@ using System.Numerics;
 namespace RadianceCascades;
 
 // The shapes the moving meshes are stamped as, and the parts each is stamped as.
-public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull
+public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull where TTag : IEquatable<TTag>
 {
     // The parts a mesh is stamped as where there are no more than room for, which leaves a box each
     // for the meshes farther from the eye, and the box around all of it where there are, so a crowd

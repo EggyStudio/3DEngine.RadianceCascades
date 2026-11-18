@@ -21,19 +21,30 @@ public static class FieldTriangles
     /// <summary>The color a corner takes where its mesh has none, white in sRGB bytes.</summary>
     public const uint White = 0xFFFFFFu;
 
+    /// <summary>A color as a corner takes it, three sRGB bytes, red in the lowest.</summary>
+    public static uint Srgb(byte red, byte green, byte blue) => red | (uint)green << 8 | (uint)blue << 16;
+
     /// <summary>
     /// Writes the corners of the triangles <paramref name="indices"/> makes of
     /// <paramref name="positions"/> into <paramref name="into"/>, <see cref="Uints"/> a triangle,
-    /// each corner's color from <paramref name="colors"/> by its vertex, three sRGB bytes red
-    /// lowest, or <see cref="White"/> where it is empty, and the open edges <see cref="OpenEdges"/>
-    /// finds.
+    /// each corner's color from <paramref name="colors"/> by its vertex, one a vertex as
+    /// <see cref="Srgb"/> makes it, or <see cref="White"/> for every corner where it is empty, and
+    /// the open edges <see cref="OpenEdges"/> finds.
     /// </summary>
     /// <returns>How many triangles were written.</returns>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="into"/> is shorter than the triangles take, or <paramref name="colors"/> is
+    /// neither empty nor one a vertex.
+    /// </exception>
     public static int Write(Span<uint> into, ReadOnlySpan<Vector3> positions, ReadOnlySpan<uint> indices, ReadOnlySpan<uint> colors)
     {
         var count = indices.Length / 3;
         if (into.Length < count * Uints)
             throw new ArgumentException($"{count} triangles take {count * Uints} uints, and {into.Length} were given.", nameof(into));
+        if (!colors.IsEmpty && colors.Length != positions.Length)
+            throw new ArgumentException(
+                $"{colors.Length} color{(colors.Length == 1 ? " was" : "s were")} given for {positions.Length} vertices, where a mesh takes one a vertex or none for white.",
+                nameof(colors));
         var open = OpenEdges(positions, indices);
         for (int i = 0; i < count * 3; i++)
         {
@@ -79,12 +90,19 @@ public static class FieldTriangles
     /// less than twice that free, as many as half what it has free holds and those of this frame's
     /// meshes, <paramref name="needed"/>, at least.
     /// </summary>
+    /// <remarks>
+    /// A pool is 2^30 triangles at most, 48 GB, so a build of more than half that holds less than
+    /// twice its triangles.
+    /// </remarks>
     /// <param name="wanted">The triangles of the build in progress.</param>
     /// <param name="needed">The triangles of this frame's meshes.</param>
     /// <param name="free">The bytes the device has free, or null where it does not say.</param>
     public static int PoolCapacity(int wanted, int needed, ulong? free)
     {
-        var whole = Math.Max(1024, (int)BitOperations.RoundUpToPowerOf2((uint)Math.Max(1, wanted * 2)));
+        // Twice the build in a long, so a build past half a billion triangles does not wrap, held
+        // to the largest power of two an int holds.
+        var twice = Math.Max(1L, 2L * wanted);
+        var whole = (int)Math.Max(1024UL, Math.Min(BitOperations.RoundUpToPowerOf2((ulong)twice), 1UL << 30));
         if (free is not { } bytes || (ulong)whole * Uints * 4 * 2 <= bytes) return whole;
         return Math.Max(Math.Max(1024, needed), (int)Math.Min(wanted, (long)(bytes / 2 / (Uints * 4))));
     }

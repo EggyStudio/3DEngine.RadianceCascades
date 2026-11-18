@@ -6,7 +6,7 @@ namespace RadianceCascades;
 // its cells within the band of what changed splatted from the still meshes near them, rather than
 // the whole cascade built again from every still mesh within its band, and how many frames and
 // triangles the field took to hold a change.
-public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull
+public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull where TTag : IEquatable<TTag>
 {
     // The box around the still meshes that came or went within each built cascade since its last
     // build or the last build of its region.

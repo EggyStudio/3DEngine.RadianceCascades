@@ -4,7 +4,7 @@ namespace RadianceCascades;
 
 // The plan moved with a program's world, every place it keeps moved by the whole step every place
 // the engine is handed moved by, as an engine that keeps its world near the origin moves it.
-public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull
+public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull where TTag : IEquatable<TTag>
 {
     /// <summary>
     /// Moves every place the plan keeps by a whole step, in doubles, as a program moved every place
