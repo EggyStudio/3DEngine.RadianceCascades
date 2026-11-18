@@ -19,8 +19,29 @@ to the band outside, beside the cells about a double-sided sheet at 0.08, the ro
 keeping its plane 0.04492 and 0.20483 off along their way where it lies 0.045 and 0.205 off, built
 and resolved on the CPU from the library's Slang.
 
+![](.github/assets/readings/2026-11-18-item-3-march.webp)
+Seven rays marched from one point through the field of a box of two and a double-sided wall across
+the slice through the box's middle, each step a dot, the distance read or a quarter of a cell at
+least, four meeting the box's face, two passing over it in short steps along its edge to meet the
+wall, and one leaving the cascade, built and marched on the CPU from the library's Slang.
+
 Commits that day
 
+- `620bd21` The library's Slang stamps the boxes of the moving meshes into a cascade over what the
+  still meshes made, the nearer surface painting each cell, its shape laid out by a writer of its
+  own in the library, so a turned box stamps every cell near it at its distance and its color while
+  a nearer still surface keeps its own, held by a test run on the CPU.
+- `881fa74` The library's Slang splats a triangle into the cells its band covers through cells an
+  engine keeps, each lane of a workgroup taking its share, and paints each cell by the triangle
+  whose code it kept, so a box splatted a triangle at a time keeps at every cell the code the cells
+  built one at a time keep and each face paints the cells beside it, held by tests run on the CPU.
+- `17d068b` A cell outside both of two blocks that meet along an edge, between a cell inside each
+  and across from one outside, is held inside by the field's pinch over the resolved cells about it,
+  so a march through the edge meets the field, held by a test run on the CPU.
+- `9e70dad` A face's way read back from its eight bits is held within 14.5 degrees of itself, its
+  largest lean over 65,536 ways being 14.15, the paint's reach says the two bounds it stands
+  between, a floor a fifth of a cell over another states the blend the read gives, and the cells'
+  reading says its own way's lean.
 - `6115a5e` A hit reads its color from the cells of the field about it that face its way and hold a
   surface through it, so a floor over another of another color a tenth of a unit below reads its
   own, held by tests run on the CPU, with a reading of the cells about a box and a thin sheet, and

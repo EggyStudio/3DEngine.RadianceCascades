@@ -471,3 +471,38 @@ Not yet the library's: the splat's second plane, kept where a second double-side
 way passes a cell, the lending of emitters thinner than a cell, the paint again of a mesh whose
 colors changed in place, the clearing of a cascade's codes, and every reader of the field's distance
 and of the probes. The kernels' own files, each a binding over these, stay each engine's.
+
+The field's distance at a point and the march, in the commit carrying this line, with the march's
+sheet. `rc_field_read` holds `IFieldVolume`, the cascades as a reader reads them, the finest holding
+a point, a cascade's corner and cell, its field between cells and a cell as it is, and its second
+plane; `fieldDistanceIn`, the cells' blend held half a cell below a double-sided face's plane;
+`fieldDistanceSheetIn` and `sheetDistance`, the probes' read of a cell's planes held `SheetHalf`
+either side; and `traceField` and `traceFieldSheets`, 64 steps at most of the distance read or a
+quarter of a cell at least, met within a tenth of a cell, each step handed to an `IMarchSteps`,
+`NoSteps` where none is kept. The tests, written first, measure the blend about a box of two 0.286
+of a cell off the box's own distance at worst over 400 points, held to 0.3; rays stopping 0.043 of a
+cell short of a face and 0.144 past it at worst, within the march's tenth and its quarter-cell step;
+and a ray from either side of a sheet stopping on its own side within 0.35 of a cell of the plane.
+The README's binding section names every Slang interface an engine implements. Not yet the
+library's: the field's normal, the table of cascades an engine's `cascadeOf` reads, and the march
+held within a cascade.
+
+Handoff, for a fresh session. Where the work stands: the library holds the field's plan
+(`SceneFieldPlan`, `FieldPlanOptions`), the triangles' layout (`FieldTriangles`), the glow lights
+(`GlowLights`, `GlowOptions`), and in Slang the probes' octahedron (`rc_octahedron`), the cell code,
+resolve and pinch (`rc_field_code`), the hit's color read (`rc_field_paint`), the splat and its
+paint (`rc_field_splat`), the stamp (`rc_field_stamp`) and the field's distance and march
+(`rc_field_read`), each run on the CPU by its tests through `CpuKernel` (`slangc -target
+shader-sharedlib`). Tools is pinned at `1e1ec63` through `modules/Tools/scripts/pin.py`. Next in
+order: the probes' kernels, trace, merge and gather with their readers, a hit taking the split sum
+from a 32 by 32 Slang table the tests hold to Materials' `SurfaceResponse.SplitSumIntegrated`; then
+the light through surfaces, the screen probes, the light on the picture and the contact shadow's
+march. Left behind each part's Reply: the field's normal, the cascades' table, the march held within
+a cascade, the splat's second plane, the lending of thin emitters, the repaint and the clearing of
+codes. Open: AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md wait for the owner. Read
+first: AGENTS.md, this file's head, Decisions 6 to 8 and these Replies, the README's binding
+section, NORM.md's N 4.8 to 4.11 and N 7.9, and the tests' `CpuKernel.cs`. Every build and test goes
+through N 7.9's lock (`flock -s /run/user/1000/gpu.lock` once `/run/user/1000/gpu.waiting/` holds no
+living process's file), restored outside it and built with `--no-restore
+-p:UseSharedCompilation=false` and `MSBUILDDISABLENODEREUSE=1`, and each commit is read by
+`commitcheck.py . --staged --message=<file>` first.

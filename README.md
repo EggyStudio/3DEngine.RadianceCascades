@@ -78,6 +78,20 @@ parameters and the functions its constructor takes.
 | `GlowLight` | A light `GlowLights.Gather` finds, its box's middle and half sides, its light, its share and the faces it emits from |
 | `GlowPlaces` | The place each light is written in, kept from frame to frame by the one the engine hands `GlowLights.Write`, with the count of places taken and the bits of those whose light is the frame before's |
 
+The library's Slang, under `RadianceCascades/Shaders`, asks an engine for its own images and
+buffers through interfaces its kernels implement, each a struct of the engine's own handed to the
+library's functions, and the engine keeps its bindings, its threads and its atomics.
+
+| Slang interface | What the engine's struct reads or writes | Read or written by |
+|---|---|---|
+| `ISplatCells` | Keeps a cell's least code and the least code of a face it lies straight behind, an atomic minimum on a GPU | `splatCodes` |
+| `IPaintCells` | Reads the code a cell kept and paints it its nearest surface's color, emission and gloss | `splatPaint` |
+| `IResolvedCells` | Reads a cascade's resolved distances about a cell | `pinched` |
+| `IStampShapes` | Reads the shapes of a brick's run, each as `FieldShape.WriteStamp` writes it | `stampCell` |
+| `IFieldCells` | Reads a cascade's cells' paint, faces and distances | `paintFacing`, `paintAt` |
+| `IFieldVolume` | Reads the finest cascade holding a point, a cascade's corner and cell, its field between cells and a cell as it is | `fieldDistanceIn`, `fieldDistanceSheetIn`, `traceField`, `traceFieldSheets` |
+| `IMarchSteps` | Takes each step a march makes, which `NoSteps` passes over | `traceField`, `traceFieldSheets` |
+
 The conventions the module stands on:
 
 - Places, cells and reaches are in the engine's world unit, which the module's defaults and
