@@ -12,7 +12,8 @@ namespace RadianceCascades.Tests;
 /// slangc writes the compute entry <c>test</c> as a function of three pointers, the first and the
 /// end group to run along each axis, the entry's own parameters, and the kernel's globals, which
 /// hold each <c>RWStructuredBuffer</c> as a pointer to its data and a count of its elements, in
-/// the order the kernel declares them. A kernel run here declares its buffers alone as globals.
+/// the order the kernel declares them. A kernel run here declares its buffers alone as globals,
+/// each an array of the element type it reads, floats or uints.
 /// </remarks>
 internal static class CpuKernel
 {
@@ -30,7 +31,7 @@ internal static class CpuKernel
     /// from the first to <paramref name="groups"/>, each of <paramref name="buffers"/> bound to its
     /// buffers in order and read back into in place.
     /// </summary>
-    internal static void Run(string kernel, (uint X, uint Y, uint Z) groups, params float[][] buffers)
+    internal static void Run(string kernel, (uint X, uint Y, uint Z) groups, params Array[] buffers)
     {
         var folder = Directory.CreateTempSubdirectory("radiancecascades-cpu-");
         var pinned = buffers.Select(buffer => GCHandle.Alloc(buffer, GCHandleType.Pinned)).ToArray();

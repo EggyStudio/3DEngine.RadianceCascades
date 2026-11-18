@@ -413,3 +413,17 @@ one value gathering them would allocate each frame an engine reads it where a si
 does not. KERNELS.md leaves the repository, and the README's binding section holds the settings'
 table, each with its default, what it does and what it trades. The sheet is made again with its
 title line and gray, from the settings.
+
+The color a hit reads from the field, in the commit carrying this line, with the reading of the
+cells about a box and a thin sheet. The finding of two unlike surfaces in one field cell is mended
+in the module's field. Its found case is a floor over another of another color a tenth of a unit
+below, both facing up, whose cells between lie nearer the lower and face the hit's way as the
+upper's do. Read as both copies read it, the eight cells about the hit facing within 60 degrees of
+its normal, the upper floor's white read (0.77, 0.90, 0.77), the green blended in by a quarter,
+which the test failing first said. `paintFacing` counts a cell's paint only where the surface it
+holds, its distance back from its middle along its face's way, passes within `PaintReach`, 0.3 of a
+cell, of the hit, past the way's eight bits' error across half a cell and short of a second surface
+four tenths of a cell off, and falls back to the cells that face the hit's way and then to the plain
+blend where none holds a surface through it. The red wall on a white floor and a slab half a cell
+thick, red above and white below, read their own colors under both reads. A second surface nearer
+than 0.3 of a cell to the first still blends in, which no test here reads.

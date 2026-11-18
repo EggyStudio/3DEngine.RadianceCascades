@@ -13,9 +13,104 @@ Of 102 emitters about one eye, the 64 glow lights ranked by each one's light abo
 12 bright lanterns 18 to 30 meters out, where nearest the eye first takes none of them and reaches
 less far, above the glow block's bytes written with its head and as the lights alone.
 
+![](.github/assets/readings/2026-11-18-item-3-field-cells.webp)
+The middle slice of the field's cells about a box of two as they resolve, below zero inside and out
+to the band outside, beside the cells about a double-sided sheet at 0.08, the rows either side
+keeping its plane 0.04492 and 0.20483 off along their way where it lies 0.045 and 0.205 off, built
+and resolved on the CPU from the library's Slang.
+
+Commits that day
+
+- `d573ea7` The library's Slang holds what a cell of the field keeps of the triangles near it and
+  the distance the resolve makes of it, and tests run on the CPU build a box of two within a 1024th
+  of a cell, part two meshes' coplanar faces by their instances and keep a thin sheet's plane on
+  either side.
+- `78fa4c5` The tests run a kernel of the library's Slang on the CPU, built by slangc through the
+  system's C++ compiler and dispatched over its buffers, so the octahedral map's round trip at every
+  texel and the texels' marks are read as they compute, skipped with the reason where no compiler is
+  found.
+- `866bba7` The cheatsheet is one word wherever the module writes it, and a seventh fact from Tools
+  holds the README to its link row above its title.
+- `38470fd` The module names no engine in any text it keeps, the plan's and the glow lights' forms
+  are settings each at a default with what it does and trades, the cascade's lead one of them, the
+  read of two engines' copies leaves the repository, and the tests take the shared check of every
+  tracked text.
+- `7622814` The tests take the checks every module keeps from the Tools submodule in place of their
+  own copy, five facts with the cheat sheet the built library writes among them, the README links
+  the devlog and the cheat sheet, and a clone without the submodule stops with the command that
+  fetches it.
+- `ff7571b` The module holds the glow lights' choice and layout, which emitters are carried and cut
+  into parts, the 64 that send the most about the eye written into a block of its own against the
+  frame's origin, with three ways the engines part behind a record of forms each engine names, ten
+  tests on the CPU, and a sheet of the lights each ranking writes about one eye and the block's
+  bytes.
+- `f44ae1a` The README says how an engine binds the module, what the plan asks and hands back, the
+  conventions it stands on and which forms an engine new to it names, its smallest binding run by a
+  host in the tests with no engine and held line for line to the README, and every form is named
+  where a plan is made.
+- `35f76c3` The tests compile the library's Slang to HLSL and to Metal beside SPIR-V and WGSL, each
+  kernel's entry named since Metal reserves main, and the README says how an engine in any language
+  compiles the kernels with slangc alone.
+- `448f28b` The plan holds four ways the two engines' plans part behind a record of forms each
+  engine sets, a cascade lying ahead of the eye, meshes stamped until they are built, every build of
+  a whole cascade and a mesh painted again waiting for its new paint to settle, with a reflectance
+  and a share sent through on each draw and stamp, 10 more tests held with every form set, the
+  probes' cascade tested on its own and the forms tabled with what will choose between them.
+- `03da2c4` The plan compares an engine's tag with the rest of a draw, so a draw whose tag changes
+  is its mesh painted again, the budgets and the pool are worked out without overflow at the largest
+  counts, and a mesh's triangles are refused colors of another count than its vertices, each held by
+  a test that failed before the mend.
+- `643e32c` The library builds as the assembly 3DEngine.RadianceCascades under the package id of the
+  same name and its tests as 3DEngine.RadianceCascades.Tests, the namespace staying
+  RadianceCascades.
+- `6d60f08` The module holds the scene field's plan, where each cascade lies about the eye, which
+  cascades, regions and shifts are built each frame under the budgets and which meshes are stamped
+  as boxes, generic over what an engine knows a mesh by, with the layout of the triangles the builds
+  read, their open edges, the pool's size and the cut of a rigid mesh into parts, held by 32 tests
+  on the CPU.
+- `ebd3470` The fetch of slangc refuses an archive whose sha256 is not the one its release lists,
+  and writes its stamp only once the compiler runs, so a compiler that does not run is fetched
+  again.
+- `8d11f8c` The module holds its first Slang, a probe's directions on an octahedron with the rays
+  and marks of its texels as both engines lay them out, compiled by the tests to SPIR-V and to WGSL
+  with the slangc both engines pin, which the workflow fetches on the three systems, and a test
+  holds every comment line to 100 columns.
+
+## 2026-11-17
+
+Commits that day
+
+- `6b7bcd8` The ignore file's note on the pictures folder names no one, and the guides spell
+  canceled.
+
+## 2026-11-14
+
+Commits that day
+
+- `ad7841e` The kernels' document names no item of the review where it says what the move needs, the
+  move of the code into the module in its opening and the move in its section of tests.
+- `21761ff` The interface's opening says the choice between the two forms is made when the kernels
+  move, naming no session and no item.
+- `040353c` The kernels' document writes out the ten things an engine gives a kernel as the
+  declarations the module would hold, each field and function with its name in both engines or the
+  engine that lacks it, and what each engine changes in its own files to give them.
+- `13d21db` The kernels' document gains what holds each kernel today, each engine's tests for every
+  pair with the device each runs on and the gaps between them, the rooms both engines draw alike,
+  and the order the kernels could move in.
+- `7806020` A document reads the radiance cascades of both engines kernel by kernel in the order a
+  frame runs them, with where each pair differs and which form is the later, the three findings
+  placed at their kernels and the interface the module would ask of an engine.
+
 ## 2026-10-31
 
 Done that day
 
 - Item 1 at `8811a8e`. The documents, one commit.
 - Item 2 at `8cc387d`. The skeleton, one commit after item 1.
+
+Commits that day
+
+- `8cc387d` The module gains its solution, an empty library whose public members need summaries, a
+  test that it loads, the version at 0.1 and a build workflow on Linux, Windows and macOS.
+- `8811a8e` The module gains its documents, AGENTS.md, the README, STYLE.md, COMMITS.md and the code
+  of conduct as the engines keep them, with git's ignore and attribute files.

@@ -20,10 +20,10 @@ int MaxShapes = 256;                                     // How many shapes are 
 int BrickCells = 4;                                      // The cells along each side of a brick a stamp writes
 int SnapCells = 8;                                       // How many of its cells a cascade's corner moves by at least
 int DefaultTriangleBudget = 32768;                       // How many triangles the builds splat a frame at most unless the engine says
-SceneFieldPlan(int cascades, float cellSize, int budget, Func<TMesh, FieldBox> bounds, Func<TMesh, int> triangles, Func<TMesh, FieldPart[]?>? parts = null, Func<SceneFieldPlan<TMesh, TTag>.Instance<TMesh, TTag>, Vector3>? tint = null, int triangleBudget = 32768, float farCell = 0f, Func<SceneFieldPlan<TMesh, TTag>.Instance<TMesh, TTag>, bool>? carried = null, FieldPlanOptions? options = null);
+SceneFieldPlan(int cascades, float cellSize, int budget, Func<TMesh, FieldBox> bounds, Func<TMesh, int> triangles, Func<TMesh, FieldPart[]?>? parts = null, Func<SceneFieldPlan<TMesh, TTag>.Instance, Vector3>? tint = null, int triangleBudget = 32768, float farCell = 0f, Func<SceneFieldPlan<TMesh, TTag>.Instance, bool>? carried = null, FieldPlanOptions? options = null);
 int BaseTriangleBudget { get; }                          // The triangle budget the field was made with, which TriangleBudget is raised from
 int BuildingTriangles { get; }                           // The triangles of the meshes the build in progress splats over its frames, or none
-(int, FieldCells)? Unbuilt { get; }                      // The cascade a shift moved and the cells it brought in, which hold nothing until the shift's build ends in a later frame, or null where no shift waits
+(int Cascade, FieldCells Cells)? Unbuilt { get; }        // The cascade a shift moved and the cells it brought in, which hold nothing until the shift's build ends in a later frame, or null where no shift waits
 int Splatted { get; }                                    // How many triangles this frame's builds splat
 int Waiting { get; }                                     // How many triangles of a build left for later frames wait to be splatted
 int Arriving { get; }                                    // How many meshes drawn this frame came and have not moved and are not yet still, which the field holds nothing of until they settle and are built in, as a scene's on its first load
@@ -38,10 +38,10 @@ bool HasFar { get; }                                     // Whether the last cas
 float CellSize { get; }                                  // The width of a cell of the finest cascade
 int Budget { get; }                                      // How many cascades are built a frame at most
 int TriangleBudget { get; }                              // How many triangles the builds splat a frame at most, a mesh at least, raised where the frame has room (Raise)
-List<SceneFieldPlan<TMesh, TTag>.Build<TMesh, TTag>> Builds { get; }  // The cascades built this frame, or the parts of their builds splatted this frame
+List<SceneFieldPlan<TMesh, TTag>.Build> Builds { get; }  // The cascades built this frame, or the parts of their builds splatted this frame
 List<FieldShape> Shapes { get; }                         // The shapes stamped this frame
-List<(int, int, int, int)> Bricks { get; }               // The bricks stamped this frame, by cascade and place in bricks
-List<(int, int)> BrickRanges { get; }                    // The shapes that come within each of Bricks, where its run of BrickShapes begins and how long it is, none for a brick only put back
+List<(int Cascade, int X, int Y, int Z)> Bricks { get; }  // The bricks stamped this frame, by cascade and place in bricks
+List<(int First, int Count)> BrickRanges { get; }        // The shapes that come within each of Bricks, where its run of BrickShapes begins and how long it is, none for a brick only put back
 List<int> BrickShapes { get; }                           // The shapes of each brick one run after another, by their place in Shapes
 int StillCount { get; }                                  // How many meshes are still
 bool ReadByPlace { get; }                                // Whether the last frame drew the meshes the frame before did in the same order, and was read by place
@@ -49,19 +49,19 @@ bool DrawnTwiceInPlace { get; }                          // Whether a frame has 
 Vector3 Eye { get; }                                     // The eye the cascades lie around this frame, as Update was last given it
 int Spent { get; }                                       // How much of the triangle budget this frame's builds spent, each mesh its triangles by the share of its bounds within the cells built, an eighth of them at least
 long Frame { get; }                                      // The frames the plan has been updated for
-(long, long, int) LastChange { get; }                    // The frame the field last began to change, the frame after which it held the change whole, or -1 while it has not, and the triangles its builds splatted between
-(int[], int, int) Unsettled { get; }                     // What keeps the field from holding a change whole, the cascades to be built whole or to have a region built, the still meshes that wait for their cascades and those kept for meshes replacing them
+(long From, long To, int Triangles) LastChange { get; }  // The frame the field last began to change, the frame after which it held the change whole, or -1 while it has not, and the triangles its builds splatted between
+(int[] Cascades, int Waiting, int Kept) Unsettled { get; }  // What keeps the field from holding a change whole, the cascades to be built whole or to have a region built, the still meshes that wait for their cascades and those kept for meshes replacing them
 void SetBudgets(int cascades, int triangles);            // Sets the cascades built a frame and the base triangle budget to new ones, keeping what the field holds and the builds in progress, the raised budget held between the new base and MostRaise times it
 void Raise(double roomMs, double fieldMs);               // Sets the triangle budget each RaiseFrames frames from roomMs, the milliseconds a frame waits for the target frame rate, and fieldMs, what the field costs a frame on the CPU and the GPU, both averaged over the frames before, called before each Update
 int TakeMostSplatted();                                  // The most triangles a frame's builds splatted since this was last asked, started afresh
-bool IsStill(in SceneFieldPlan<TMesh, TTag>.Instance<TMesh, TTag> instance);
+bool IsStill(in SceneFieldPlan<TMesh, TTag>.Instance instance);
 int CascadeOfProbes(int probes, int cascades);           // The cascade the probes of cascade probes of cascades stand in, its own number but for the last, which stands in the far cascade where there is one, as the field's readers look a probe's cascade up
 float CellOf(int cascade);                               // The width of a cell of a cascade
 float FarCellFor(float reach, int cascades, float cellSize);  // The width of a cell of a far cascade for reach, 0.85 of its width, at least twice as wide as the last counted cascade's of cascades from cellSize, or 0 for a reach of none or past every finite distance
 Vector3? BuiltOrigin(int cascade);                       // Where a cascade lies as it was last built, its corner, or null for one not yet built
 Vector3 OriginAround(int cascade, Vector3 eye, Vector3 ahead = default);  // Where a cascade's corner would lie around eye, its middle on the snap's grid nearest the eye, or where Lead is above 0, that share of its width ahead of it along ahead, a unit direction or zero
 void Rebuild(int frames);                                // Marks every cascade to be built again at each of the next frames frames, as many a frame as the budget allows, so a profile over them times a build
-void Update(Vector3 eye, IReadOnlyList<ValueTuple<SceneFieldPlan<TMesh, TTag>.Instance<TMesh, TTag>, bool>> drawn, Vector3 ahead = default);
+void Update(Vector3 eye, IReadOnlyList<(SceneFieldPlan<TMesh, TTag>.Instance Instance, bool Skinned)> drawn, Vector3 ahead = default);
 int Move(double x, double y, double z);                  // Moves every place the plan keeps by a whole step, in doubles, as a program moved every place it hands the engine by it
 
 record struct FieldBox                                   // A box along the axes
@@ -110,9 +110,9 @@ int Head = 48;                                           // The bytes ahead of t
 int Size = 5168;                                         // The bytes the head and the lights take
 bool Carries(Vector3 emission, IReadOnlyList<GlowPart> parts, Matrix4x4 world, float firstCell);  // Whether an instance emitting emission is carried as lights, every part of its mesh carried as Carries carries a box
 bool Carries(Vector3 emission, FieldBox box, Matrix4x4 world, float firstCell);  // Whether an instance emitting emission is carried as a light, its box in the world no longer than twice the first cascade's probe spacing
-int Write<TMesh, TTag>(Span<byte> bytes, IReadOnlyList<ValueTuple<SceneFieldPlan<TMesh, TTag>.Instance<TMesh, TTag>, bool>> drawn, Vector3 eye, float firstCell, Func<TMesh, FieldBox> boxOf, Func<TMesh, float> shareOf, GlowPlaces? places = null, Func<TMesh, IReadOnlyList<GlowPart>>? partsOf = null, FrameOrigin origin = default, GlowOptions? options = null);
+int Write<TMesh, TTag>(Span<byte> bytes, IReadOnlyList<(SceneFieldPlan<TMesh, TTag>.Instance Instance, bool Skinned)> drawn, Vector3 eye, float firstCell, Func<TMesh, FieldBox> boxOf, Func<TMesh, float> shareOf, GlowPlaces? places = null, Func<TMesh, IReadOnlyList<GlowPart>>? partsOf = null, FrameOrigin origin = default, GlowOptions? options = null);
 void Place(Span<byte> bytes, FrameOrigin origin, GlowPlaces? places = null);  // The lights Write wrote with their middles and the box about their reach taken against origin, a place no light holds left empty
-List<GlowLight> Gather<TMesh, TTag>(IReadOnlyList<ValueTuple<SceneFieldPlan<TMesh, TTag>.Instance<TMesh, TTag>, bool>> drawn, float firstCell, Func<TMesh, FieldBox> boxOf, Func<TMesh, float> shareOf, Func<TMesh, IReadOnlyList<GlowPart>>? partsOf = null, FrameOrigin origin = default);
+List<GlowLight> Gather<TMesh, TTag>(IReadOnlyList<(SceneFieldPlan<TMesh, TTag>.Instance Instance, bool Skinned)> drawn, float firstCell, Func<TMesh, FieldBox> boxOf, Func<TMesh, float> shareOf, Func<TMesh, IReadOnlyList<GlowPart>>? partsOf = null, FrameOrigin origin = default);
 GlowPart[] PartsOf(Vector3[]? corners, FieldBox box, float share);  // The parts of a mesh, its triangles joined where they share a corner, from its corners three a triangle in its own space, or the mesh whole, box with share, where its triangles are all joined or it has none
 float ShareOf(Vector3[]? corners, FieldBox box);         // A mesh's surface over its box's, from its triangles' corners three a triangle in its own space, 1 where it has none
 float ShareOf(double area, FieldBox box);                // A mesh's surface over its box's, from the area of its triangles in its own space, 1 where that is not known, 0 or less
