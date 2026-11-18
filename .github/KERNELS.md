@@ -1827,10 +1827,11 @@ BevyCSharp, a file at a time:
 ## The forms held twice
 
 The field's plan holds four ways the two engines' plans part, each a member of `FieldForms`
-(`RadianceCascades/Field/FieldForms.cs`) an engine sets, the default 3DEngine's and the member set
-BevyCSharp's. Each stays until what its row names chooses one form for both, and the other
-engine's test changes with it. A row stays open no longer than the two parts of the move after the
-one that brought it.
+(`RadianceCascades/Field/FieldForms.cs`), and the glow lights three ways the two engines' glow
+lights part, each a member of `GlowForms` (`RadianceCascades/Glow/GlowForms.cs`). An engine sets
+each, the default 3DEngine's and the member set BevyCSharp's. Each stays until what its row names
+chooses one form for both, and the other engine's test changes with it. A row stays open no longer
+than the two parts of the move after the one that brought it.
 
 | Member | Default | Set | What chooses | Brought by, closed by |
 |---|---|---|---|---|
@@ -1838,3 +1839,6 @@ one that brought it.
 | `StampsArrivals` | A mesh that came and has not moved stands in for nothing until it is built | It is stamped as its box until then, as a still mesh waiting for its cascades is | The plan's tests of a mesh drawn the same for eight frames in each form, and a pair of pictures of a scene's first frames in BevyCSharp before and after | The plan, the field's kernels |
 | `WholeBuilds` | A cascade the eye moved by whole cells shifts, and what came or went within a built one is built as a region of it | Every build is of a whole cascade | BevyCSharp binding the module's field kernels, which build regions and shift cascades, its tests of the plan's builds held in the default form | The plan, the field's kernels |
 | `RepaintWaits` | A mesh painted again where it stands goes on from the frames the one painted had | It is still at once only where the one painted had stood still for eight frames since it settled, and stays as it was until then | A test of a mesh painted again each frame, written before the choice, counting the builds each form makes, beside 3DEngine's tests of a mesh painted again and BevyCSharp's `AMeshPaintedAgainWhereItStandsHasNotMovedAndKeepsItsPlaceInTheField` | The plan, the field's kernels |
+| `FaintThousandth` | A light reaches as far as a surface takes a 300th of its light, or as far as a surface takes a 300th of what one half the first cascade's probe spacing from it takes where that is farther | It reaches as far as a surface takes a thousandth of its light, with no floor | The module's tests of a light's reach in each form (`The_Lights_Written_Are_The_Nearest_The_Eye_With_Their_Boxes_And_Reach` and `The_Light_Nearest_The_Eye_Is_Written_First_And_Reaches_Where_A_Surface_Takes_A_Thousandth_Of_Its_Light`), with 3DEngine's `A_Bulb_Hung_High_Lights_The_Floor_Under_It_As_Its_Lower_Face_Does` and both engines' rooms lit by six emitters held in the form chosen, and a pair of pictures of BevyCSharp's room lit by six emitters before and after | The glow lights, the glow kernel |
+| `NearestFirst` | The 64 lights written are those that send the most about the eye, each one's light times the surface it emits from over its squared distance from the eye | They are the 64 nearest the eye | The module's tests of the lights written in each form (`A_Bright_Lamp_Farther_Than_Seventy_Faint_Ones_Is_Lit_And_The_Faintest_Are_Not` and `The_Light_Nearest_The_Eye_Is_Written_First_And_Reaches_Where_A_Surface_Takes_A_Thousandth_Of_Its_Light`), and a pair of pictures in BevyCSharp before and after of a bright lantern beyond more than 64 small emitters | The glow lights, the glow kernel |
+| `LightsAlone` | A head of 48 bytes lies ahead of the lights, the count of places taken, the box every light's reach lies in and a bit a place for those that hold the frame before's light | The block is the lights alone, the count and the bits handed apart through `GlowPlaces` | The module's tests of the block in each form, and the glow kernel reading one layout in both engines, held by a pair of pictures of BevyCSharp's village's torches far from the origin (`FarFromTheWorldsOriginGlowLightsLeaveNoMoreOfTheLandBlackThanNearIt`) before and after | The glow lights, the glow kernel |

@@ -122,6 +122,15 @@ internal sealed class NumericAssertions<T>(T subject, string text) where T : str
         return new(this);
     }
 
+    // Within the precision either side of the value expected, as the library has it, so a number
+    // that is not one fails.
+    public AndConstraint<NumericAssertions<T>> BeApproximately(T expected, T precision, string because = "")
+    {
+        if (!(T.Abs(subject - expected) <= precision))
+            throw Failure.Of(text, $"to approximate {Failure.Show(expected)} +/- {Failure.Show(precision)}", because, $"found {Failure.Show(subject)}");
+        return new(this);
+    }
+
     private AndConstraint<NumericAssertions<T>> Check(bool holds, string relation, T expected, string because)
     {
         if (!holds) throw Failure.Of(text, $"{relation} {Failure.Show(expected)}", because, $"found {Failure.Show(subject)}");

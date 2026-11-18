@@ -1,0 +1,1 @@
+2026-11-18-item-3-glow-choice.webp | Of 102 emitters about one eye, the 64 glow lights ranked by each one's light about the eye take all 12 bright lanterns 18 to 30 meters out, where nearest the eye first takes none of them and reaches less far, above the glow block's bytes written with its head and as the lights alone.

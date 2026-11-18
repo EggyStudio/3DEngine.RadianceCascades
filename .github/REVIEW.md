@@ -381,3 +381,20 @@ plan is made only with each form named; the README's section Binding it in your 
 engine new to the module names every form false, and why, and when `RepaintWaits` or `WholeBuilds`
 is set. Its C# block is the host's in BindingTests.cs, run with no engine and compared with the
 README line for line by a test of its own until the shared checks are taken.
+
+Part 3, the glow lights' choice and layout, in the commit carrying this line, with its sheet.
+`GlowForms` is a public record of three required members, `FaintThousandth`, `NearestFirst` and
+`LightsAlone`, each a way the two engines' glow lights part, cleared 3DEngine's and set
+BevyCSharp's, named here as Decision 7 asks, its rows in KERNELS.md's table closing by the glow
+kernel. The module owns the glow block alone, its head and its lights, and the place of the block in
+an engine's own lights is the engine's. `FrameOrigin` in doubles takes the place of 3DEngine's
+origin and its world's step, zero for an engine that has none.
+
+Four ways no form holds come to BevyCSharp with the module where it binds the glow lights, and its
+rooms hold them. A copy recorded twice is one light. A flat emitter emits from its two broad faces
+at twice its share, where BevyCSharp's emitted from all six faces of its thickened box at a share of
+1, a flat quad's surface so about 2 percent less and a disc's a quarter of pi. A box of no size
+takes no share where BevyCSharp's took 0.05. `Write` returns the lights found, the places taken
+being in `GlowPlaces.Count`. A form is added for any of them that BevyCSharp's rooms read apart.
+Nine of 3DEngine's CPU tests of the glow lights come with it, twelve cases, and one under
+BevyCSharp's forms; the rest draw, or read the engine's shaders, and stay.
