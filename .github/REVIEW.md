@@ -374,3 +374,10 @@ looks. 10 of BevyCSharp's 16 tests of its plan hold with every member set, each 
 of them when cleared, and six stay in BevyCSharp, five on its GPU and one of its bridge's layout.
 The budget's lift after a cut, which BevyCSharp's plan lacks, comes to it with the module, none of
 its tests reaching it.
+
+The binding, in the commit carrying this line. `FieldForms` takes its four members as required
+properties and the plan's constructor takes the forms with no default, after the triangles, so a
+plan is made only with each form named; the README's section Binding it in your engine says an
+engine new to the module names every form false, and why, and when `RepaintWaits` or `WholeBuilds`
+is set. Its C# block is the host's in BindingTests.cs, run with no engine and compared with the
+README line for line by a test of its own until the shared checks are taken.

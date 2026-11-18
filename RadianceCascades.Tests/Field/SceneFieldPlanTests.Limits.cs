@@ -27,7 +27,7 @@ public sealed partial class SceneFieldPlanTests
     [Trait("Category", "Unit")]
     public void A_Tag_Made_Again_Each_Frame_Equal_To_The_Last_Leaves_The_Mesh_Still()
     {
-        var plan = new SceneFieldPlan<TestMesh, Look>(1, 0.25f, 1, mesh => FieldBox.Of(mesh.Positions), mesh => mesh.Positions.Length / 3);
+        var plan = new SceneFieldPlan<TestMesh, Look>(1, 0.25f, 1, mesh => FieldBox.Of(mesh.Positions), mesh => mesh.Positions.Length / 3, Around);
         var eye = new Vector3(0, 2, 6);
         SceneFieldPlan<TestMesh, Look>.Instance Drawn() => new(1, Cube, Matrix4x4.Identity, false, Tag: new Look(7));
         for (int frame = 0; frame < SceneFieldPlan.SettleFrames + 2; frame++) plan.Update(eye, [(Drawn(), false)]);

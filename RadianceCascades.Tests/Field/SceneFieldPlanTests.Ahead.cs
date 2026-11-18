@@ -25,7 +25,7 @@ public sealed partial class SceneFieldPlanTests
         /// </summary>
         internal readonly record struct NumberedMesh(uint Mesh, uint Generation, FieldBox Bounds);
 
-        private static readonly FieldForms Forms = new(Ahead: true, StampsArrivals: true, WholeBuilds: true, RepaintWaits: true);
+        private static readonly FieldForms Forms = new() { Ahead = true, StampsArrivals = true, WholeBuilds = true, RepaintWaits = true };
 
         private static readonly FieldBox CubeBounds = new(new Vector3(-1), new Vector3(1));
 

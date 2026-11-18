@@ -261,6 +261,7 @@ public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull wh
     /// The box around a mesh's vertices in its own space, which the caller may keep.
     /// </param>
     /// <param name="triangles">How many triangles a mesh has.</param>
+    /// <param name="forms">The forms the engine chose where the plan holds two.</param>
     /// <param name="parts">
     /// The parts a mesh that does not bend is stamped as, or null for its one box, which the caller
     /// may keep.
@@ -275,14 +276,13 @@ public sealed partial class SceneFieldPlan<TMesh, TTag> where TMesh : notnull wh
     /// <param name="farCell">
     /// The width of a cell of the far cascade after the others, or 0 for none.
     /// </param>
-    /// <param name="forms">The forms the engine chose where the plan holds two.</param>
     /// <param name="carried">
     /// Whether global illumination carries an emissive mesh as a glow light, whose box is stamped
     /// with none of its emission.
     /// </param>
-    public SceneFieldPlan(int cascades, float cellSize, int budget, Func<TMesh, FieldBox> bounds, Func<TMesh, int> triangles,
+    public SceneFieldPlan(int cascades, float cellSize, int budget, Func<TMesh, FieldBox> bounds, Func<TMesh, int> triangles, FieldForms forms,
         Func<TMesh, FieldPart[]?>? parts = null, Func<Instance, Vector3>? tint = null, int triangleBudget = DefaultTriangleBudget,
-        float farCell = 0, Func<Instance, bool>? carried = null, FieldForms forms = default)
+        float farCell = 0, Func<Instance, bool>? carried = null)
     {
         Forms = forms;
         _parts = parts ?? (_ => null);
