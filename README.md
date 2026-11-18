@@ -40,6 +40,26 @@ dotnet test RadianceCascades.Tests
 
 Without slangc those tests are reported as skipped, with their reason.
 
+## The kernels without the library
+
+The Slang under `RadianceCascades/Shaders` needs nothing of the C# library, so an engine in any
+language takes it with slangc alone, each file a module its kernels import with that folder among
+the folders slangc searches. A kernel of the engine's own, here with its compute entry `run`,
+compiles to each target slangc writes itself:
+
+```bash
+slangc kernel.slang -I RadianceCascades/Shaders -entry run -stage compute -target spirv -o kernel.spv
+slangc kernel.slang -I RadianceCascades/Shaders -entry run -stage compute -target wgsl -o kernel.wgsl
+slangc kernel.slang -I RadianceCascades/Shaders -entry run -stage compute -target hlsl -o kernel.hlsl
+slangc kernel.slang -I RadianceCascades/Shaders -entry run -stage compute -target metal -o kernel.metal
+```
+
+Vulkan reads the SPIR-V and WebGPU the WGSL, and the HLSL and the Metal are compiled to DXIL and to
+a Metal library by each platform's own compiler, dxc and Apple's metal, which slangc calls itself
+where they are installed. Metal reserves the name `main`, so a kernel compiled for it names its
+entry otherwise. The tests compile their own kernels, under `RadianceCascades.Tests/Shaders`, to the
+four with the slangc `build/fetch-slang.sh` fetches.
+
 ## License
 
 The Mozilla Public License 2.0, in [LICENSE](LICENSE).

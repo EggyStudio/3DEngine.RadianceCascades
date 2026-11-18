@@ -43,9 +43,9 @@ internal static class Slangc
     }
 
     /// <summary>
-    /// Compiles <paramref name="kernel"/> for <paramref name="target"/> into
-    /// <paramref name="output"/>, the library's Slang on the import path and every warning an
-    /// error, as the build's are.
+    /// Compiles the compute entry <c>test</c> of <paramref name="kernel"/> for
+    /// <paramref name="target"/> into <paramref name="output"/>, the library's Slang on the import
+    /// path and every warning an error, as the build's are.
     /// </summary>
     /// <returns>The compiler's exit code and what it wrote to either stream.</returns>
     internal static (int Code, string Said) Compile(string kernel, string target, string output)
@@ -58,7 +58,7 @@ internal static class Slangc
         };
         foreach (var argument in new[]
                  {
-                     kernel, "-I", Repository.Shaders, "-target", target, "-o", output,
+                     kernel, "-I", Repository.Shaders, "-entry", "test", "-stage", "compute", "-target", target, "-o", output,
                      "-warnings-as-errors", "all",
                  })
             start.ArgumentList.Add(argument);

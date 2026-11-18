@@ -1,6 +1,6 @@
 // A probe's directions laid out on an octahedron folded flat into a square, the rays a texel of
-// that square sends, and the mark a texel's rays leave for the passes that read them. Both engines
-// lay their probes' texels out by these functions, so a texel means one direction in either.
+// that square sends, and the mark a texel's rays leave for the passes that read them. Every pass
+// lays its probes' texels out by these functions, so a texel means one direction in each.
 module rc_octahedron;
 
 // A unit direction as a point of the square from 0 to 1, the octahedron folded flat, which lays
