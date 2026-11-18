@@ -77,6 +77,28 @@ public sealed class FieldCodeTests
     }
 
     [CpuKernelFact]
+    public void A_Cell_Between_Two_Blocks_That_Meet_Along_An_Edge_Is_Held_Inside_So_A_March_Through_The_Edge_Meets_The_Field()
+    {
+        // Two blocks a unit square across meeting along the z axis, one below and behind it in x
+        // and y, the other above and before it, so the two cells between them about the edge lie
+        // outside both, each beside a cell inside one block and across from a cell outside both.
+        var unit = Box(0.5f);
+        var blocks = unit.Select(t => (t.A - new Vector3(0.5f, 0.5f, 0), t.B - new Vector3(0.5f, 0.5f, 0), t.C - new Vector3(0.5f, 0.5f, 0), 1, false))
+            .Concat(unit.Select(t => (t.A + new Vector3(0.5f, 0.5f, 0), t.B + new Vector3(0.5f, 0.5f, 0), t.C + new Vector3(0.5f, 0.5f, 0), 2, false)));
+        var (distances, _, _) = Build(Triangles(blocks));
+        var pinched = new float[Size * Size * Size];
+        CpuKernel.Run("pinch_cpu.slang", (Size / 4, Size / 4, Size / 4), distances, pinched);
+        foreach (var (x, y) in new[] { (16, 15), (15, 16) })
+        {
+            var index = (16 * Size + y) * Size + x;
+            Assert.True(distances[index] > 0, $"the cell at {Middle(x, y, 16)} resolves outside both blocks, {distances[index]}");
+            Assert.True(pinched[index] < 0, $"the cell at {Middle(x, y, 16)} between the blocks is held at {pinched[index]}, where it is held inside");
+        }
+        Assert.True(pinched[(16 * Size + 15) * Size + 15] < 0 && pinched[(16 * Size + 16) * Size + 16] < 0, "the cells inside each block stay inside");
+        Assert.True(pinched[(16 * Size + 30) * Size + 30] > 0, "a cell far from both stays outside");
+    }
+
+    [CpuKernelFact]
     public void A_Faces_Way_Read_Back_From_Its_Eight_Bits_Lies_Within_Fourteen_And_A_Half_Degrees_Of_It()
     {
         // The largest over 65,536 ways is 14.15 degrees, near the octahedron's folded corners,

@@ -153,6 +153,46 @@ public float resolvedDistance(uint code, uint behind, float cell, float band, fl
     return (code & Front) == 0u ? -d : d;
 }
 
+// The distances of a cascade's cells as the resolve made them, which the pinch reads about a cell,
+// an engine's over its own images or the codes it kept.
+public interface IResolvedCells
+{
+    // The cells along each side of the cascade.
+    int size();
+
+    // A cell's distance, below zero inside.
+    float resolvedAt(int3 at);
+}
+
+// Whether a cell outside every surface lies between two cells beside it along two axes that lie
+// inside one while the cell across the diagonal from it lies outside, the pattern two blocks that
+// meet along an edge leave in the cells about it, which no single face makes. Such a cell is held
+// inside at its distance, so a march through the edge between the two blocks meets the field there,
+// where between the four cells about the edge the distance never falls below zero, and a march
+// from the floor on one side of a wall whose halves meet along one edge would see part of a lamp on
+// the other side and light the floor about the edge, which no light reaches.
+public bool pinched<R : IResolvedCells>(R cells, int3 c)
+{
+    int size = cells.size();
+    int3 axes[3] = { int3(1, 0, 0), int3(0, 1, 0), int3(0, 0, 1) };
+    [loop]
+    for (int a = 0; a < 3; a++)
+        [loop]
+        for (int b = a + 1; b < 3; b++)
+            [loop]
+            for (int signs = 0; signs < 4; signs++)
+            {
+                int3 one = c + axes[a] * ((signs & 1) != 0 ? 1 : -1);
+                int3 other = c + axes[b] * ((signs & 2) != 0 ? 1 : -1);
+                int3 across = one + other - c;
+                if (any(min(min(one, other), across) < 0) || any(max(max(one, other), across) >= size))
+                    continue;
+                if (cells.resolvedAt(one) < 0.0 && cells.resolvedAt(other) < 0.0 && cells.resolvedAt(across) > 0.0)
+                    return true;
+            }
+    return false;
+}
+
 // The plane of the double-sided face a code is of, where its nearest point lies on the face's
 // inside, its way times two cells more than the plane's offset from the cell's middle along it, in
 // cells, or nothing where the face is not double-sided, is nearest at its rim, past which the plane
