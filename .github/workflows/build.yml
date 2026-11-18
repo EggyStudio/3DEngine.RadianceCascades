@@ -27,9 +27,9 @@ jobs:
         # labels, so a new release under a label changes nothing with no commit to show for it.
         os: [ubuntu-24.04, windows-latest, macos-15]
     runs-on: ${{ matrix.os }}
-    # The build took 3 seconds and the test 2 on a desktop from an empty package folder
-    # (dotnet build RadianceCascades.slnx -warnaserror, dotnet test RadianceCascades.Tests), so 30 minutes is reached
-    # only where a restore or a test hangs (N 6.8).
+    # The build took 6 seconds and the test 2 on a desktop with the packages restored and slangc
+    # fetched (dotnet build RadianceCascades.slnx -warnaserror, dotnet test RadianceCascades.Tests),
+    # so 30 minutes is reached only where a restore, the download of slangc or a test hangs (N 6.8).
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
@@ -38,12 +38,24 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      # The compiler the tests compile the library's Slang with, kept between runs under the
+      # script's hash as the engines keep theirs, and downloaded by the script where none is kept.
+      - uses: actions/cache@v6
+        with:
+          path: build/tools/slang
+          key: slang-${{ runner.os }}-${{ hashFiles('build/fetch-slang.sh') }}
+
+      # In bash on every system, the Windows runner's coming with Git for Windows.
+      - run: build/fetch-slang.sh
+        shell: bash
+
       - run: dotnet build RadianceCascades.slnx -warnaserror
 
       - run: dotnet test RadianceCascades.Tests --no-build --logger trx --results-directory RadianceCascades.Tests/TestResults
 
       - uses: actions/upload-artifact@v7
-        # Kept for a job canceled as well as one that failed, since a cut-short run is the one to read.
+        # Kept for a job canceled as well as one that failed, since a cut-short run is the one to
+        # read.
         if: failure() || cancelled()
         with:
           name: test-results-${{ matrix.os }}

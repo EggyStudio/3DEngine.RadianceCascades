@@ -33,3 +33,6 @@ desktop.ini
 
 # Every picture made while working, read and pruned by day (N 4.10).
 /.github/dump/
+
+# build/fetch-slang.sh downloads into build/tools.
+/build/tools/
