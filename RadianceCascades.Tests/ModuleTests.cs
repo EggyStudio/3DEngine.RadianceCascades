@@ -8,7 +8,8 @@ namespace RadianceCascades.Tests;
 /// The checks every module keeps, from the Tools submodule, that the library references no engine,
 /// window or graphics API, names no engine in a public member or its documentation nor in any
 /// tracked text, has every public type named in the README, holds the README's binding block in its
-/// host word for word, and keeps the cheat sheet the built library writes.
+/// host word for word, keeps the cheatsheet the built library writes, and opens the README with its
+/// link row.
 /// </summary>
 public sealed class ModuleTests
 {
@@ -53,6 +54,13 @@ public sealed class ModuleTests
     public void No_Tracked_Text_Names_An_Engine()
     {
         var fault = ModuleChecks.EngineNameInTextFault(Root);
+        Assert.True(fault is null, fault);
+    }
+
+    [Fact]
+    public void The_Readme_Opens_With_Its_Link_Row()
+    {
+        var fault = ModuleChecks.LinkRowFault(Assembly.Load(Library), Readme);
         Assert.True(fault is null, fault);
     }
 

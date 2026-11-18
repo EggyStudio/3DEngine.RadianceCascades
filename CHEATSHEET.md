@@ -1,4 +1,4 @@
-# 3DEngine.RadianceCascades cheat sheet
+# 3DEngine.RadianceCascades cheatsheet
 
 Every public type of the library with its public members, in the order the README first names the
 types, each member a line of its declaration and the first sentence of its summary. The list is
