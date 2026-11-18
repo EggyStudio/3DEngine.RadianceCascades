@@ -45,7 +45,9 @@ dotnet build RadianceCascades.slnx
 dotnet test RadianceCascades.Tests
 ```
 
-Without slangc those tests are reported as skipped, with their reason.
+Without slangc those tests are reported as skipped, with their reason. The tests that run a kernel
+on the CPU take the system's C++ compiler as well, which slangc calls to build the kernel, and are
+skipped with their reason where it finds none.
 
 ## Binding it in your engine
 
