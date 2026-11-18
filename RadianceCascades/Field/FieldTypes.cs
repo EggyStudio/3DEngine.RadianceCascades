@@ -114,4 +114,37 @@ public readonly record struct FieldShape(Matrix4x4 World, Vector3 Center, Vector
 
     /// <summary>Whether a matrix has an inverse, which its translation leaves as it is.</summary>
     public static bool Turns(Matrix4x4 world) => Matrix4x4.Invert(world with { M41 = 0, M42 = 0, M43 = 0 }, out _);
+
+    /// <summary>The floats a shape takes as the stamp reads it, eight groups of four.</summary>
+    public const int StampFloats = 32;
+
+    /// <summary>
+    /// Writes the shape as the library's stamp reads it (<c>StampShape</c> in
+    /// <c>rc_field_stamp.slang</c>) into <paramref name="into"/>, <see cref="StampFloats"/> floats:
+    /// the three rows of the matrix from the world into its own space, its middle and least scale,
+    /// its half extents, its color and the share of light that passes a unit of its depth, its
+    /// emission and the share of its diffuse light it sends through, and its gloss.
+    /// </summary>
+    /// <exception cref="ArgumentException"><paramref name="into"/> is shorter than
+    /// <see cref="StampFloats"/>.</exception>
+    public void WriteStamp(Span<float> into)
+    {
+        if (into.Length < StampFloats)
+            throw new ArgumentException($"A shape takes {StampFloats} floats, and {into.Length} were given.", nameof(into));
+        var t = ToOwn;
+        // A point goes into the shape's own space as a row vector times the matrix, so each row the
+        // stamp takes a dot product with is a column of it.
+        ReadOnlySpan<float> floats =
+        [
+            t.M11, t.M21, t.M31, t.M41,
+            t.M12, t.M22, t.M32, t.M42,
+            t.M13, t.M23, t.M33, t.M43,
+            Center.X, Center.Y, Center.Z, Scale,
+            Extents.X, Extents.Y, Extents.Z, 0,
+            Color.X, Color.Y, Color.Z, LightThrough,
+            Emission.X, Emission.Y, Emission.Z, Transmission,
+            Gloss.X, Gloss.Y, Gloss.Z, 0,
+        ];
+        floats.CopyTo(into);
+    }
 }

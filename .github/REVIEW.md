@@ -442,3 +442,32 @@ twentieth of a unit over another, a fifth of a cell, blends a quarter of the low
 white with 0.26 of the green as the cells' weights give, which
 `FieldPaintTests.A_Floor_Over_Another_Of_Unlike_Color_A_Twentieth_Below_Blends_A_Quarter_Of_It_In`
 states, so a change to the read shows there.
+
+The splat and the stamp, the splat at `881fa74` and the stamp in the commit carrying this line. What
+an engine's binding takes from the library in place of its own shaders' code, kernel by kernel, each
+kernel named by what it computes and the engine keeping its bindings, its threads, its atomics and
+its dispatch:
+
+1. The probes' directions, every pass's octahedral map, its share, the rays a texel sends and a
+   texel's marks, from `rc_octahedron`.
+2. The splat's distance pass, the body each lane runs over a triangle's band of cells, from
+   `splatCodes` over an `ISplatCells` the engine keeps by its atomic minimum; the code itself, the
+   nearest point with its open edges, the way's eight bits and the passing over of a sliver, from
+   `rc_field_code`.
+3. The splat's paint pass, the cells that kept a triangle's code painted its color blended at the
+   nearest point, from `splatPaint` over an `IPaintCells`, with `lightThroughPaint`, `cornerColor`,
+   `barycentric` and `glossBits`.
+4. The resolve's distance, a code and the face behind it made the distance a reader marches, the
+   thin wall held, from `resolvedDistance`; the plane a double-sided face keeps, from `sheetOf`; the
+   pinch between two blocks, from `pinched` over an `IResolvedCells` the engine reads its resolved
+   cells through.
+5. The stamp's cell, the least of a still cell and the boxes of its brick with the nearer surface's
+   paint, face and gloss, from `stampCell` over an `IStampShapes`, each shape laid out as
+   `FieldShape.WriteStamp` writes it, 32 floats.
+6. The readers' color at a hit, from `paintFacing` and `paintAt` over an `IFieldCells`, the mend of
+   two unlike surfaces in one cell with it, and the face's gloss from `glossOf`.
+
+Not yet the library's: the splat's second plane, kept where a second double-sided face of another
+way passes a cell, the lending of emitters thinner than a cell, the paint again of a mesh whose
+colors changed in place, the clearing of a cascade's codes, and every reader of the field's distance
+and of the probes. The kernels' own files, each a binding over these, stay each engine's.

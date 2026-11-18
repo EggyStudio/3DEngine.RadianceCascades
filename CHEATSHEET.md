@@ -145,6 +145,7 @@ bool Holds(FieldCells other);                            // Whether every cell o
 FieldCells With(FieldCells other);                       // The cells around these and other
 
 record struct FieldShape                                 // A mesh stamped as a box, from its own space to the world, the box's middle and half extents there, the least scale from there to the world, the mesh's color in linear light, the share of light that passes a unit of its depth, its emission, linear, none where the engine carries the mesh as a glow light, its gloss, and the share of its diffuse light it sends through
+int StampFloats = 32;                                    // The floats a shape takes as the stamp reads it, eight groups of four
 FieldShape(Matrix4x4 World, Vector3 Center, Vector3 Extents, float Scale, Vector3 Color = default, float LightThrough = 0f, Vector3 Emission = default, Vector3 Gloss = default, float Transmission = 0f);
 Matrix4x4 World { get; init; }                           // From the box's own space to the world
 Vector3 Center { get; init; }                            // The box's middle in its own space
@@ -157,6 +158,7 @@ Vector3 Gloss { get; init; }                             // The mesh's perceptua
 float Transmission { get; init; }                        // The share of its diffuse light the mesh sends through to its far side
 Matrix4x4 ToOwn { get; }                                 // From the world into its own space, or nothing where its matrix has no inverse
 bool Turns(Matrix4x4 world);                             // Whether a matrix has an inverse, which its translation leaves as it is
+void WriteStamp(Span<float> into);                       // Writes the shape as the library's stamp reads it (StampShape in rc_field_stamp.slang) into into, StampFloats floats: the three rows of the matrix from the world into its own space, its middle and least scale, its half extents, its color and the share of light that passes a unit of its depth, its emission and the share of its diffuse light it sends through, and its gloss
 
 record struct GlowLight                                  // A light as it is written, the middle of its box, half its side along each of the box's axes, its light, and its surface over that of the faces of its box it emits from
 GlowLight(Vector3 Middle, Vector3 X, Vector3 Y, Vector3 Z, Vector3 Glow, float Share, int Faces = 0);
