@@ -19,7 +19,7 @@ public sealed partial class ProbeMergeTests
         public int ReachCount => Probes * ReachTexels * ReachTexels;
     }
 
-    private readonly record struct Chained(float Reflected, int Marched, int Steps, int Most)
+    private readonly record struct Chained(float Reflected, int Marched, int Steps, int Most, float[] Light)
     {
         public override string ToString() =>
             $"reflects {Reflected:0.00000}, {Marched} of the finest level's texels marching on themselves in {Steps} steps in all and {Most} at most";
@@ -29,12 +29,40 @@ public sealed partial class ProbeMergeTests
     private static Level[] Pair(Vector3 place) =>
         [new(place, 1, 1, 1, 1, NearTexels, NearReach), new(FarCorner, FarSpacing, FarCount, FarCount, FarCount, FarTexels, FarEnd)];
 
-    // What a floor facing up at place, where the finest level's one probe stands, reflects of the
-    // light the chain's passes merge, each pass a dispatch of a thread a texel.
-    private static Chained Passes(float[] cells, Level[] levels, Vector3 place)
+    // What a binding sets beyond the levels, each test's own, at the defaults the tests above read
+    // with, a floor facing up under the uniform sky lit by nothing else, the probes at their grid
+    // places. Moved moves a probe within a quarter unit of a surface out along the field's normal
+    // to a quarter unit off it, VaryingSky takes the sky along each way (SkyAlong), Sun is the way
+    // toward a sun times its irradiance, which lights a surface of albedo WallAlbedo, and Reference
+    // marches each of the finest level's texels on itself to the coarsest level's end.
+    private sealed record Setting
     {
-        var setup = new float[64 + 1 + 7];
-        (setup[0], setup[1], setup[2], setup[3], setup[4], setup[5]) = (Corner.X, Corner.Y, Corner.Z, Cell, Size, Sky);
+        public Vector3 Normal { get; init; } = Vector3.UnitY;
+        public float SkyLight { get; init; } = Sky;
+        public bool VaryingSky { get; init; }
+        public Vector3 Sun { get; init; }
+        public bool Moved { get; init; }
+        public bool Reference { get; init; }
+    }
+
+    private const float WallAlbedo = 0.6f;
+    private const float Margin = 0.25f;
+
+    // The sky along a way when it varies, brightest toward the top and toward x, as the test kernel
+    // gives it.
+    private static float SkyAlong(Vector3 way, float light) =>
+        light * (0.6f + 0.4f * way.X + 1.5f * MathF.Pow(MathF.Max(way.Y, 0), 2));
+
+    // What a surface at place facing as the setting says reflects of the light the chain's passes
+    // merge, where the finest level's probes about it stand, each pass a dispatch of a thread a
+    // texel, with the light each of the finest level's first probe's texels brings.
+    private static Chained Passes(float[] cells, Level[] levels, Vector3 place, Setting? setting = null)
+    {
+        setting ??= new Setting();
+        var setup = new float[96];
+        (setup[0], setup[1], setup[2], setup[3], setup[4], setup[5]) = (Corner.X, Corner.Y, Corner.Z, Cell, Size, setting.SkyLight);
+        float[] binding = [setting.Moved ? 1 : 0, Margin, setting.VaryingSky ? 1 : 0, setting.Sun.X, setting.Sun.Y, setting.Sun.Z, WallAlbedo];
+        binding.CopyTo(setup, 80);
         (setup[8], setup[9]) = (levels[^1].End, levels.Length);
         var (texels, reaches) = (0, 0);
         for (int l = 0; l < levels.Length; l++)
@@ -44,7 +72,7 @@ public sealed partial class ProbeMergeTests
             cascade.CopyTo(setup, at);
             (texels, reaches) = (texels + level.TexelCount, reaches + level.ReachCount);
         }
-        float[] point = [1, place.X, place.Y, place.Z, 0, 1, 0, Albedo];
+        float[] point = [1, place.X, place.Y, place.Z, setting.Normal.X, setting.Normal.Y, setting.Normal.Z, Albedo];
         point.CopyTo(setup, 64);
         var (rays, reach, merged, marches, surfaces) = (new float[6 * texels], new float[reaches], new float[3 * texels], new float[2 * texels], new float[6]);
         void Pass(int pass, int level, int threads)
@@ -60,12 +88,17 @@ public sealed partial class ProbeMergeTests
         Pass(2, levels.Length - 1, levels[^1].TexelCount);
         for (int l = levels.Length - 2; l >= 0; l--)
             Pass(3, l, levels[l].TexelCount);
+        if (setting.Reference)
+            Pass(5, 0, levels[0].TexelCount);
         Pass(4, 0, 1);
         var (marched, steps, most) = (0, 0, 0);
         for (int k = 0; k < levels[0].TexelCount; k++)
             if (marches[k * 2] > 0)
                 (marched, steps, most) = (marched + 1, steps + (int)marches[k * 2 + 1], Math.Max(most, (int)marches[k * 2 + 1]));
-        return new(surfaces[3], marched, steps, most);
+        var light = new float[levels[0].Texels * levels[0].Texels];
+        for (int k = 0; k < light.Length; k++)
+            light[k] = merged[k * 3];
+        return new(surfaces[3], marched, steps, most, light);
     }
 
     [CpuKernelFact]

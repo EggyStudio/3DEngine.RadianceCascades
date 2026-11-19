@@ -594,6 +594,65 @@ states the ends' rule as a convention a binding follows, a cascade's end no fart
 spacing and past its spacing times the root of three, with its limit, that an edge within a far
 spacing past a hand-off is still smeared.
 
+The passes' four additions a binding asked for, in the commit carrying this line, each held by a
+test in `ProbeMergeTests.Bindings.cs` run failing first. `IProbePlaces.placeOf`, `GridPlaces` its
+default, gives each probe's place, read by the trace, the reach map, the merge's tests of a probe
+inside a mesh and of seeing and the gather, the trilinear weights staying on the grid: probes
+standing on the open box's floor read it 0, and moved a quarter unit up along the field's normal by
+the test's rule read 0.2540 against the dome's 0.2511. `IProbeField.hitLight(place, way, cascade,
+cell)` takes the place of `surfaceLightAt`, a hit's light as the binding shades it, read in the
+march and the march-on alike, with `fieldNormalIn` in `rc_field_read` for the normal a split sum
+needs: a probe 3 units from a sunlit wall read it 0 by emission alone and 0.1574 against 0.1575
+through either. `ISky.skyAlong(way)`, `UniformSky` its default, gives the light of every cascade's
+ray that leaves the field and of the march-on: the open box under a sky varying with the way read
+0.2540 by a uniform sky of its scale and 0.4779 against the sky's integral over the opening, 0.4789.
+`farTexelsLight` gives a near texel the far texels it covers, weighed by their solid angles, where
+the far cascade keeps a whole multiple of the near's texels a side, and the one its middle way falls
+in at any other count: 8 near to 16 far under the varying sky read 10.5% off the texels' own rays at
+worst by the middle texel alone and 1.9% by the covered ones. Shape changes: `mergedLight` takes the
+places and the near texel in place of its way, `lastCascadeLight` the way and the sky, `traceTexel`,
+`reachTexel` and `gatherAt` the cascade's places, `mergeTexel` both cascades' places and the sky,
+and `settleTexel` the sky; the README has rows for `IProbePlaces` and `ISky` and a convention on far
+texel counts.
+
+A finding from the hit's test, for your word: at a near reach of 4 the merge read the sunlit wall
+37% under (0.0989), the hand-off landing 0.4 units before the wall and the far probes' rays passing
+its edge, the smear the ends' rule names, here before a lit wall and not at a rim. The march alone
+(reach 8) and the march-on (reach 2) read it within 0.1%, so the hook holds and the loss is the
+hand-off's; the test holds the hook at those reaches and does not hold a hand-off before a wall.
+
+Not built, as the review asked, three options a binding may set or keep outside the passes, drafted
+in the code's terms.
+
+More than one ray a texel. `ProbeCascade` would gain `rays`, the rays each texel sends, with
+`RaysAt(texels)` as the count a binding takes where it sets none: four from the middles of a texel's
+quarters at 8 a side, one from its middle at 16. `traceTexel`'s index would run over a cascade's
+texels times its rays, and `IProbeRays` would keep each ray at its texel's index times `rays` plus
+the ray's own. `settleTexel` and `mergeTexel` would read each of a texel's rays, merge each from its
+own end with the level above, and keep their mean as the texel's merged light, so `IMergedLight` and
+the gather keep a texel's index. `mergedLight` would take the ray's way in place of the texel's
+middle way and keep `farTexelsLight` over the texel's covered far texels.
+
+A cap on a march's steps. `traceProbeRay` would take a `steps` count at most, 0 for none, carried in
+`ProbeCascade` so each level sets its own. A ray that takes its last step without meeting a surface
+would end as `RayPast` at the distance it reached, not as `RayLeft`. A finer level would then hand
+it to the level above about the point where it stopped, as at its interval's end. The coarsest
+level, with none above it, would take no light for it, since a ray out of steps mostly grazes a
+surface inside the field, and the sky would light a closed room through it. The self-march would
+stop the same way and take, where capped, the merged light of the level above about its stop, or
+none from the coarsest. A `RayCapped` ending beside the three would let a binding count its capped
+rays.
+
+A mesh met by the device's own ray tracing. An interface `IProbeHits` would trace a ray from a place
+along a way between a start and an end and return the `ProbeRay` it ends as, with `FieldHits` as the
+default that marches the field (`traceProbeRay` over an `IProbeField`). It would also answer
+`reachAlong`'s question, how far a ray goes before it meets any surface. `traceTexel`, `reachTexel`
+and `mergedLight`'s march-on would take it in place of the field's march. The hit's light would stay
+`hitLight`'s, read at the place and cell the tracer reports. Light through a surface would take the
+tracer's own crossing of the mesh, an any-hit pass that multiplies the share to the depth between
+entry and exit. The merge's and the gather's test of a probe inside a mesh would still read the
+field's distance, or the tracer's own answer where a binding has no field.
+
 Handoff, for a fresh session, in place of those above. Where the work stands: the library holds the
 field's plan, the triangles' layout and the glow lights in C#, and in Slang the probes' octahedron,
 the cell code, resolve and pinch, the hit's color read, the splat, the stamp, the field's distance
@@ -603,19 +662,21 @@ and their gather (`rc_probes`), the merge with the seeing rule and the self-marc
 run on the CPU by its tests through `CpuKernel`. The rules agreed for the merge: a far probe inside
 a mesh or not seeing the near ray's end weighs nothing, every cascade's rays begin at its probe, a
 texel no probe above sees marches on to the coarsest cascade's end, and a cascade's end lies within
-twice its spacing, which the README states. Next in order: the engines' findings as they take the
-passes, then the split sum at a hit, the screen probes, the light on the picture and the contact
-shadow's march. Left behind each part's Reply: the field's normal, the cascades' table, the march
-held within a cascade, the splat's second plane, the lending of thin emitters, the repaint and the
-clearing of codes. Open: AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md wait for the
-owner. Read first: AGENTS.md, this file's head and Decisions, the Replies from the field's distance
-on, the README's binding section, NORM.md's N 4.8 to 4.11 and N 7.9, `CpuKernel.cs` and the head of
+twice its spacing, which the README states. A binding gives the passes its probes' places
+(`IProbePlaces`), a hit's light (`IProbeField.hitLight`) and the sky along a way (`ISky`), and a
+near texel takes the far texels it covers (`farTexelsLight`). Next in order: the engines' further
+findings as they take the passes, and the review's word on a hand-off before a lit wall, then the
+split sum at a hit, the screen probes, the light on the picture and the contact shadow's march. Left
+behind each part's Reply: the field's normal, the cascades' table, the march held within a cascade,
+the splat's second plane, the lending of thin emitters, the repaint and the clearing of codes. Open:
+AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md wait for the owner. Read first:
+AGENTS.md, this file's head and Decisions, the Replies from the field's distance on, the README's
+binding section, NORM.md's N 4.8 to 4.11 and N 7.9, `CpuKernel.cs` and the head of
 `rc_probe_passes.slang`. Every build and test goes through N 7.9's lock, restored outside it, built
 with `--no-restore -p:UseSharedCompilation=false`, its output written to a file of which the summary
 line and the failing lines alone are read, and each commit is read by `commitcheck.py . --staged
---message=<file>` first.
-
-At a binding's request, in the commit carrying this line: `build/fetch-slang.sh` reads an archive's
-sha256 with `shasum -a 256`, on macOS, Linux and Git's bash on Windows alike, and Python's hashlib
-where a system has none, in place of `sha256sum`, which N 6.6's check refuses. This repository's own
-tests do not run that check on its scripts; the binding's suite found it.
+--message=<file>` first. At a binding's request, in the commit carrying this line:
+`build/fetch-slang.sh` reads an archive's sha256 with `shasum -a 256`, on macOS, Linux and Git's
+bash on Windows alike, and Python's hashlib where a system has none, in place of `sha256sum`, which
+N 6.6's check refuses. This repository's own tests do not run that check on its scripts; the
+binding's suite found it.

@@ -17,11 +17,14 @@
 // the far probes, 2 apart, 4 units out, where reaching 4 it hands it on 6 out, 2 under an open
 // box's rim, and the floor reads 7.7 percent under its share of the sky and a sheet lid lets
 // through 4.3 percent of the open box's light. A level's reach map runs to its end too, so that
-// end lies past the diagonal of the cell
-// between its probes, the spacing times the root of 3, for the seeing of a point among them to be
-// read within the map. A texel's index is its probe's, x fastest, times the texels of a probe,
-// and its texel's along a row of the octahedron, x fastest (cascadeTexelIndex), and a reach
-// texel's the same over ReachTexels a side.
+// end lies past the diagonal of the cell between its probes, the spacing times the root of 3, for
+// the seeing of a point among them to be read within the map. A texel's index is its probe's, x
+// fastest, times the texels of a probe, and its texel's along a row of the octahedron, x fastest
+// (cascadeTexelIndex), and a reach texel's the same over ReachTexels a side.
+//
+// The engine gives each level's probes their places (IProbePlaces, gridPlaces where they stand on
+// the grid), the light of a surface a ray meets (IProbeField.hitLight) and the sky along a way
+// (ISky, UniformSky where it is one light), and every pass reads them where it needs them.
 module rc_probe_passes;
 
 __exported import rc_cascade_merge;
@@ -107,57 +110,62 @@ public uint reachTexelIndex(ProbeCascade cascade, int3 probe, uint2 texel)
     return (at * ReachTexels + texel.y) * ReachTexels + texel.x;
 }
 
-// Traces the ray of the cascade's texel at index from its probe through its interval
+// Traces the ray of the cascade's texel at index from its probe's place through its interval
 // (traceProbeRay) and keeps it, a thread a texel, and nothing past the cascade's last texel.
-public void traceTexel<F : IProbeField, R : IProbeRays>(F field, R rays, ProbeCascade cascade, uint index)
+public void traceTexel<F : IProbeField, R : IProbeRays, Q : IProbePlaces>(F field, R rays, Q places, ProbeCascade cascade, uint index)
 {
     if (index >= cascadeTexels(cascade))
         return;
     uint texels = cascade.texels * cascade.texels;
     uint2 texel = uint2((index % texels) % cascade.texels, (index % texels) / cascade.texels);
-    float3 place = probePlace(cascade, probeAt(cascade, index / texels));
+    float3 place = places.placeOf(probeAt(cascade, index / texels));
     rays.keepRay(index, traceProbeRay(field, place, texelWay(cascade.texels, texel), cascade.start, cascade.end));
 }
 
-// Traces how far the ray of the cascade's reach texel at index goes from its probe before it meets
-// a surface, up to the cascade's end (reachAlong), and keeps it, a thread a reach texel.
-public void reachTexel<F : IFieldVolume, R : IReachTexels>(F field, R reach, ProbeCascade cascade, uint index)
+// Traces how far the ray of the cascade's reach texel at index goes from its probe's place before
+// it meets a surface, up to the cascade's end (reachAlong), and keeps it, a thread a reach texel.
+public void reachTexel<F : IFieldVolume, R : IReachTexels, Q : IProbePlaces>(F field, R reach, Q places, ProbeCascade cascade, uint index)
 {
     if (index >= cascadeReachTexels(cascade))
         return;
     uint texels = ReachTexels * ReachTexels;
     uint2 texel = uint2((index % texels) % ReachTexels, (index % texels) / ReachTexels);
-    float3 place = probePlace(cascade, probeAt(cascade, index / texels));
+    float3 place = places.placeOf(probeAt(cascade, index / texels));
     reach.keepReach(index, reachAlong(field, place, texelWay(ReachTexels, texel), cascade.end));
 }
 
 // Keeps the light of the coarsest level's texel at index as merged, its ray's alone, the light of
-// the surface it met or the sky's past the field (lastCascadeLight), since no level above holds
-// more.
-public void settleTexel<R : IProbeRays, M : IMergedLight>(R rays, M merged, ProbeCascade cascade, float3 sky, uint index)
+// the surface it met or the sky's along its way past the field (lastCascadeLight), since no level
+// above holds more.
+public void settleTexel<R : IProbeRays, M : IMergedLight, K : ISky>(R rays, M merged, ProbeCascade cascade, K sky, uint index)
 {
-    if (index < cascadeTexels(cascade))
-        merged.keepMerged(index, lastCascadeLight(rays.rayAt(index), sky));
+    if (index >= cascadeTexels(cascade))
+        return;
+    uint texels = cascade.texels * cascade.texels;
+    uint2 texel = uint2((index % texels) % cascade.texels, (index % texels) / cascade.texels);
+    merged.keepMerged(index, lastCascadeLight(rays.rayAt(index), texelWay(cascade.texels, texel), sky));
 }
 
 // Merges the texel at index of a level finer than the coarsest with the merged light of the level
-// above, above's probes read through IFarProbes, by the agreed rule (mergedLight), and keeps it.
+// above, above's probes read through IFarProbes and their places through abovePlaces, by the
+// agreed rule (mergedLight), and keeps it, the ray beginning at its own probe's place (places).
 // Where no probe above sees the end of its ray the ray marches on itself to marchEnd, the coarsest
 // level's end, each step handed to steps, since past the end of the level above no merged light
 // along it is taken from where the ray stands, and in a pair marchEnd is the far cascade's end the
 // rule names. It says whether the texel marched on itself.
-public bool mergeTexel<F : IProbeField, R : IProbeRays, P : IFarProbes, M : IMergedLight, S : IMarchSteps>(F field, R rays, P above,
-    M merged, ProbeCascade cascade, ProbeCascade aboveCascade, float marchEnd, float3 sky, inout S steps, uint index)
+public bool mergeTexel<F : IProbeField, R : IProbeRays, Q : IProbePlaces, P : IFarProbes, U : IProbePlaces, M : IMergedLight, K : ISky,
+    S : IMarchSteps>(F field, R rays, Q places, P above, U abovePlaces, M merged, ProbeCascade cascade, ProbeCascade aboveCascade,
+    float marchEnd, K sky, inout S steps, uint index)
 {
     if (index >= cascadeTexels(cascade))
         return false;
     uint texels = cascade.texels * cascade.texels;
     uint2 texel = uint2((index % texels) % cascade.texels, (index % texels) / cascade.texels);
-    float3 place = probePlace(cascade, probeAt(cascade, index / texels));
+    float3 place = places.placeOf(probeAt(cascade, index / texels));
     ProbeCascade marchedTo = aboveCascade;
     marchedTo.end = marchEnd;
     bool marched;
-    float3 light = mergedLight(field, above, marchedTo, place, texelWay(cascade.texels, texel), rays.rayAt(index), sky, steps, marched);
+    float3 light = mergedLight(field, above, abovePlaces, marchedTo, place, cascade.texels, texel, rays.rayAt(index), sky, steps, marched);
     merged.keepMerged(index, light);
     return marched;
 }
@@ -172,11 +180,13 @@ struct ProbeTexels<P : IFarProbes> : IProbeLight
 
 // Gathers the light the surface point at index takes from the finest level's probes about it, its
 // merged light and its reach map read through IFarProbes, and keeps it, a thread a point. Each
-// probe's light taken at the point's normal (lightTaken) is weighed by its trilinear weight, and by
-// nothing where it stands inside a mesh or does not see the point (farProbeSees), as the merge
-// weighs the probes about a ray's end, normalized by their sum, and none where no probe counts. A
-// point at a probe's place takes that probe's light alone.
-public void gatherAt<F : IProbeField, P : IFarProbes, A : ISurfacePoints>(F field, P probes, ProbeCascade cascade, A surfaces, uint index)
+// probe's light taken at the point's normal (lightTaken) is weighed by its trilinear weight on the
+// grid, and by nothing where it stands inside a mesh or does not see the point from its place
+// (places, farProbeSees), as the merge weighs the probes about a ray's end, normalized by their
+// sum, and none where no probe counts. A point at a probe's grid place takes that probe's light
+// alone.
+public void gatherAt<F : IProbeField, P : IFarProbes, Q : IProbePlaces, A : ISurfacePoints>(F field, P probes, Q places, ProbeCascade cascade,
+    A surfaces, uint index)
 {
     float3 p = surfaces.placeAt(index);
     float3 n = surfaces.normalAt(index);
@@ -193,7 +203,7 @@ public void gatherAt<F : IProbeField, P : IFarProbes, A : ISurfacePoints>(F fiel
             continue;
         float3 lerps = lerp(1.0 - f, f, float3(offset));
         float weight = lerps.x * lerps.y * lerps.z;
-        float3 place = probePlace(cascade, probe);
+        float3 place = places.placeOf(probe);
         int c = field.cascadeOf(place, 1.0);
         if (weight <= 0.0 || (c >= 0 && fieldDistanceIn(field, c, place) < 0.0) || !farProbeSees(probes, probe, place, p, SeeingSlack * cascade.spacing))
             continue;

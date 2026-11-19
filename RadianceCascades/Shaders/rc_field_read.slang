@@ -77,6 +77,20 @@ public float fieldDistanceIn<F : IFieldVolume>(F field, int i, float3 p)
     return read.r - 0.5 * field.cornerAndCell(i).w * saturate(length(read.yzw));
 }
 
+// The field's normal at p in cascade i, the way its distance (fieldDistanceIn) grows fastest,
+// read across half a cell either side of p along each axis, of unit length, or none where the
+// distance does not change about p. A binding that shades the surface a ray met reads it there.
+public float3 fieldNormalIn<F : IFieldVolume>(F field, int i, float3 p)
+{
+    float h = field.cornerAndCell(i).w * 0.5;
+    float3 g = float3(
+        fieldDistanceIn(field, i, p + float3(h, 0.0, 0.0)) - fieldDistanceIn(field, i, p - float3(h, 0.0, 0.0)),
+        fieldDistanceIn(field, i, p + float3(0.0, h, 0.0)) - fieldDistanceIn(field, i, p - float3(0.0, h, 0.0)),
+        fieldDistanceIn(field, i, p + float3(0.0, 0.0, h)) - fieldDistanceIn(field, i, p - float3(0.0, 0.0, h)));
+    float l = length(g);
+    return l > 1e-6 ? g / l : float3(0.0);
+}
+
 // How far a point local off a cell's middle lies from the plane the cell keeps as sheet, held
 // SheetHalf of a cell either side, or far where it keeps none.
 public float sheetDistance(float3 sheet, float3 local, float cell)

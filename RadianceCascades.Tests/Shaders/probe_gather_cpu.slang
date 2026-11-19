@@ -63,7 +63,7 @@ struct ProbeCells : IProbeField
     float3 secondAt(int cascade, int3 at) { return float3(0.0); }
     float throughAt(int cascade, int3 at) { return cells[index(at) * 5 + 4]; }
     // The walls and floors of these rooms send no light of their own.
-    float3 surfaceLightAt(int cascade, int3 at) { return float3(0.0); }
+    float3 hitLight(float3 place, float3 way, int cascade, int3 at) { return float3(0.0); }
 };
 
 struct FarProbes : IFarProbes
@@ -141,6 +141,7 @@ void test(uint3 id : SV_DispatchThreadID)
 {
     ProbeCells field;
     float3 sky = float3(setup[5]);
+    UniformSky skyLight = { sky };
     ProbeCascade near = cascadeAt(6);
     ProbeCascade far = cascadeAt(16);
     FarProbes probes = { far };
@@ -167,7 +168,7 @@ void test(uint3 id : SV_DispatchThreadID)
                     farRays++;
                     farSteps += counted.taken;
                     farMost = max(farMost, counted.taken);
-                    float3 light = lastCascadeLight(ray, sky);
+                    float3 light = lastCascadeLight(ray, texelWay(far.texels, uint2(k % far.texels, k / far.texels)), skyLight);
                     farLight[(lightBase + k) * 3u] = light.x;
                     farLight[(lightBase + k) * 3u + 1u] = light.y;
                     farLight[(lightBase + k) * 3u + 2u] = light.z;
@@ -182,7 +183,7 @@ void test(uint3 id : SV_DispatchThreadID)
         ProbeRay ray = traceProbeRay(field, place, way, near.start, near.end);
         CountedSteps counted = { 0u };
         bool itself;
-        float3 merged = mergedLight(field, probes, far, place, way, ray, sky, counted, itself);
+        float3 merged = mergedLight(field, probes, gridPlaces(far), far, place, near.texels, texel, ray, skyLight, counted, itself);
         float3 trilinear = ray.ended == RayPast ? trilinearLight(probes, place + way * ray.t, way) * ray.carried
             : ray.ended == RayMet ? ray.light : sky * ray.carried;
         if (itself)

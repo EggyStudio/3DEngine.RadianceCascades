@@ -13,7 +13,10 @@ RWStructuredBuffer<float> cells;
 // the level it runs on, the coarsest level's end and the count of levels, then from the float at
 // 16 each level's cascade as ProbeCascade holds them and where its texels' rays, its reach texels
 // and its texels' merged light begin in their buffers, sixteen floats a level, and from the float
-// at 64 the count of surface points and each point's place, normal and albedo, seven floats each.
+// at 64 the count of surface points and each point's place, normal and albedo, seven floats each,
+// and from the float at 80 what the test's binding sets, whether it moves probes off surfaces and
+// the margin it moves them to, whether the sky varies with the way, the way toward the sun times
+// its irradiance and the albedo of the surfaces it lights.
 RWStructuredBuffer<float> setup;
 
 // Each texel's ray as its trace ended, how, where, its carried share and its light, six floats a
@@ -64,8 +67,42 @@ struct ProbeCells : IProbeField
     }
     float3 secondAt(int cascade, int3 at) { return float3(0.0); }
     float throughAt(int cascade, int3 at) { return cells[index(at) * 5 + 4]; }
-    // The walls and floors of these rooms send no light of their own.
-    float3 surfaceLightAt(int cascade, int3 at) { return float3(0.0); }
+    // The walls and floors of these rooms send no light of their own, and where the setup gives a
+    // sun they reflect its light as a diffuse surface at the field's normal does.
+    float3 hitLight(float3 place, float3 way, int cascade, int3 at)
+    {
+        float3 sun = float3(setup[83], setup[84], setup[85]);
+        if (dot(sun, sun) <= 0.0)
+            return float3(0.0);
+        return float3(setup[86] / 3.14159265 * max(dot(fieldNormalIn(this, cascade, place), sun), 0.0));
+    }
+};
+
+// The sky the setup asks for, its light along every way, or brightest toward the top and toward x.
+struct TestSky : ISky
+{
+    float3 skyAlong(float3 way)
+    {
+        float up = max(way.y, 0.0);
+        return float3(setup[82] < 0.5 ? setup[5] : setup[5] * (0.6 + 0.4 * way.x + 1.5 * up * up));
+    }
+};
+
+// The test's own rule for where a probe stands, at its grid place, or where the setup asks for it
+// moved out along the field's normal to the margin off a surface it stands within the margin of.
+struct TestPlaces : IProbePlaces
+{
+    ProbeCascade cascade;
+    float3 placeOf(int3 probe)
+    {
+        float3 p = probePlace(cascade, probe);
+        ProbeCells field;
+        int c = field.cascadeOf(p, 1.0);
+        if (setup[80] < 0.5 || c < 0)
+            return p;
+        float d = fieldDistanceIn(field, c, p);
+        return d < setup[81] ? p + fieldNormalIn(field, c, p) * (setup[81] - d) : p;
+    }
 };
 
 struct LevelRays : IProbeRays
@@ -165,6 +202,12 @@ ProbeCascade levelCascade(int level)
 // and 12 of its sixteen floats.
 uint firstOf(int level, int which) { return uint(setup[Levels + level * 16 + which]); }
 
+TestPlaces placesOf(int level)
+{
+    TestPlaces places = { levelCascade(level) };
+    return places;
+}
+
 LevelProbes probesOf(int level)
 {
     LevelProbes probes = { levelCascade(level), firstOf(level, 12), firstOf(level, 11) };
@@ -177,34 +220,46 @@ void test(uint3 id : SV_DispatchThreadID)
 {
     uint index = id.x;
     ProbeCells field;
-    float3 sky = float3(setup[5]);
+    TestSky sky;
     uint pass = uint(setup[6]);
     int level = int(setup[7]);
     ProbeCascade cascade = levelCascade(level);
     LevelRays rays = { firstOf(level, 10) };
     LevelMerged merged = { firstOf(level, 12) };
     if (pass == 0u)
-        traceTexel(field, rays, cascade, index);
+        traceTexel(field, rays, placesOf(level), cascade, index);
     else if (pass == 1u)
     {
         LevelReach reach = { firstOf(level, 11) };
-        reachTexel(field, reach, cascade, index);
+        reachTexel(field, reach, placesOf(level), cascade, index);
     }
     else if (pass == 2u)
         settleTexel(rays, merged, cascade, sky, index);
     else if (pass == 3u)
     {
         CountedSteps counted = { 0u };
-        bool marched = mergeTexel(field, rays, probesOf(level + 1), merged, cascade, levelCascade(level + 1), setup[8], sky, counted, index);
+        bool marched = mergeTexel(field, rays, placesOf(level), probesOf(level + 1), placesOf(level + 1), merged, cascade, levelCascade(level + 1),
+            setup[8], sky, counted, index);
         if (index < cascadeTexels(cascade))
         {
             marches[(firstOf(level, 10) + index) * 2u] = marched ? 1.0 : 0.0;
             marches[(firstOf(level, 10) + index) * 2u + 1u] = float(counted.taken);
         }
     }
+    else if (pass == 5u)
+    {
+        // The finest level's texel marched on itself from its probe to the coarsest level's end,
+        // the reference a merge is read against.
+        if (index >= cascadeTexels(cascade))
+            return;
+        uint texels = cascade.texels * cascade.texels;
+        float3 way = texelWay(cascade.texels, uint2((index % texels) % cascade.texels, (index % texels) / cascade.texels));
+        ProbeRay ray = traceProbeRay(field, placesOf(level).placeOf(probeAt(cascade, index / texels)), way, 0.0, setup[8]);
+        merged.keepMerged(index, lastCascadeLight(ray, way, sky));
+    }
     else if (index < uint(setup[Points]))
     {
         SurfacePoints surfaces;
-        gatherAt(field, probesOf(0), levelCascade(0), surfaces, index);
+        gatherAt(field, probesOf(0), placesOf(0), levelCascade(0), surfaces, index);
     }
 }

@@ -61,11 +61,15 @@ public float texelSolidAngle(uint texels, uint2 texel, float shares)
 
 // The field's cascades as a probe's ray reads them, the distances and planes IFieldVolume reads
 // with what the surface nearest a cell gives a ray that meets it, which an engine implements over
-// its images.
+// its images and its shading.
 public interface IProbeField : IFieldVolume
 {
-    // The light the surface nearest a cell of a cascade sends of its own, its emission.
-    float3 surfaceLightAt(int cascade, int3 cell);
+    // The light the surface a ray met at place sends back along the ray, toward -way, as the
+    // engine shades it, its emission and the light it reflects of its sun, its local lights and
+    // the probes' own, with the cascade and the cell of the field the hit lies in, which a binding
+    // reads the surface's paint and gloss from and the field's normal at place (fieldNormalIn).
+    // The way lets it weigh a gloss toward the eye the ray stands for, as a split sum does.
+    float3 hitLight(float3 place, float3 way, int cascade, int3 cell);
 
     // The share of light that passes a unit of the depth of the surface nearest a cell of a
     // cascade, 0 for a surface that lets none through, which a ray crosses where it is above zero.
@@ -145,7 +149,7 @@ public ProbeRay traceProbeRay<F : IProbeField, S : IMarchSteps>(F field, float3 
                     ray.carried *= pow(through, max(t - entered, 0.0));
                     ray.ended = RayMet;
                     ray.t = t;
-                    ray.light = field.surfaceLightAt(c, cellOf(field, c, p)) * ray.carried;
+                    ray.light = field.hitLight(p, way, c, cellOf(field, c, p)) * ray.carried;
                     return ray;
                 }
                 t += max(cell * 0.5, -d);
@@ -161,7 +165,7 @@ public ProbeRay traceProbeRay<F : IProbeField, S : IMarchSteps>(F field, float3 
             {
                 ray.ended = RayMet;
                 ray.t = t;
-                ray.light = field.surfaceLightAt(c, cellOf(field, c, p)) * ray.carried;
+                ray.light = field.hitLight(p, way, c, cellOf(field, c, p)) * ray.carried;
                 return ray;
             }
             entered = t + max(d, 0.0);
@@ -183,12 +187,55 @@ public ProbeRay traceProbeRay<F : IProbeField>(F field, float3 origin, float3 wa
     return traceProbeRay(field, origin, way, start, end, none);
 }
 
-// The light a ray of the last cascade brings, the light of the surface it met, or, past its
-// interval or the field, where no cascade beyond holds the light, the sky's times the share it
-// carries.
-public float3 lastCascadeLight(ProbeRay ray, float3 sky)
+// The sky a ray that leaves the field takes along its way, which an engine implements over its
+// own sky, and UniformSky gives the same along every way.
+public interface ISky
 {
-    return ray.ended == RayMet ? ray.light : sky * ray.carried;
+    // The light the sky sends along way, toward -way, to a ray that leaves the field along it.
+    float3 skyAlong(float3 way);
+}
+
+// A sky of one light along every way.
+public struct UniformSky : ISky
+{
+    public float3 light;
+
+    public float3 skyAlong(float3 way) { return light; }
+}
+
+// The light a ray of the last cascade along way brings, the light of the surface it met, or, past
+// its interval or the field, where no cascade beyond holds the light, the sky's along its way times
+// the share it carries.
+public float3 lastCascadeLight<K : ISky>(ProbeRay ray, float3 way, K sky)
+{
+    return ray.ended == RayMet ? ray.light : sky.skyAlong(way) * ray.carried;
+}
+
+// Where a cascade's probes stand, which an engine implements over its own rule where it moves a
+// probe that would stand in or against a surface off it, and GridPlaces gives the grid's places.
+// The merge and the gather weigh probes by their places on the grid alone and read their places
+// here for the rest, a probe's rays, its reach map and whether it stands inside a mesh or sees a
+// point.
+public interface IProbePlaces
+{
+    // Where the probe of the cascade stands.
+    float3 placeOf(int3 probe);
+}
+
+// A cascade's probes at their places on its grid (probePlace).
+public struct GridPlaces : IProbePlaces
+{
+    public ProbeCascade cascade;
+
+    public float3 placeOf(int3 probe) { return probePlace(cascade, probe); }
+}
+
+// The grid's places of a cascade's probes.
+public GridPlaces gridPlaces(ProbeCascade cascade)
+{
+    GridPlaces places;
+    places.cascade = cascade;
+    return places;
 }
 
 // The texels along each side of a far probe's reach map, how far its rays went in each way.
