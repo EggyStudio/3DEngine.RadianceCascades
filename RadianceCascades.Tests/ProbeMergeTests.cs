@@ -127,7 +127,7 @@ public sealed class ProbeMergeTests(ITestOutputHelper output)
         ];
         const int probes = FarCount * FarCount * FarCount;
         var (far, reach) = (new float[probes * FarTexels * FarTexels * 3], new float[probes * ReachTexels * ReachTexels]);
-        var (near, result) = (new float[NearTexels * NearTexels * 8], new float[16]);
+        var (near, result) = (new float[NearTexels * NearTexels * 8], new float[18]);
         CpuKernel.Run("probe_gather_cpu.slang", (1, 1, 1), cells, setup, far, reach, near, result);
         return new(result[3], result[9], (int)result[12], (int)result[13], (int)result[14]);
     }

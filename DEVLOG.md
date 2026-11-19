@@ -6,6 +6,23 @@ kept under `.github/assets/readings` as WebP files named by their day, each on t
 says, and the notes written beside them as Markdown files named the same way. A line under Done
 names the item of .github/REVIEW.md or .github/REVIEW-ARCHIVE.md and the commit that closed it.
 
+## 2026-11-19
+
+![](.github/assets/readings/2026-11-19-item-3-open-box-rules.webp)
+The light a floor in a box open to the sky reflects across its middle from wall to wall under three
+rules of the merge, every far probe at its trilinear weight, the agreed rule weighing at nothing a
+far probe inside a mesh or not seeing the near ray's end, and that rule with the far rays begun 4
+units out, beside the dome's share, the agreed rule reading 0.2540 at the middle against the dome's
+0.2511, run on the CPU from the library's Slang.
+
+Commits that day
+
+- `9ecdbbb` The library's Slang traces a probe's rays through the field and through surfaces that
+  let light through, hands a near ray past its reach to the far probes about its end that see it or
+  marches it on itself, and gathers a probe's light at a surface, held by four tests run on the CPU
+  in a box open to the sky, a lidded one, one lidded by a sheet and two rooms parted by a wall that
+  lets light through.
+
 ## 2026-11-18
 
 ![](.github/assets/readings/2026-11-18-item-3-glow-choice.webp)
@@ -27,6 +44,10 @@ wall, and one leaving the cascade, built and marched on the CPU from the library
 
 Commits that day
 
+- `987e963` The library's Slang reads the field's distance at a point and marches a ray through it
+  to the first surface, each step handed to a keeper of steps, held by tests run on the CPU about a
+  box of two and a double-sided sheet, with a sheet of seven rays marched through a slice, and the
+  README names every Slang interface an engine implements.
 - `620bd21` The library's Slang stamps the boxes of the moving meshes into a cascade over what the
   still meshes made, the nearer surface painting each cell, its shape laid out by a writer of its
   own in the library, so a turned box stamps every cell near it at its distance and its color while

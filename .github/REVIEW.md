@@ -525,3 +525,20 @@ with 128 texels marching 4.9 steps on the mean and 11 at most. Open, for your wo
 rays begin at the probes, the far interval from 0, not 4 units out, since probes about E whose rays
 begin 4 out leave the near ray's next 4 units past E untraced, and the open box then reads 0.900,
 3.6 times the dome's. The phase's picture follows that word.
+
+The cost of the far rays begun at the probe and the phase's picture, in the commit carrying this
+line. Counted by the tests' kernel, a far probe's light ray takes 7.58 steps on the mean and 58 at
+most begun at the probe against 3.90 and 47 begun 4 units out in the open box, 7.49 and 61 against
+3.71 and 50 in the lidded box, 7.48 and 58 against 3.74 and 47 in the box lidded by a sheet, 8.23
+and 68 against 4.52 and 70 in the rooms parted by the wall and 7.25 and 68 against 3.87 and 54 with
+the wall away, about 1.9 times the steps on the mean and alike at most, over 46080 rays in the boxes
+and 38400 in the rooms. Begun 4 out, the floors read 0.900 in the open box, 0.696 lidded, 0.772
+lidded by a sheet and 0.376 in the dark room with the wall and without it alike. The self-march
+stays, and no texel of the four tests takes it, nor any at the picture's 15 probes. A scene that
+would is one where a near ray ends in a space narrower than the far probes' spacing, a duct, a
+closet or the gap between two walls, so the eight far probes about its end all stand in the walls or
+beyond them. The picture, `2026-11-19-item-3-open-box-rules.webp`, reads the floor across its middle
+under the trilinear weights alone, the agreed rule and that rule with the far rays begun 4 out,
+beside the dome's share there. The agreed rule reads 0.2540 at the middle against the dome's 0.2511,
+and 17% over at worst near the walls, the trilinear weights alone up to 48% over, and the far rays
+begun 4 out up to 3.6 times.

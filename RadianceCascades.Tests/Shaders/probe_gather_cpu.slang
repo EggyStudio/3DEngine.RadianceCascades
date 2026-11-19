@@ -25,7 +25,8 @@ RWStructuredBuffer<float> nearTexels;
 
 // The light the surface takes and reflects by the rule, the same by trilinear weights alone, three
 // floats each, then how many texels marched on themselves, their steps in all and the most one
-// took.
+// took, and how many rays the far probes traced for their light, their steps in all and the most
+// one took.
 RWStructuredBuffer<float> result;
 
 struct ProbeCells : IProbeField
@@ -146,6 +147,7 @@ void test(uint3 id : SV_DispatchThreadID)
     float3 place = probePlace(near, int3(0));
 
     // The far probes about any end of the near probe's rays lie within its reach and a spacing.
+    uint farRays = 0u, farSteps = 0u, farMost = 0u;
     for (int z = 0; z < far.count.z; z++)
         for (int y = 0; y < far.count.y; y++)
             for (int x = 0; x < far.count.x; x++)
@@ -160,7 +162,11 @@ void test(uint3 id : SV_DispatchThreadID)
                 uint lightBase = probes.index(probe) * far.texels * far.texels;
                 for (uint k = 0u; k < far.texels * far.texels; k++)
                 {
-                    ProbeRay ray = traceProbeRay(field, p, texelWay(far.texels, uint2(k % far.texels, k / far.texels)), far.start, far.end);
+                    CountedSteps counted = { 0u };
+                    ProbeRay ray = traceProbeRay(field, p, texelWay(far.texels, uint2(k % far.texels, k / far.texels)), far.start, far.end, counted);
+                    farRays++;
+                    farSteps += counted.taken;
+                    farMost = max(farMost, counted.taken);
                     float3 light = lastCascadeLight(ray, sky);
                     farLight[(lightBase + k) * 3u] = light.x;
                     farLight[(lightBase + k) * 3u + 1u] = light.y;
@@ -212,4 +218,7 @@ void test(uint3 id : SV_DispatchThreadID)
     result[12] = float(marched);
     result[13] = float(steps);
     result[14] = float(most);
+    result[15] = float(farRays);
+    result[16] = float(farSteps);
+    result[17] = float(farMost);
 }
