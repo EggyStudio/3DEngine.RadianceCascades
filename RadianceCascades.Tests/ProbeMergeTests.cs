@@ -203,7 +203,7 @@ public sealed partial class ProbeMergeTests(ITestOutputHelper output)
         var passes = MathF.Pow(WallThrough, WallDepth);
         var said = $"the dark room's floor {parted}, and with the wall taken away {whole}, the wall passing {passes:0.0000} straight through";
         output.WriteLine(said);
-        // 0.02369 against 0.03509 without the wall, a share of 0.675, 4.5 percent under 0.707,
+        // 0.02351 against 0.03548 without the wall, a share of 0.663, 6.3 percent under 0.707,
         // since a ray that crosses the wall aslant crosses more of its depth.
         Assert.True(parted.Reflected > 0 && MathF.Abs(parted.Reflected - passes * whole.Reflected) <= 0.15f * passes * whole.Reflected, said);
         // 0 of the 256 texels marched on themselves either way.

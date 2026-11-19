@@ -90,8 +90,8 @@ library's functions, and the engine keeps its bindings, its threads and its atom
 | `IStampShapes` | Reads the shapes of a brick's run, each as `FieldShape.WriteStamp` writes it | `stampCell` |
 | `IFieldCells` | Reads a cascade's cells' paint, faces and distances | `paintFacing`, `paintAt` |
 | `IFieldVolume` | Reads the finest cascade holding a point, a cascade's corner and cell, its field between cells and a cell as it is | `fieldDistanceIn`, `fieldDistanceSheetIn`, `fieldNormalIn`, `traceField`, `traceFieldSheets`, `reachAlong`, `reachTexel` |
-| `IMarchSteps` | Takes each step a march makes, which `NoSteps` passes over | `traceField`, `traceFieldSheets`, `traceProbeRay`, `mergedLight`, `mergeTexel` |
-| `IProbeField` | Reads, beyond `IFieldVolume`, the light a ray's hit sends back along the ray as the engine shades it, from the hit's place, the ray's way, the cascade and the cell, and the share of light that passes a unit of a surface's depth | `traceProbeRay`, `mergedLight`, `traceTexel`, `mergeTexel`, `gatherAt` |
+| `IMarchSteps` | Takes each step a march makes, which `NoSteps` passes over | `traceField`, `traceFieldSheets`, `traceProbeRay`, `marchToOpenSpace`, `mergedLight`, `mergeTexel` |
+| `IProbeField` | Reads, beyond `IFieldVolume`, the light a ray's hit sends back along the ray as the engine shades it, from the hit's place, the ray's way, the cascade and the cell, and the share of light that passes a unit of a surface's depth | `traceProbeRay`, `marchToOpenSpace`, `mergedLight`, `traceTexel`, `mergeTexel`, `gatherAt` |
 | `IFarProbes` | Reads a far probe's light at a texel and how far its ray toward each way of its reach map went, the merged light and reach maps of the level above a merge's or of the finest level a gather's | `mergedLight`, `farTexelsLight`, `farProbeSees`, `mergeTexel`, `gatherAt` |
 | `IProbePlaces` | Reads where a cascade's probe stands, by the engine's own rule where it moves a probe off a surface, which `GridPlaces` gives as the grid's place | `traceTexel`, `reachTexel`, `mergedLight`, `mergeTexel`, `gatherAt` |
 | `ISky` | Reads the sky's light along a way, for a ray that leaves the field, which `UniformSky` gives as one light | `lastCascadeLight`, `mergedLight`, `settleTexel`, `mergeTexel` |
@@ -122,14 +122,18 @@ The conventions the module stands on:
 - A cascade's end, set in its `ProbeCascade`, lies no farther than twice its own spacing and past
   its spacing times the root of three, the coarsest's alone past the field's edge. A finer cascade's
   end is where its rays are handed to the cascade above, whose probes about that point stand up to a
-  spacing of theirs off the ray and meet an edge where their own rays do, so a hand-off that lands
-  within a far spacing of an edge smears the edge over the ways about it. In a box open to the sky,
-  a middle cascade of probes a unit apart reaching 4 handed the floor's rays on 2 under the rim and
-  read the floor 7.7 percent under its share of the sky and let 4.3 percent of that light through a
-  lid thinner than a cell, and reaching 2 it reads 1.5 percent over and the lid dark. The lower
-  bound keeps a cascade's reach map covering the cell about any point handed to it. The rule lessens
-  the smear and does not end it: an edge that lies within a far spacing past a hand-off is still
-  smeared, in any chain, and the tests hold the two boxes alone.
+  spacing of theirs off the ray and meet an edge where their own rays do, so a hand-off near an edge
+  smears the edge over the ways about it. A ray that reaches its end where the field reads a surface
+  nearer than a far spacing, or than the field's band where that is less, marches on itself to open
+  space and is handed on there (`marchToOpenSpace`), which holds a sunlit wall 0.4 units past a
+  probe's reach at its share of the light, where handed on at its end it read 37 percent under. The
+  band is 4 cells, a unit at a first cell of a quarter, so an edge farther than that past a hand-off
+  is still smeared. In a box open to the sky, a middle cascade of probes a unit apart reaching 4
+  hands the floor's rays on within 2 of the rim and reads the floor 12.4 percent under its share of
+  the sky and lets 6.2 percent of that light through a lid thinner than a cell, and reaching 2 it
+  reads 1.5 percent over and the lid dark. The lower bound keeps a cascade's reach map covering the
+  cell about any point handed to it. The rules lessen the smear and do not end it, in any chain, and
+  the tests hold the two boxes, the lids and the wall alone.
 
 Each setting has a default an engine may leave, and each trades one thing for another.
 

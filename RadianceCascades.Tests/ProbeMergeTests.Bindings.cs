@@ -107,4 +107,24 @@ public sealed partial class ProbeMergeTests
         // does not.
         Assert.True(off / whole <= 0.03, said);
     }
+
+    [CpuKernelFact]
+    public void A_Wall_Lit_By_The_Bindings_Sun_A_Little_Past_The_Near_Rays_Reach_Lights_A_Probe_By_Its_Share()
+    {
+        // The sunlit wall 3 units from a probe whose rays reach 4, so a ray toward the wall's outer
+        // parts reaches its end 0.4 units or less in front of the wall, where the far probes about
+        // that point stand up to a spacing back and their own rays pass the wall's edge.
+        var cells = Field(Cuboid(new(3, 0, -4), new(3 + Wall, 8, 4), 1));
+        var sun = new Vector3(-0.8f, 0.6f, 0) * 3;
+        var radiance = WallAlbedo * 3 * 0.8f / MathF.PI;
+        var at = new Vector3(0, 4, 0);
+        var reading = Passes(cells, Pair(at), at, new Setting { Normal = Vector3.UnitX, SkyLight = 0, Sun = sun });
+        var expected = Albedo * 4 * CornerShare(4 / 3.0, 4 / 3.0) * radiance;
+        var said = $"a probe 3 units from the sunlit wall reaching 4 {reading}, where its share gives {expected:0.00000}";
+        output.WriteLine(said);
+        // 0.15742 against 0.15751, 0.06 percent under, 34 of the 256 texels marching on past their
+        // end to open space in 4.2 steps on the mean and 8 at most, where handed on at their end
+        // they read 0.09885, 37 percent under.
+        Assert.True(Math.Abs(reading.Reflected - expected) <= 0.10 * expected, said);
+    }
 }

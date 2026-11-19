@@ -19,10 +19,13 @@ public sealed partial class ProbeMergeTests
         public int ReachCount => Probes * ReachTexels * ReachTexels;
     }
 
-    private readonly record struct Chained(float Reflected, int Marched, int Steps, int Most, float[] Light)
+    // Marched, Steps and Most count the finest level's texels no probe above saw the end of, and
+    // Onward, OnwardSteps and OnwardMost those that took any step past their end.
+    private readonly record struct Chained(float Reflected, int Marched, int Steps, int Most, float[] Light, int Onward, int OnwardSteps, int OnwardMost)
     {
         public override string ToString() =>
-            $"reflects {Reflected:0.00000}, {Marched} of the finest level's texels marching on themselves in {Steps} steps in all and {Most} at most";
+            $"reflects {Reflected:0.00000}, {Marched} of the finest level's texels marching on themselves in {Steps} steps in all and {Most} at most, "
+            + $"{Onward} stepping past their end in {(Onward == 0 ? 0 : OnwardSteps / (float)Onward):0.0} steps on the mean and {OnwardMost} at most";
     }
 
     // The pair the one-thread kernel reads, a near probe at place and the far cascade.
@@ -92,13 +95,19 @@ public sealed partial class ProbeMergeTests
             Pass(5, 0, levels[0].TexelCount);
         Pass(4, 0, 1);
         var (marched, steps, most) = (0, 0, 0);
+        var (onward, onwardSteps, onwardMost) = (0, 0, 0);
         for (int k = 0; k < levels[0].TexelCount; k++)
+        {
+            var taken = (int)marches[k * 2 + 1];
             if (marches[k * 2] > 0)
-                (marched, steps, most) = (marched + 1, steps + (int)marches[k * 2 + 1], Math.Max(most, (int)marches[k * 2 + 1]));
+                (marched, steps, most) = (marched + 1, steps + taken, Math.Max(most, taken));
+            if (taken > 0)
+                (onward, onwardSteps, onwardMost) = (onward + 1, onwardSteps + taken, Math.Max(onwardMost, taken));
+        }
         var light = new float[levels[0].Texels * levels[0].Texels];
         for (int k = 0; k < light.Length; k++)
             light[k] = merged[k * 3];
-        return new(surfaces[3], marched, steps, most, light);
+        return new(surfaces[3], marched, steps, most, light, onward, onwardSteps, onwardMost);
     }
 
     [CpuKernelFact]

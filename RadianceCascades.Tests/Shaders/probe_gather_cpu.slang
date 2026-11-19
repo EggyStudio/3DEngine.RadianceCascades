@@ -1,8 +1,8 @@
 // A probe of a near cascade gathering its light at a surface from the cells given, on one thread
-// so each part runs after the one it reads. Each far probe within reach of the near probe's rays
-// traces its texels and its reach map first, then each of the near probe's texels traces its ray
-// and merges with the far probes, by the library's rule and, for a comparison, by trilinear
-// weights alone, and last the light its texels give the surface is gathered both ways.
+// so each part runs after the one it reads. Each far probe traces its texels and its reach map
+// first, then each of the near probe's texels traces its ray and merges with the far probes, by the
+// library's rule and, for a comparison, by trilinear weights alone, and last the light its texels
+// give the surface is gathered both ways.
 import rc_probes;
 import rc_cascade_merge;
 
@@ -147,7 +147,8 @@ void test(uint3 id : SV_DispatchThreadID)
     FarProbes probes = { far };
     float3 place = probePlace(near, int3(0));
 
-    // The far probes about any end of the near probe's rays lie within its reach and a spacing.
+    // Every far probe is traced, since a near ray that marches on to open space hands off past its
+    // reach as far as the field's edge.
     uint farRays = 0u, farSteps = 0u, farMost = 0u;
     for (int z = 0; z < far.count.z; z++)
         for (int y = 0; y < far.count.y; y++)
@@ -155,8 +156,6 @@ void test(uint3 id : SV_DispatchThreadID)
             {
                 int3 probe = int3(x, y, z);
                 float3 p = probePlace(far, probe);
-                if (any(abs(p - place) > near.end + far.spacing))
-                    continue;
                 uint reachBase = probes.index(probe) * ReachTexels * ReachTexels;
                 for (uint k = 0u; k < ReachTexels * ReachTexels; k++)
                     farReach[reachBase + k] = reachAlong(field, p, texelWay(ReachTexels, uint2(k % ReachTexels, k / ReachTexels)), far.end);

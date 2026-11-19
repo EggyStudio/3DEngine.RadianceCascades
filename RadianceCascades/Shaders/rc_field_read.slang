@@ -59,6 +59,11 @@ public static const float MarchStep = 0.25;
 // How many steps a march takes at most before it has met nothing.
 public static const int MarchSteps = 64;
 
+// How many cells from a surface a cascade's distances are exact, the band the plan's cascades
+// resolve to (SceneFieldPlan.Band), past which a distance reads that many cells whatever lies
+// farther.
+public static const float FieldBand = 4.0;
+
 // The point p in cells from cascade i's corner, held half a cell from every side, so cascades
 // stacked in one image do not bleed into each other.
 float3 cellsOf<F : IFieldVolume>(F field, int i, float3 p)

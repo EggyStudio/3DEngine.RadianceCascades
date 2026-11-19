@@ -653,6 +653,25 @@ tracer's own crossing of the mesh, an any-hit pass that multiplies the share to 
 entry and exit. The merge's and the gather's test of a probe inside a mesh would still read the
 field's distance, or the tracer's own answer where a binding has no field.
 
+The sunlit wall past a hand-off, in the commit carrying this line, by the rule the review gave: a
+near ray past its end where the field's distance reads a surface near marches on itself
+(`marchToOpenSpace` in `rc_probes`, one march with `traceProbeRay`) until it meets the surface or
+stands in open space, and hands off there, uncapped, at every link through `mergedLight`. The field
+reads no farther than its band, 4 cells, so open space is where the distance reads the lesser of a
+far spacing and the band (`openAt`, with `FieldBand` in `rc_field_read`, which a test holds to
+`SceneFieldPlan.Band`), and an edge between the band and a far spacing past a hand-off is still
+smeared. The test, written first at a near reach of 4 with the wall 0.4 past the hand-off, read
+0.0989 against 0.1575 (37% under) and reads 0.1574, held to 10%. Texels marching on, of 256, with
+their mean and most steps: in two cascades the wall 34 (13%), 4.2 and 8, and each of the open,
+lidded and sheet-lidded boxes 76 (30%), 2.9 and 5; in three cascades (ends 2, 2 and 32) the wall 12
+(5%), 3.0 and 3, reading 0.1588, and each box 88 (34%), 7.6 and 20. The boxes read as before,
+0.2540, 0 and 0.0018 in two cascades and 0.2548, 0 and 0.0021 in three, and the fallback march stays
+at no texel. The rooms parted by a wall that lets light through move from 0.675 of their reading
+with the wall away to 0.663, within the test's 15%. A middle cascade reaching 4, outside the ends'
+rule, reads worse with the rule, the open box 12.4% under where it was 7.7 and the sheet lid letting
+through 6.2% where it was 4.3, since the march carries the hand-off nearer the rim; the README's
+ends convention carries these figures.
+
 Handoff, for a fresh session, in place of those above. Where the work stands: the library holds the
 field's plan, the triangles' layout and the glow lights in C#, and in Slang the probes' octahedron,
 the cell code, resolve and pinch, the hit's color read, the splat, the stamp, the field's distance
@@ -662,10 +681,11 @@ and their gather (`rc_probes`), the merge with the seeing rule and the self-marc
 run on the CPU by its tests through `CpuKernel`. The rules agreed for the merge: a far probe inside
 a mesh or not seeing the near ray's end weighs nothing, every cascade's rays begin at its probe, a
 texel no probe above sees marches on to the coarsest cascade's end, and a cascade's end lies within
-twice its spacing, which the README states. A binding gives the passes its probes' places
-(`IProbePlaces`), a hit's light (`IProbeField.hitLight`) and the sky along a way (`ISky`), and a
-near texel takes the far texels it covers (`farTexelsLight`). Next in order: the engines' further
-findings as they take the passes, and the review's word on a hand-off before a lit wall, then the
+twice its spacing, which the README states. A near ray past its end beside a surface marches on to
+it or to open space, the lesser of a far spacing and the field's band, before it hands off. A
+binding gives the passes its probes' places (`IProbePlaces`), a hit's light (`IProbeField.hitLight`)
+and the sky along a way (`ISky`), and a near texel takes the far texels it covers
+(`farTexelsLight`). Next in order: the engines' further findings as they take the passes, then the
 split sum at a hit, the screen probes, the light on the picture and the contact shadow's march. Left
 behind each part's Reply: the field's normal, the cascades' table, the march held within a cascade,
 the splat's second plane, the lending of thin emitters, the repaint and the clearing of codes. Open:

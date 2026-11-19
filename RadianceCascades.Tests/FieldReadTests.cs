@@ -133,4 +133,17 @@ public sealed class FieldReadTests
             Assert.True(hits[k * 2 + 1] > 0 && off >= 0 && off <= 0.35f, $"the ray from {rays[k].Item1.Y} met the sheet {off:0.000} of a cell off its plane on its own side");
         }
     }
+
+    [Fact]
+    public void The_Band_The_Slang_Reads_Is_The_Band_The_Plan_Resolves_To()
+    {
+        // A march stands in open space no farther from a surface than the band (openAt), past which
+        // the field reads the band whatever lies farther, so a band of the Slang's other than the
+        // plan's would hand a ray off beside a surface or march it on through open space.
+        var source = File.ReadAllText(Path.Combine(Repository.Shaders, "rc_field_read.slang"));
+        var match = System.Text.RegularExpressions.Regex.Match(source, @"public static const float FieldBand = ([0-9.]+);");
+        Assert.True(match.Success, "rc_field_read.slang declares no FieldBand");
+        var band = float.Parse(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+        Assert.True(band == SceneFieldPlan<string, int>.Band, $"the Slang reads a band of {band} cells where the plan resolves {SceneFieldPlan<string, int>.Band}");
+    }
 }

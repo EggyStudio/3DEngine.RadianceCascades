@@ -114,6 +114,35 @@ int3 cellOf<F : IFieldVolume>(F field, int i, float3 p)
 // its end.
 public ProbeRay traceProbeRay<F : IProbeField, S : IMarchSteps>(F field, float3 origin, float3 way, float start, float end, inout S steps)
 {
+    return marchProbeRay(field, origin, way, start, end, 0.0, steps);
+}
+
+// How far the distance a march reads must reach for the ray to stand in open space, the lesser of
+// clearance and the field's band at the point (FieldBand cells), a hundredth short of it, since
+// past the band the field reads the band's distance whatever lies farther, and the blend of cells
+// that each read it comes out a rounding under it.
+float openAt(float clearance, float cell)
+{
+    return 0.99 * min(clearance, FieldBand * cell);
+}
+
+// The march of a ray past the end of its interval to open space, from start along way through the
+// field as traceProbeRay marches it, crossing surfaces that let light through, until it meets a
+// surface, reaches end, leaves every cascade, or stands where the distance read reaches clearance
+// or the field's band, whichever is less (openAt), outside any surface it crosses, where it ends
+// as RayPast at that distance along it. A ray that starts in open space ends there with no step
+// taken. Each step on is handed to steps, and the march takes no count of steps at most.
+public ProbeRay marchToOpenSpace<F : IProbeField, S : IMarchSteps>(F field, float3 origin, float3 way, float start, float end, float clearance,
+    inout S steps)
+{
+    return marchProbeRay(field, origin, way, start, end, clearance, steps);
+}
+
+// The march traceProbeRay and marchToOpenSpace share, which ends in open space as well where
+// clearance is above zero (openAt).
+ProbeRay marchProbeRay<F : IProbeField, S : IMarchSteps>(F field, float3 origin, float3 way, float start, float end, float clearance,
+    inout S steps)
+{
     ProbeRay ray;
     ray.ended = RayPast;
     ray.t = end;
@@ -136,6 +165,11 @@ public ProbeRay traceProbeRay<F : IProbeField, S : IMarchSteps>(F field, float3 
         }
         float cell = field.cornerAndCell(c).w;
         float d = fieldDistanceSheetIn(field, c, p);
+        if (clearance > 0.0 && entered < 0.0 && d >= openAt(clearance, cell))
+        {
+            ray.t = t;
+            return ray;
+        }
         steps.at(t, d);
         if (entered >= 0.0)
         {
