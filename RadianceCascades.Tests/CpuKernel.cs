@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using Xunit;
 
@@ -9,11 +10,19 @@ namespace RadianceCascades.Tests;
 /// read with no GPU.
 /// </summary>
 /// <remarks>
+/// <para>
 /// slangc writes the compute entry <c>test</c> as a function of three pointers, the first and the
 /// end group to run along each axis, the entry's own parameters, and the kernel's globals, which
 /// hold each <c>RWStructuredBuffer</c> as a pointer to its data and a count of its elements, in
 /// the order the kernel declares them. A kernel run here declares its buffers alone as globals,
 /// each an array of the element type it reads, floats or uints.
+/// </para>
+/// <para>
+/// Each kernel is compiled the first time a test runs it and kept loaded until the run ends, since
+/// a test that runs one kernel's passes one after another would otherwise compile it for each, and
+/// the runs of one kernel are made one at a time, since nothing says the code slangc writes may be
+/// entered by two threads at once.
+/// </para>
 /// </remarks>
 internal static class CpuKernel
 {
@@ -26,41 +35,60 @@ internal static class CpuKernel
     private static string Extension =>
         OperatingSystem.IsWindows() ? ".dll" : OperatingSystem.IsMacOS() ? ".dylib" : ".so";
 
+    private static readonly ConcurrentDictionary<string, Lazy<Compiled>> Kernels = new();
+
+    // The folder the kernels are compiled into, and the libraries loaded from it, freed and the
+    // folder deleted as the run ends.
+    private static readonly Lazy<DirectoryInfo> Folder = new(() =>
+    {
+        var folder = Directory.CreateTempSubdirectory("radiancecascades-cpu-");
+        AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+        {
+            foreach (var kernel in Kernels.Values.Where(kernel => kernel.IsValueCreated))
+                NativeLibrary.Free(kernel.Value.Library);
+            try { folder.Delete(recursive: true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+        };
+        return folder;
+    });
+
+    private readonly record struct Compiled(IntPtr Library, Entry Entry);
+
     /// <summary>
-    /// Compiles <paramref name="kernel"/> of the tests' kernels for the CPU and runs its groups
-    /// from the first to <paramref name="groups"/>, each of <paramref name="buffers"/> bound to its
-    /// buffers in order and read back into in place.
+    /// Compiles <paramref name="kernel"/> of the tests' kernels for the CPU, the first time it is
+    /// run, and runs its groups from the first to <paramref name="groups"/>, each of
+    /// <paramref name="buffers"/> bound to its buffers in order and read back into in place.
     /// </summary>
     internal static void Run(string kernel, (uint X, uint Y, uint Z) groups, params Array[] buffers)
     {
-        var folder = Directory.CreateTempSubdirectory("radiancecascades-cpu-");
+        var compiled = Kernels.GetOrAdd(kernel, name => new Lazy<Compiled>(() => Compile(name))).Value;
         var pinned = buffers.Select(buffer => GCHandle.Alloc(buffer, GCHandleType.Pinned)).ToArray();
         var globals = Marshal.AllocHGlobal(Math.Max(1, buffers.Length) * 2 * IntPtr.Size);
-        var library = IntPtr.Zero;
         try
         {
-            var path = Path.Combine(folder.FullName, "kernel" + Extension);
-            var (code, said) = Slangc.Compile(Path.Combine(Repository.TestKernels, kernel), "shader-sharedlib", path);
-            Assert.True(code == 0, $"{kernel} for the CPU exited {code}:\n{said}");
             for (int i = 0; i < buffers.Length; i++)
             {
                 Marshal.WriteIntPtr(globals, 2 * i * IntPtr.Size, pinned[i].AddrOfPinnedObject());
                 Marshal.WriteIntPtr(globals, (2 * i + 1) * IntPtr.Size, buffers[i].Length);
             }
-            library = NativeLibrary.Load(path);
-            var entry = Marshal.GetDelegateForFunctionPointer<Entry>(NativeLibrary.GetExport(library, "test"));
             var range = new Groups { EndX = groups.X, EndY = groups.Y, EndZ = groups.Z };
-            entry(ref range, IntPtr.Zero, globals);
+            lock (Kernels[kernel])
+                compiled.Entry(ref range, IntPtr.Zero, globals);
         }
         finally
         {
-            if (library != IntPtr.Zero)
-                NativeLibrary.Free(library);
             Marshal.FreeHGlobal(globals);
             foreach (var handle in pinned)
                 handle.Free();
-            folder.Delete(recursive: true);
         }
+    }
+
+    private static Compiled Compile(string kernel)
+    {
+        var path = Path.Combine(Folder.Value.FullName, Path.GetFileNameWithoutExtension(kernel) + Extension);
+        var (code, said) = Slangc.Compile(Path.Combine(Repository.TestKernels, kernel), "shader-sharedlib", path);
+        Assert.True(code == 0, $"{kernel} for the CPU exited {code}:\n{said}");
+        var library = NativeLibrary.Load(path);
+        return new(library, Marshal.GetDelegateForFunctionPointer<Entry>(NativeLibrary.GetExport(library, "test")));
     }
 
     private static string? Probe()

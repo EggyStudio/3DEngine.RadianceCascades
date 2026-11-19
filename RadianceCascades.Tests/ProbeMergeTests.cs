@@ -10,7 +10,7 @@ namespace RadianceCascades.Tests;
 /// Slang, a box open to a uniform sky, the same box closed by a solid lid and by a sheet thinner
 /// than a cell, and two rooms parted by a wall that lets light through.
 /// </summary>
-public sealed class ProbeMergeTests(ITestOutputHelper output)
+public sealed partial class ProbeMergeTests(ITestOutputHelper output)
 {
     // One cascade of the field, 64 cells of a quarter unit a side, from -8 to 8 across and from -4
     // to 12 up.

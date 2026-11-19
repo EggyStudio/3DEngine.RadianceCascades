@@ -542,3 +542,21 @@ under the trilinear weights alone, the agreed rule and that rule with the far ra
 beside the dome's share there. The agreed rule reads 0.2540 at the middle against the dome's 0.2511,
 and 17% over at worst near the walls, the trilinear weights alone up to 48% over, and the far rays
 begun 4 out up to 3.6 times.
+
+The probes' passes, in the commit carrying this line. `rc_probe_passes` holds what an engine's
+kernel calls once a thread with its index, past the last index doing nothing: `traceTexel` writes a
+texel's ray to `IProbeRays`, `reachTexel` a reach texel to `IReachTexels`, `settleTexel` gives the
+coarsest cascade's texels their own light or the sky, `mergeTexel` merges a texel with the merged
+light of the cascade above through `IFarProbes` into `IMergedLight`, and `gatherAt` takes the finest
+cascade's probes about a surface point into `ISurfacePoints` by the merge's own weights. Every
+cascade's rays begin at its probe, the engine setting each one's end in its `ProbeCascade`, farther
+each cascade up and the coarsest past the field's edge, each end beyond its spacing times the root
+of three so its reach map covers the seeing test. Dispatched a thread a texel, the passes read as
+the one-thread trace in all five fields with no difference, and three cascades ending at 2, 4 and 32
+read the open box's floor 0.2317 against the dome's 0.2511 (7.7% under) and the lidded box's 0. For
+your word: in a chain longer than two, a texel no probe above sees marches on to the coarsest
+cascade's end, an extension of the agreed rule past a pair. `SlangInterfaceTests` holds every public
+Slang interface to a row in the README's table, which failed first on the four new ones. `CpuKernel`
+compiles a kernel once a run and runs one kernel's dispatches one at a time. For the engines' change
+list: a cell carries its surface's light-through as a value of its own (`throughAt`), not in the
+paint's alpha, which the README's binding section states.

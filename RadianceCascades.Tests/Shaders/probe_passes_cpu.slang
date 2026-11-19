@@ -1,0 +1,210 @@
+// The passes over a chain of cascades of probes, a thread a texel or a surface point, as an
+// engine's compute kernels run them, one pass a dispatch. A level's texels are traced, its reach
+// map traced, the coarsest level's texels settled, a finer level's texels merged with the level
+// above, and the light the finest level gives each surface point gathered. One kernel holds the
+// passes, picked by a value of the setup, so each target compiles every function.
+import rc_probe_passes;
+
+// Each cell's distance, the plane it keeps and its share of light through, five floats a cell, as
+// probe_field_cpu.slang builds them.
+RWStructuredBuffer<float> cells;
+
+// The field's least corner, its cell and its cells along each side, the sky's luminance, the pass,
+// the level it runs on, the coarsest level's end and the count of levels, then from the float at
+// 16 each level's cascade as ProbeCascade holds them and where its texels' rays, its reach texels
+// and its texels' merged light begin in their buffers, sixteen floats a level, and from the float
+// at 64 the count of surface points and each point's place, normal and albedo, seven floats each.
+RWStructuredBuffer<float> setup;
+
+// Each texel's ray as its trace ended, how, where, its carried share and its light, six floats a
+// texel, each reach texel's reach, and each texel's merged light, three floats a texel.
+RWStructuredBuffer<float> rayFloats;
+RWStructuredBuffer<float> reachFloats;
+RWStructuredBuffer<float> mergedFloats;
+
+// Whether each texel's merge marched on itself and the steps that march took, two floats a texel.
+RWStructuredBuffer<float> marches;
+
+// The light each surface point takes and reflects, three floats each.
+RWStructuredBuffer<float> surfaceFloats;
+
+static const int Levels = 16;
+static const int Points = 64;
+
+struct ProbeCells : IProbeField
+{
+    float3 corner() { return float3(setup[0], setup[1], setup[2]); }
+    float cell() { return setup[3]; }
+    int size() { return int(setup[4]); }
+    int index(int3 at) { return (at.z * size() + at.y) * size() + at.x; }
+    int cascadeOf(float3 p, float margin)
+    {
+        float3 q = (p - corner()) / cell();
+        return all(q >= margin) && all(q <= float(size()) - margin) ? 0 : -1;
+    }
+    float4 cornerAndCell(int cascade) { return float4(corner(), cell()); }
+    float4 cellAt(int cascade, int3 at)
+    {
+        int i = index(at) * 5;
+        return float4(cells[i], cells[i + 1], cells[i + 2], cells[i + 3]);
+    }
+    float4 between(int cascade, float3 at)
+    {
+        float3 q = at - 0.5;
+        int3 base = int3(floor(q));
+        float3 f = q - float3(base);
+        float4 sum = float4(0.0);
+        for (int corner = 0; corner < 8; corner++)
+        {
+            int3 offset = int3(corner & 1, (corner >> 1) & 1, corner >> 2);
+            float3 lerps = lerp(1.0 - f, f, float3(offset));
+            sum += cellAt(cascade, clamp(base + offset, int3(0), int3(size() - 1))) * (lerps.x * lerps.y * lerps.z);
+        }
+        return sum;
+    }
+    float3 secondAt(int cascade, int3 at) { return float3(0.0); }
+    float throughAt(int cascade, int3 at) { return cells[index(at) * 5 + 4]; }
+    // The walls and floors of these rooms send no light of their own.
+    float3 surfaceLightAt(int cascade, int3 at) { return float3(0.0); }
+};
+
+struct LevelRays : IProbeRays
+{
+    uint first;
+    ProbeRay rayAt(uint index)
+    {
+        uint i = (first + index) * 6u;
+        ProbeRay ray;
+        ray.ended = uint(rayFloats[i]);
+        ray.t = rayFloats[i + 1];
+        ray.carried = rayFloats[i + 2];
+        ray.light = float3(rayFloats[i + 3], rayFloats[i + 4], rayFloats[i + 5]);
+        return ray;
+    }
+    void keepRay(uint index, ProbeRay ray)
+    {
+        uint i = (first + index) * 6u;
+        rayFloats[i] = float(ray.ended);
+        rayFloats[i + 1] = ray.t;
+        rayFloats[i + 2] = ray.carried;
+        rayFloats[i + 3] = ray.light.x;
+        rayFloats[i + 4] = ray.light.y;
+        rayFloats[i + 5] = ray.light.z;
+    }
+};
+
+struct LevelReach : IReachTexels
+{
+    uint first;
+    void keepReach(uint index, float reach) { reachFloats[first + index] = reach; }
+};
+
+struct LevelMerged : IMergedLight
+{
+    uint first;
+    void keepMerged(uint index, float3 light)
+    {
+        uint i = (first + index) * 3u;
+        mergedFloats[i] = light.x;
+        mergedFloats[i + 1] = light.y;
+        mergedFloats[i + 2] = light.z;
+    }
+};
+
+// A level's merged light and reach map as the level below it, or the gather, reads them.
+struct LevelProbes : IFarProbes
+{
+    ProbeCascade cascade;
+    uint merged;
+    uint reach;
+    float3 lightAt(int3 probe, uint2 texel)
+    {
+        uint i = (merged + cascadeTexelIndex(cascade, probe, texel)) * 3u;
+        return float3(mergedFloats[i], mergedFloats[i + 1], mergedFloats[i + 2]);
+    }
+    float reachAt(int3 probe, uint2 texel) { return reachFloats[reach + reachTexelIndex(cascade, probe, texel)]; }
+};
+
+struct SurfacePoints : ISurfacePoints
+{
+    float3 placeAt(uint index) { uint i = uint(Points) + 1u + index * 7u; return float3(setup[i], setup[i + 1], setup[i + 2]); }
+    float3 normalAt(uint index) { uint i = uint(Points) + 4u + index * 7u; return float3(setup[i], setup[i + 1], setup[i + 2]); }
+    void keepTaken(uint index, float3 taken)
+    {
+        float3 reflected = reflectedLight(float3(setup[uint(Points) + 7u + index * 7u]), taken);
+        surfaceFloats[index * 6u] = taken.x;
+        surfaceFloats[index * 6u + 1u] = taken.y;
+        surfaceFloats[index * 6u + 2u] = taken.z;
+        surfaceFloats[index * 6u + 3u] = reflected.x;
+        surfaceFloats[index * 6u + 4u] = reflected.y;
+        surfaceFloats[index * 6u + 5u] = reflected.z;
+    }
+};
+
+struct CountedSteps : IMarchSteps
+{
+    uint taken;
+    [mutating]
+    void at(float t, float d) { taken++; }
+};
+
+ProbeCascade levelCascade(int level)
+{
+    int at = Levels + level * 16;
+    ProbeCascade cascade;
+    cascade.corner = float3(setup[at], setup[at + 1], setup[at + 2]);
+    cascade.spacing = setup[at + 3];
+    cascade.count = int3(int(setup[at + 4]), int(setup[at + 5]), int(setup[at + 6]));
+    cascade.texels = uint(setup[at + 7]);
+    cascade.start = setup[at + 8];
+    cascade.end = setup[at + 9];
+    return cascade;
+}
+
+// Where a level's rays, its reach texels or its merged light begin in their buffers, at 10, 11
+// and 12 of its sixteen floats.
+uint firstOf(int level, int which) { return uint(setup[Levels + level * 16 + which]); }
+
+LevelProbes probesOf(int level)
+{
+    LevelProbes probes = { levelCascade(level), firstOf(level, 12), firstOf(level, 11) };
+    return probes;
+}
+
+[shader("compute")]
+[numthreads(64, 1, 1)]
+void test(uint3 id : SV_DispatchThreadID)
+{
+    uint index = id.x;
+    ProbeCells field;
+    float3 sky = float3(setup[5]);
+    uint pass = uint(setup[6]);
+    int level = int(setup[7]);
+    ProbeCascade cascade = levelCascade(level);
+    LevelRays rays = { firstOf(level, 10) };
+    LevelMerged merged = { firstOf(level, 12) };
+    if (pass == 0u)
+        traceTexel(field, rays, cascade, index);
+    else if (pass == 1u)
+    {
+        LevelReach reach = { firstOf(level, 11) };
+        reachTexel(field, reach, cascade, index);
+    }
+    else if (pass == 2u)
+        settleTexel(rays, merged, cascade, sky, index);
+    else if (pass == 3u)
+    {
+        CountedSteps counted = { 0u };
+        bool marched = mergeTexel(field, rays, probesOf(level + 1), merged, cascade, levelCascade(level + 1), setup[8], sky, counted, index);
+        if (index < cascadeTexels(cascade))
+        {
+            marches[(firstOf(level, 10) + index) * 2u] = marched ? 1.0 : 0.0;
+            marches[(firstOf(level, 10) + index) * 2u + 1u] = float(counted.taken);
+        }
+    }
+    else if (index < uint(setup[Points]))
+    {
+        SurfacePoints surfaces;
+        gatherAt(field, probesOf(0), levelCascade(0), surfaces, index);
+    }
+}

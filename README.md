@@ -89,11 +89,15 @@ library's functions, and the engine keeps its bindings, its threads and its atom
 | `IResolvedCells` | Reads a cascade's resolved distances about a cell | `pinched` |
 | `IStampShapes` | Reads the shapes of a brick's run, each as `FieldShape.WriteStamp` writes it | `stampCell` |
 | `IFieldCells` | Reads a cascade's cells' paint, faces and distances | `paintFacing`, `paintAt` |
-| `IFieldVolume` | Reads the finest cascade holding a point, a cascade's corner and cell, its field between cells and a cell as it is | `fieldDistanceIn`, `fieldDistanceSheetIn`, `traceField`, `traceFieldSheets` |
-| `IMarchSteps` | Takes each step a march makes, which `NoSteps` passes over | `traceField`, `traceFieldSheets` |
-| `IProbeField` | Reads, beyond `IFieldVolume`, the light a cell's surface sends and the share of light that passes a unit of its depth | `traceProbeRay`, `mergedLight` |
-| `IFarProbes` | Reads a far probe's light along a texel's way and how far its ray toward each way of its reach map went | `mergedLight`, `farProbeSees` |
+| `IFieldVolume` | Reads the finest cascade holding a point, a cascade's corner and cell, its field between cells and a cell as it is | `fieldDistanceIn`, `fieldDistanceSheetIn`, `traceField`, `traceFieldSheets`, `reachAlong`, `reachTexel` |
+| `IMarchSteps` | Takes each step a march makes, which `NoSteps` passes over | `traceField`, `traceFieldSheets`, `traceProbeRay`, `mergedLight`, `mergeTexel` |
+| `IProbeField` | Reads, beyond `IFieldVolume`, the light a cell's surface sends and the share of light that passes a unit of its depth | `traceProbeRay`, `mergedLight`, `traceTexel`, `mergeTexel`, `gatherAt` |
+| `IFarProbes` | Reads a far probe's light along a texel's way and how far its ray toward each way of its reach map went, the merged light and reach maps of the level above a merge's or of the finest level a gather's | `mergedLight`, `farProbeSees`, `mergeTexel`, `gatherAt` |
 | `IProbeLight` | Reads a probe's merged light at each of its texels | `lightTaken` |
+| `IProbeRays` | Keeps the ray each texel of a cascade traced, how it ended, where, the share of light it carries and the light it met, and reads it back | `traceTexel`, `settleTexel`, `mergeTexel` |
+| `IReachTexels` | Keeps how far each ray of a cascade's reach maps went, which `IFarProbes` reads back | `reachTexel` |
+| `IMergedLight` | Keeps each texel's light merged from every distance past its probe, which `IFarProbes` reads back for the level below and the gather | `settleTexel`, `mergeTexel` |
+| `ISurfacePoints` | Reads a surface point's place and normal and keeps the light it takes | `gatherAt` |
 
 The conventions the module stands on:
 
@@ -106,6 +110,9 @@ The conventions the module stands on:
 - `Color` and `Emission` are linear, and a corner's color is three sRGB bytes, red lowest.
 - Emission is in the engine's own unit of light, which the plan carries and neither scales nor
   reads.
+- A cell of an engine's field carries its nearest surface's share of light through, the share
+  that passes a unit of its depth, as a value of its own, which `IProbeField.throughAt` reads, and
+  not in the paint's alpha, which `lightThroughPaint` makes of it for the blend of colors alone.
 
 Each setting has a default an engine may leave, and each trades one thing for another.
 
