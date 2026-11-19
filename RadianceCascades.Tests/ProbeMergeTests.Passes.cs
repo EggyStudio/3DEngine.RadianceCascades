@@ -94,24 +94,30 @@ public sealed partial class ProbeMergeTests
     }
 
     [CpuKernelFact]
-    public void A_Chain_Of_Three_Cascades_Reads_The_Open_Boxs_Floor_By_Its_Share_And_The_Lidded_Boxs_Under_A_Hundredth()
+    public void A_Chain_Of_Three_Cascades_Reads_The_Open_Boxs_Floor_By_Its_Share_And_The_Lidded_Boxes_Under_A_Hundredth()
     {
         // A near probe reaching 2 units, a middle cascade of probes a unit apart over the floor's
-        // middle reaching 4, and the far cascade past the field's edge.
+        // middle reaching 2, twice its spacing, and the far cascade past the field's edge, so a ray
+        // from the floor reaches the far cascade 4 units out, as the pair hands it.
         Level[] chain =
         [
             new(Floor, 1, 1, 1, 1, NearTexels, 2),
-            new(new(-3.5f, -0.5f, -3.5f), 1, 8, 5, 8, 16, 4),
+            new(new(-3.5f, -0.5f, -3.5f), 1, 8, 5, 8, 16, 2),
             new(FarCorner, FarSpacing, FarCount, FarCount, FarCount, FarTexels, FarEnd),
         ];
         const float o = 4 + Wall;
         var open = Passes(Field(OpenBox()), chain, Floor);
         var lidded = Passes(Field(OpenBox().Concat(Cuboid(new(-o, 8, -o), new(o, 8 + Wall, o), 6))), chain, Floor);
+        var sheeted = Passes(Field(OpenBox().Concat(Sheet(8, o, 6))), chain, Floor);
         var high = 8 - Floor.Y;
         var expected = Albedo * 4 * CornerShare(4 / high, 4 / high) * Sky;
-        var said = $"by three cascades the open box's floor {open}, where the sky's share gives {expected:0.00000}, and the lidded box's {lidded}";
+        var said = $"by three cascades the open box's floor {open}, where the sky's share gives {expected:0.00000}, the lidded box's {lidded} and the sheeted box's {sheeted}";
         output.WriteLine(said);
-        Assert.True(Math.Abs(open.Reflected - expected) <= 0.15 * expected, said);
-        Assert.True(lidded.Reflected < 0.01f * open.Reflected, said);
+        // 0.25480 against 0.25111, 1.5 percent over. With the middle reaching 4 it read 0.23165,
+        // 7.7 percent under.
+        Assert.True(Math.Abs(open.Reflected - expected) <= 0.05 * expected, said);
+        // 0.00000, and 0.00207, 0.81 percent of the open box's, where with the middle reaching 4
+        // the sheeted box read 4.3 percent.
+        Assert.True(lidded.Reflected < 0.01f * open.Reflected && sheeted.Reflected < 0.01f * open.Reflected, said);
     }
 }

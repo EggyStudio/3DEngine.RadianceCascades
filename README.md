@@ -113,6 +113,17 @@ The conventions the module stands on:
 - A cell of an engine's field carries its nearest surface's share of light through, the share
   that passes a unit of its depth, as a value of its own, which `IProbeField.throughAt` reads, and
   not in the paint's alpha, which `lightThroughPaint` makes of it for the blend of colors alone.
+- A cascade's end, set in its `ProbeCascade`, lies no farther than twice its own spacing and past
+  its spacing times the root of three, the coarsest's alone past the field's edge. A finer cascade's
+  end is where its rays are handed to the cascade above, whose probes about that point stand up to a
+  spacing of theirs off the ray and meet an edge where their own rays do, so a hand-off that lands
+  within a far spacing of an edge smears the edge over the ways about it. In a box open to the sky,
+  a middle cascade of probes a unit apart reaching 4 handed the floor's rays on 2 under the rim and
+  read the floor 7.7 percent under its share of the sky and let 4.3 percent of that light through a
+  lid thinner than a cell, and reaching 2 it reads 1.5 percent over and the lid dark. The lower
+  bound keeps a cascade's reach map covering the cell about any point handed to it. The rule lessens
+  the smear and does not end it: an edge that lies within a far spacing past a hand-off is still
+  smeared, in any chain, and the tests hold the two boxes alone.
 
 Each setting has a default an engine may leave, and each trades one thing for another.
 

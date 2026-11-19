@@ -8,9 +8,16 @@
 // the light the finest level gives each surface point is gathered (gatherAt).
 //
 // Each level's rays begin at its probe, its start 0, and run to its end, which the engine sets in
-// its ProbeCascade, the finest's at the reach its probes trace themselves, each coarser level's
-// farther, and the coarsest's past the field's edge, so its rays end at a surface or leave the
-// field. A level's reach map runs to its end too, so that end lies past the diagonal of the cell
+// its ProbeCascade, the coarsest's past the field's edge, so its rays end at a surface or leave
+// the field. A finer level's end is where its rays are handed to the level above, whose probes
+// about that point stand up to a spacing of theirs off the ray and meet an edge beyond it where
+// their own parallel rays do, so the nearer the point lies to an edge the more the edge is smeared
+// over the ways about it. The ends are kept short against the spacings above. The tests' middle
+// level of probes a unit apart reaches 2, twice its spacing, and hands a ray from the floor to
+// the far probes, 2 apart, 4 units out, where reaching 4 it hands it on 6 out, 2 under an open
+// box's rim, and the floor reads 7.7 percent under its share of the sky and a sheet lid lets
+// through 4.3 percent of the open box's light. A level's reach map runs to its end too, so that
+// end lies past the diagonal of the cell
 // between its probes, the spacing times the root of 3, for the seeing of a point among them to be
 // read within the map. A texel's index is its probe's, x fastest, times the texels of a probe,
 // and its texel's along a row of the octahedron, x fastest (cascadeTexelIndex), and a reach

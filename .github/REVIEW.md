@@ -560,3 +560,57 @@ Slang interface to a row in the README's table, which failed first on the four n
 compiles a kernel once a run and runs one kernel's dispatches one at a time. For the engines' change
 list: a cell carries its surface's light-through as a value of its own (`throughAt`), not in the
 paint's alpha, which the README's binding section states.
+
+The three cascades' loss, read by switching each link of the chain against the finest cascade's
+texels each marched on itself to 32, which read the open box's floor 0.2470 against the dome's
+0.2511. The finest-to-middle link by the rule, the middle's texels marched on themselves, reads
+0.2504, 1.4% over the reference; the middle-to-far link alone reads 0.2116, 14.3% under; both links
+by the rule 0.2317, 6.2% under. The middle cascade ending at 4 hands its rays to the far probes some
+6 units out, 2 under the box's rim, where the far probes about that point stand up to 2 units off
+the ray and their rays meet the rim, so the opening's edge is smeared across the ways about it and
+light moves from the steep texels, which weigh most on the floor, to shallow ones toward the walls.
+It is not the lookup between cascades (16 texels at each), the grids' edges (no texel marched on
+itself) or the slack (a quarter of it reads the same). The same hand-off lets 4.28% of the open
+box's light through the sheet lid in three cascades, which the committed test does not read. Ending
+the middle cascade at 2, twice its spacing, so its rays reach the far cascade 4 out as in the pair,
+reads the open box 0.2548 in three cascades (1.5% over), the lidded box 0 and the sheet-lidded 0.81%
+of the open box's, and leaves the pair at 1.1% over, so a test at 5% holds. Reading each far probe
+toward where its own ray stopped, or toward a point two far spacings along the ray, mended the open
+box and let 4.4 to 9.3% through the sheet lid. A hand-off that lands within a far spacing of an edge
+still smears it, so short ends lessen the loss in other scenes and do not end it. For your word: the
+mend, the three-cascade test's middle end at 2 held to 5% with the sheet-lidded box beside it, and
+the note on ends in `rc_probe_passes` that engines set their ends by.
+
+Decision, from the review, recorded as the probes' readers enter: a hit takes the split sum with its
+cell's own reflectance, its shares from the integrated table, a 32 by 32 Slang constant array the
+tests hold to Materials' `SurfaceResponse.SplitSumIntegrated`, with a floor of 0.045. It is not yet
+built; a hit's light is read through `IProbeField.surfaceLightAt` until it is.
+
+The mend, agreed, in the commit carrying this line: the three-cascade test's middle cascade ends at
+2, twice its spacing, held to 5 percent, reading the open box's floor 0.2548 against the dome's
+0.2511, and reads the box lidded by a sheet beside the lidded one, 0.81 percent of the open box's
+where reaching 4 let through 4.28; the note on ends in `rc_probe_passes` says why, and the README
+states the ends' rule as a convention a binding follows, a cascade's end no farther than twice its
+spacing and past its spacing times the root of three, with its limit, that an edge within a far
+spacing past a hand-off is still smeared.
+
+Handoff, for a fresh session, in place of those above. Where the work stands: the library holds the
+field's plan, the triangles' layout and the glow lights in C#, and in Slang the probes' octahedron,
+the cell code, resolve and pinch, the hit's color read, the splat, the stamp, the field's distance
+and march (`rc_field_read`), the probes' trace through surfaces that let light through, their reach
+and their gather (`rc_probes`), the merge with the seeing rule and the self-march
+(`rc_cascade_merge`) and the per-thread passes an engine's kernels call (`rc_probe_passes`), each
+run on the CPU by its tests through `CpuKernel`. The rules agreed for the merge: a far probe inside
+a mesh or not seeing the near ray's end weighs nothing, every cascade's rays begin at its probe, a
+texel no probe above sees marches on to the coarsest cascade's end, and a cascade's end lies within
+twice its spacing, which the README states. Next in order: the engines' findings as they take the
+passes, then the split sum at a hit, the screen probes, the light on the picture and the contact
+shadow's march. Left behind each part's Reply: the field's normal, the cascades' table, the march
+held within a cascade, the splat's second plane, the lending of thin emitters, the repaint and the
+clearing of codes. Open: AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md wait for the
+owner. Read first: AGENTS.md, this file's head and Decisions, the Replies from the field's distance
+on, the README's binding section, NORM.md's N 4.8 to 4.11 and N 7.9, `CpuKernel.cs` and the head of
+`rc_probe_passes.slang`. Every build and test goes through N 7.9's lock, restored outside it, built
+with `--no-restore -p:UseSharedCompilation=false`, its output written to a file of which the summary
+line and the failing lines alone are read, and each commit is read by `commitcheck.py . --staged
+--message=<file>` first.
