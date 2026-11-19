@@ -614,3 +614,8 @@ on, the README's binding section, NORM.md's N 4.8 to 4.11 and N 7.9, `CpuKernel.
 with `--no-restore -p:UseSharedCompilation=false`, its output written to a file of which the summary
 line and the failing lines alone are read, and each commit is read by `commitcheck.py . --staged
 --message=<file>` first.
+
+At a binding's request, in the commit carrying this line: `build/fetch-slang.sh` reads an archive's
+sha256 with `shasum -a 256`, on macOS, Linux and Git's bash on Windows alike, and Python's hashlib
+where a system has none, in place of `sha256sum`, which N 6.6's check refuses. This repository's own
+tests do not run that check on its scripts; the binding's suite found it.

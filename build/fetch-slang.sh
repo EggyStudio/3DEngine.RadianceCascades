@@ -67,7 +67,15 @@ case "$archive" in
     slang-2026.18.2-macos-aarch64.tar.gz) sum=410c0ed14e231089a58437bb0d8e00389c48e29ed9ffe23e3b04a5c74f1ce809 ;;
     *) echo "No sha256 is written here for $archive. Write the one its release lists." >&2; exit 1 ;;
 esac
-sha256() { if command -v sha256sum > /dev/null; then sha256sum "$1"; else shasum -a 256 "$1"; fi | cut -d ' ' -f 1; }
+# shasum reads a file's sha256 on macOS, on Linux and in Git's bash on Windows alike, and Python's
+# hashlib where a system has no shasum.
+sha256() {
+    if command -v shasum > /dev/null; then
+        shasum -a 256 "$1" | cut -d ' ' -f 1
+    else
+        python3 -I -c 'import hashlib, sys; print(hashlib.sha256(open(sys.argv[1], "rb").read()).hexdigest())' "$1"
+    fi
+}
 
 mkdir -p "$TOOLS_DIR"
 echo "==> downloading $url"
