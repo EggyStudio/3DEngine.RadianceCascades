@@ -506,3 +506,22 @@ through N 7.9's lock (`flock -s /run/user/1000/gpu.lock` once `/run/user/1000/gp
 living process's file), restored outside it and built with `--no-restore
 -p:UseSharedCompilation=false` and `MSBUILDDISABLENODEREUSE=1`, and each commit is read by
 `commitcheck.py . --staged --message=<file>` first.
+
+The probes' trace, the merge between cascades and the gather, on the CPU, in the commit carrying
+this line. `rc_probes` holds `ProbeCascade`, `traceProbeRay`, which crosses a surface that lets
+light through and carries share to the power of the depth crossed, a cell whose surface lets none
+through ending the crossing, the reach map (`reachAlong`, 16 by 16 ways) and the gather
+(`lightTaken`, `reflectedLight`); a cell carries its surface's share of light through as a value of
+its own (`throughAt`), not in the paint's alpha. `rc_cascade_merge` holds the agreed rule,
+`mergedLight`: a near ray past its reach takes the light of the eight far probes about its end E at
+their trilinear weights, a probe inside a mesh or not seeing E (`farProbeSees`, slack an eighth of
+the far spacing) weighing nothing, and marches on itself where none counts. The four tests, each
+failing first: the open box's floor reads 0.2540 against the dome's 0.2511 (+1.1%), and 0.3119
+(+24%) with every far probe at its trilinear weight; the lidded box reads 0 (0.0580 without the
+rule); the box lidded by a sheet reads 0.70% of the open one, under 1% with little room; the dark
+room behind a wall passing 0.707 straight on reads 0.675 of its floor with the wall away. The
+self-march is taken by 0 of 256 texels in all four; forced on every texel, the open box reads 0.2470
+with 128 texels marching 4.9 steps on the mean and 11 at most. Open, for your word: the far probes'
+rays begin at the probes, the far interval from 0, not 4 units out, since probes about E whose rays
+begin 4 out leave the near ray's next 4 units past E untraced, and the open box then reads 0.900,
+3.6 times the dome's. The phase's picture follows that word.

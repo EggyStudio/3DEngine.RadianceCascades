@@ -91,6 +91,9 @@ library's functions, and the engine keeps its bindings, its threads and its atom
 | `IFieldCells` | Reads a cascade's cells' paint, faces and distances | `paintFacing`, `paintAt` |
 | `IFieldVolume` | Reads the finest cascade holding a point, a cascade's corner and cell, its field between cells and a cell as it is | `fieldDistanceIn`, `fieldDistanceSheetIn`, `traceField`, `traceFieldSheets` |
 | `IMarchSteps` | Takes each step a march makes, which `NoSteps` passes over | `traceField`, `traceFieldSheets` |
+| `IProbeField` | Reads, beyond `IFieldVolume`, the light a cell's surface sends and the share of light that passes a unit of its depth | `traceProbeRay`, `mergedLight` |
+| `IFarProbes` | Reads a far probe's light along a texel's way and how far its ray toward each way of its reach map went | `mergedLight`, `farProbeSees` |
+| `IProbeLight` | Reads a probe's merged light at each of its texels | `lightTaken` |
 
 The conventions the module stands on:
 
