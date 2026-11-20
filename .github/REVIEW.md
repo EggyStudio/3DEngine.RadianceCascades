@@ -703,6 +703,16 @@ so a blend there reads a cell one past the last at no weight, which a sampler cl
 reading a buffer by hand must clamp too, since no weight times what lies past a buffer's end may be
 NaN.
 
+The macOS fault, a binding's field that held every cascade's table by value, so each read copied
+the table into a thread's own memory. No shape of `IFieldVolume` keeps an array out of a binding's
+struct, since a Slang interface names a struct's functions and never its fields, and it asks for a
+cascade's corner and cell by its index and never for a table. A shape taking the engine's buffers
+in place of its struct would choose the engine's storage for it and still leave it free to copy. So
+it is a note and a test: the README's binding section says the struct holds no table by value, and
+each test kernel is compiled to SPIR-V assembly, in which no variable of Function or Private
+storage holds an array, a check a field holding two or eight cascades' corners by value is seen to
+fail. The one array the module kept, `pinched`'s three axes, is made from the index instead.
+
 Handoff, for a fresh session, in place of those above. Where the work stands: the library holds the
 field's plan, the triangles' layout and the glow lights in C#, and in Slang the probes' octahedron,
 the cell code, resolve and pinch, the hit's color read, the splat, the stamp, the field's distance
@@ -717,7 +727,8 @@ it or to open space, the lesser of a far spacing and the field's band, before it
 surface a ray crosses adds its own light weighed by what it keeps, and a binding may cap a cascade's
 steps (`ProbeCascade.stepCap`). A binding gives the passes its probes' places (`IProbePlaces`), a
 hit's light (`IProbeField.hitLight`) and the sky along a way (`ISky`), and a near texel takes the
-far texels it covers (`farTexelsLight`). Next in order: the engines' further findings as they take
+far texels it covers (`farTexelsLight`). A binding's struct holds no array, which the tests check on
+the module's own kernels by their SPIR-V. Next in order: the engines' further findings as they take
 the passes, then the split sum at a hit, the screen probes, the light on the picture and the contact
 shadow's march. Left behind each part's Reply: the field's normal, the cascades' table, the march
 held within a cascade, the splat's second plane, the lending of thin emitters, the repaint and the

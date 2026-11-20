@@ -164,6 +164,13 @@ public interface IResolvedCells
     float resolvedAt(int3 at);
 }
 
+// The axis of an index, made from it and kept in no array, since an array a function keeps lies in
+// a thread's own memory, which one device reads wrong (README, Binding it in your engine).
+int3 axisOf(int a)
+{
+    return int3(a == 0 ? 1 : 0, a == 1 ? 1 : 0, a == 2 ? 1 : 0);
+}
+
 // Whether a cell outside every surface lies between two cells beside it along two axes that lie
 // inside one while the cell across the diagonal from it lies outside, the pattern two blocks that
 // meet along an edge leave in the cells about it, which no single face makes. Such a cell is held
@@ -174,7 +181,6 @@ public interface IResolvedCells
 public bool pinched<R : IResolvedCells>(R cells, int3 c)
 {
     int size = cells.size();
-    int3 axes[3] = { int3(1, 0, 0), int3(0, 1, 0), int3(0, 0, 1) };
     [loop]
     for (int a = 0; a < 3; a++)
         [loop]
@@ -182,8 +188,8 @@ public bool pinched<R : IResolvedCells>(R cells, int3 c)
             [loop]
             for (int signs = 0; signs < 4; signs++)
             {
-                int3 one = c + axes[a] * ((signs & 1) != 0 ? 1 : -1);
-                int3 other = c + axes[b] * ((signs & 2) != 0 ? 1 : -1);
+                int3 one = c + axisOf(a) * ((signs & 1) != 0 ? 1 : -1);
+                int3 other = c + axisOf(b) * ((signs & 2) != 0 ? 1 : -1);
                 int3 across = one + other - c;
                 if (any(min(min(one, other), across) < 0) || any(max(max(one, other), across) >= size))
                     continue;

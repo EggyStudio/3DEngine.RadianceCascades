@@ -101,6 +101,15 @@ library's functions, and the engine keeps its bindings, its threads and its atom
 | `IMergedLight` | Keeps each texel's light merged from every distance past its probe, which `IFarProbes` reads back for the level below and the gather | `settleTexel`, `mergeTexel` |
 | `ISurfacePoints` | Reads a surface point's place and normal and keeps the light it takes | `gatherAt` |
 
+The engine's struct is handed to the library's functions by value, so an array it holds is copied
+into each thread's own memory where it is read, which one macOS device reads wrong where every other
+reads right. `IFieldVolume` asks for a cascade's corner and cell by its index and for the cells
+along a side, never for a table of cascades, and the engine's struct reads them by index from a
+buffer of its own or holds the one cascade it reads, never a table by value. An interface names a
+struct's functions and never its fields, so no shape of it keeps an array out, and the tests hold
+the module's own kernels to it instead: each is compiled to SPIR-V and none keeps an array in a
+thread's own memory, a check an engine may run on its own kernels by the same reading.
+
 The conventions the module stands on:
 
 - Places, cells and reaches are in the engine's world unit, which the module's defaults and
