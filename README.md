@@ -1,4 +1,4 @@
-[Devlog](https://github.com/EggyStudio/RadianceCascades/blob/main/DEVLOG.md) [Cheatsheet](https://github.com/EggyStudio/RadianceCascades/blob/main/CHEATSHEET.md)
+[Devlog](https://github.com/EggyStudio/3DEngine.RadianceCascades/blob/main/DEVLOG.md) [Cheatsheet](https://github.com/EggyStudio/3DEngine.RadianceCascades/blob/main/CHEATSHEET.md)
 
 # RadianceCascades
 
@@ -13,7 +13,7 @@ An engine adds the repository as a git submodule under `modules/` and references
 from a project one folder below the engine's root.
 
 ```bash
-git submodule add https://github.com/EggyStudio/RadianceCascades.git modules/RadianceCascades
+git submodule add https://github.com/EggyStudio/3DEngine.RadianceCascades.git modules/RadianceCascades
 ```
 
 ```xml

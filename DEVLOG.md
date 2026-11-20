@@ -6,6 +6,17 @@ kept under `.github/assets/readings` as WebP files named by their day, each on t
 says, and the notes written beside them as Markdown files named the same way. A line under Done
 names the item of .github/REVIEW.md or .github/REVIEW-ARCHIVE.md and the commit that closed it.
 
+## 2026-11-20
+
+Commits that day
+
+- `fa46096` The tests check that no kernel of the module keeps an array in a thread's own memory,
+  and the README tells a binding to hold no table of cascades by value, since one macOS device reads
+  such a copy wrong.
+- `6b6f783` A ray takes the light of a surface it crosses weighed by what the surface keeps, so a
+  lit canopy reads lit from below, and a binding may cap a march's steps, a capped ray handing on
+  where it stopped, each held by a test run on the CPU.
+
 ## 2026-11-19
 
 ![](.github/assets/readings/2026-11-19-item-3-open-box-rules.webp)
@@ -17,6 +28,23 @@ units out, beside the dome's share, the agreed rule reading 0.2540 at the middle
 
 Commits that day
 
+- `9f5b90b` A near ray past its end beside a surface marches on to it or to open space before it
+  hands off, so a sunlit wall a little past a hand-off reads its light, held by tests run on the
+  CPU.
+- `fa4ccca` The probes' passes read a probe's place, a hit's light and the sky along a way through
+  interfaces a binding implements, and a near texel takes the far texels it covers where the far
+  cascade keeps more, each held by a test run on the CPU.
+- `78ef6b6` The fetch of slangc reads an archive's sha256 with shasum, or with Python's hashlib
+  where a system has none, in place of sha256sum, which not every system the scripts run on has.
+- `6622616` The middle of three cascades ends at twice its spacing, which holds a floor in a box
+  open to the sky within 5 percent of its share of the sky and a box lidded by a sheet dark, and the
+  README states the ends' rule a binding follows with its limit.
+- `02068b9` The library's Slang holds the probes' passes an engine's kernel calls once a thread, the
+  trace, the reach, the merge from the coarsest cascade down and the gather, compiled for four
+  targets and run on the CPU as the one-thread trace reads, with a test holding every Slang
+  interface to a row in the README.
+- `e211bdf` A picture of the light a floor in a box open to the sky reflects under three rules of
+  the merge beside the dome's share, and the far probes' steps counted by the tests' kernel.
 - `9ecdbbb` The library's Slang traces a probe's rays through the field and through surfaces that
   let light through, hands a near ray past its reach to the far probes about its end that see it or
   marches it on itself, and gathers a probe's light at a surface, held by four tests run on the CPU
