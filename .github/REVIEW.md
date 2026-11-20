@@ -672,6 +672,37 @@ rule, reads worse with the rule, the open box 12.4% under where it was 7.7 and t
 through 6.2% where it was 4.3, since the march carries the hand-off nearer the rim; the README's
 ends convention carries these figures.
 
+A crossed surface's own light and the step cap, in the commit carrying this line, each held by a
+test run failing first. Where a ray crosses a surface that lets light through it takes the surface's
+light through `hitLight` at the entry, times the share carried to it, times what the surface keeps,
+and carries on its share times what the surface passes, through several such surfaces in turn, in
+the march and the march-on alike. A thick surface passes its share to the power of the depth crossed
+and keeps the rest, and a double-sided sheet thinner than a cell, whose depth the field cannot read,
+passes its share once, as a unit of depth would. A probe under two sunlit sheets each passing half
+read 0.7716 through the march and 0.7670 through the march-on against 0.4694, each sheet passing its
+light whole and keeping none of its own, and reads 0.4640 and 0.4648, held to 3%. The rooms parted
+by a wall that lets light through read as before, 0.663 of their reading with the wall away, since
+that test lights no surface; a lit wall adds its light times what it keeps. `ProbeCascade.stepCap`,
+0 for none, caps a cascade's own rays and, from the cascade above, its march to open space and its
+march-on. A capped ray ends as `RayCapped` and is handed off where it stopped, a capped march-on
+takes the far probes about its stop or nothing where none counts, and at the coarsest cascade a
+capped ray takes no light past its stop. With its near rays capped the open box reads 0.2540 at 16
+steps (30 of 256 capped) and at 8 (66), 0.2657 at 4 (5.8% over, 198) and 0.2309 at 2 (8.0% under,
+238), held to 10%, and the lidded box with every cascade capped at 4 or 2 reads 0. Shape changes:
+`ProbeCascade` gains `stepCap`, `ProbeRay.light` holds the crossings' light for every ending, to
+which `lastCascadeLight` adds the sky, `traceProbeRay` has an overload taking a cap and
+`marchToOpenSpace` takes one; the README states both conventions.
+
+Places in the module's Slang that rest on exact floats or a buffer's bounds, noted for a binding's
+finding on macOS's device and not changed. `cellCode` quantizes a distance to 1024ths of a cell and
+keeps the least code, so two faces at one distance, common on meshes laid on the grid, are told
+apart by their low bits, which a device rounding a distance one ulp otherwise, as fast math and
+fused multiply-adds may, can turn. `floor(cells)` and `d < MarchHit * cell` in `rc_field_read`
+choose a cell and a hit by exact comparisons. `cellsOf` holds a point half a cell from the far side,
+so a blend there reads a cell one past the last at no weight, which a sampler clamps and an engine
+reading a buffer by hand must clamp too, since no weight times what lies past a buffer's end may be
+NaN.
+
 Handoff, for a fresh session, in place of those above. Where the work stands: the library holds the
 field's plan, the triangles' layout and the glow lights in C#, and in Slang the probes' octahedron,
 the cell code, resolve and pinch, the hit's color read, the splat, the stamp, the field's distance
@@ -683,15 +714,16 @@ a mesh or not seeing the near ray's end weighs nothing, every cascade's rays beg
 texel no probe above sees marches on to the coarsest cascade's end, and a cascade's end lies within
 twice its spacing, which the README states. A near ray past its end beside a surface marches on to
 it or to open space, the lesser of a far spacing and the field's band, before it hands off. A
-binding gives the passes its probes' places (`IProbePlaces`), a hit's light (`IProbeField.hitLight`)
-and the sky along a way (`ISky`), and a near texel takes the far texels it covers
-(`farTexelsLight`). Next in order: the engines' further findings as they take the passes, then the
-split sum at a hit, the screen probes, the light on the picture and the contact shadow's march. Left
-behind each part's Reply: the field's normal, the cascades' table, the march held within a cascade,
-the splat's second plane, the lending of thin emitters, the repaint and the clearing of codes. Open:
-AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md wait for the owner. Read first:
-AGENTS.md, this file's head and Decisions, the Replies from the field's distance on, the README's
-binding section, NORM.md's N 4.8 to 4.11 and N 7.9, `CpuKernel.cs` and the head of
+surface a ray crosses adds its own light weighed by what it keeps, and a binding may cap a cascade's
+steps (`ProbeCascade.stepCap`). A binding gives the passes its probes' places (`IProbePlaces`), a
+hit's light (`IProbeField.hitLight`) and the sky along a way (`ISky`), and a near texel takes the
+far texels it covers (`farTexelsLight`). Next in order: the engines' further findings as they take
+the passes, then the split sum at a hit, the screen probes, the light on the picture and the contact
+shadow's march. Left behind each part's Reply: the field's normal, the cascades' table, the march
+held within a cascade, the splat's second plane, the lending of thin emitters, the repaint and the
+clearing of codes. Open: AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md wait for the
+owner. Read first: AGENTS.md, this file's head and Decisions, the Replies from the field's distance
+on, the README's binding section, NORM.md's N 4.8 to 4.11 and N 7.9, `CpuKernel.cs` and the head of
 `rc_probe_passes.slang`. Every build and test goes through N 7.9's lock, restored outside it, built
 with `--no-restore -p:UseSharedCompilation=false`, its output written to a file of which the summary
 line and the failing lines alone are read, and each commit is read by `commitcheck.py . --staged

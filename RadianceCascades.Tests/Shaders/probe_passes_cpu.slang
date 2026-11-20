@@ -68,13 +68,16 @@ struct ProbeCells : IProbeField
     float3 secondAt(int cascade, int3 at) { return float3(0.0); }
     float throughAt(int cascade, int3 at) { return cells[index(at) * 5 + 4]; }
     // The walls and floors of these rooms send no light of their own, and where the setup gives a
-    // sun they reflect its light as a diffuse surface at the field's normal does.
+    // sun they reflect its light as a diffuse surface at the field's normal does, and a sheet,
+    // whose plane the cell keeps, as a leaf sends the light it takes on either side of it.
     float3 hitLight(float3 place, float3 way, int cascade, int3 at)
     {
         float3 sun = float3(setup[83], setup[84], setup[85]);
         if (dot(sun, sun) <= 0.0)
             return float3(0.0);
-        return float3(setup[86] / 3.14159265 * max(dot(fieldNormalIn(this, cascade, place), sun), 0.0));
+        float lit = dot(fieldNormalIn(this, cascade, place), sun);
+        float3 plane = cellAt(cascade, at).yzw;
+        return float3(setup[86] / 3.14159265 * (dot(plane, plane) >= 0.25 ? abs(lit) : max(lit, 0.0)));
     }
 };
 
@@ -195,11 +198,12 @@ ProbeCascade levelCascade(int level)
     cascade.texels = uint(setup[at + 7]);
     cascade.start = setup[at + 8];
     cascade.end = setup[at + 9];
+    cascade.stepCap = uint(setup[at + 13]);
     return cascade;
 }
 
 // Where a level's rays, its reach texels or its merged light begin in their buffers, at 10, 11
-// and 12 of its sixteen floats.
+// and 12 of its sixteen floats, its cap of steps at 13.
 uint firstOf(int level, int which) { return uint(setup[Levels + level * 16 + which]); }
 
 TestPlaces placesOf(int level)

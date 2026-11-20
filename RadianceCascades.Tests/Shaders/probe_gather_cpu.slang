@@ -108,6 +108,7 @@ ProbeCascade cascadeAt(int at)
     cascade.texels = uint(setup[at + 7]);
     cascade.start = setup[at + 8];
     cascade.end = setup[at + 9];
+    cascade.stepCap = 0u;
     return cascade;
 }
 
@@ -183,8 +184,8 @@ void test(uint3 id : SV_DispatchThreadID)
         CountedSteps counted = { 0u };
         bool itself;
         float3 merged = mergedLight(field, probes, gridPlaces(far), far, place, near.texels, texel, ray, skyLight, counted, itself);
-        float3 trilinear = ray.ended == RayPast ? trilinearLight(probes, place + way * ray.t, way) * ray.carried
-            : ray.ended == RayMet ? ray.light : sky * ray.carried;
+        float3 trilinear = ray.light + (ray.ended == RayPast ? trilinearLight(probes, place + way * ray.t, way) * ray.carried
+            : ray.ended == RayMet ? float3(0.0) : sky * ray.carried);
         if (itself)
         {
             marched++;

@@ -19,13 +19,16 @@ public sealed partial class ProbeMergeTests
         public int ReachCount => Probes * ReachTexels * ReachTexels;
     }
 
-    // Marched, Steps and Most count the finest level's texels no probe above saw the end of, and
-    // Onward, OnwardSteps and OnwardMost those that took any step past their end.
-    private readonly record struct Chained(float Reflected, int Marched, int Steps, int Most, float[] Light, int Onward, int OnwardSteps, int OnwardMost)
+    // Marched, Steps and Most count the finest level's texels no probe above saw the end of,
+    // Onward, OnwardSteps and OnwardMost those that took any step past their end, and Capped those
+    // whose trace stopped at its cap of steps.
+    private readonly record struct Chained(float Reflected, int Marched, int Steps, int Most, float[] Light, int Onward, int OnwardSteps, int OnwardMost,
+        int Capped)
     {
         public override string ToString() =>
             $"reflects {Reflected:0.00000}, {Marched} of the finest level's texels marching on themselves in {Steps} steps in all and {Most} at most, "
-            + $"{Onward} stepping past their end in {(Onward == 0 ? 0 : OnwardSteps / (float)Onward):0.0} steps on the mean and {OnwardMost} at most";
+            + $"{Onward} stepping past their end in {(Onward == 0 ? 0 : OnwardSteps / (float)Onward):0.0} steps on the mean and {OnwardMost} at most, "
+            + $"{Capped} stopped at their cap";
     }
 
     // The pair the one-thread kernel reads, a near probe at place and the far cascade.
@@ -36,8 +39,9 @@ public sealed partial class ProbeMergeTests
     // with, a floor facing up under the uniform sky lit by nothing else, the probes at their grid
     // places. Moved moves a probe within a quarter unit of a surface out along the field's normal
     // to a quarter unit off it, VaryingSky takes the sky along each way (SkyAlong), Sun is the way
-    // toward a sun times its irradiance, which lights a surface of albedo WallAlbedo, and Reference
-    // marches each of the finest level's texels on itself to the coarsest level's end.
+    // toward a sun times its irradiance, which lights a surface of albedo WallAlbedo, a sheet from
+    // either side, Reference marches each of the finest level's texels on itself to the coarsest
+    // level's end, and Caps holds each level's cap of steps a march takes, 0 for none.
     private sealed record Setting
     {
         public Vector3 Normal { get; init; } = Vector3.UnitY;
@@ -46,6 +50,7 @@ public sealed partial class ProbeMergeTests
         public Vector3 Sun { get; init; }
         public bool Moved { get; init; }
         public bool Reference { get; init; }
+        public int[]? Caps { get; init; }
     }
 
     private const float WallAlbedo = 0.6f;
@@ -71,7 +76,8 @@ public sealed partial class ProbeMergeTests
         for (int l = 0; l < levels.Length; l++)
         {
             var (level, at) = (levels[l], 16 + l * 16);
-            float[] cascade = [level.Corner.X, level.Corner.Y, level.Corner.Z, level.Spacing, level.X, level.Y, level.Z, level.Texels, 0, level.End, texels, reaches, texels];
+            float[] cascade = [level.Corner.X, level.Corner.Y, level.Corner.Z, level.Spacing, level.X, level.Y, level.Z, level.Texels, 0, level.End, texels, reaches, texels,
+                setting.Caps?[l] ?? 0];
             cascade.CopyTo(setup, at);
             (texels, reaches) = (texels + level.TexelCount, reaches + level.ReachCount);
         }
@@ -95,7 +101,7 @@ public sealed partial class ProbeMergeTests
             Pass(5, 0, levels[0].TexelCount);
         Pass(4, 0, 1);
         var (marched, steps, most) = (0, 0, 0);
-        var (onward, onwardSteps, onwardMost) = (0, 0, 0);
+        var (onward, onwardSteps, onwardMost, capped) = (0, 0, 0, 0);
         for (int k = 0; k < levels[0].TexelCount; k++)
         {
             var taken = (int)marches[k * 2 + 1];
@@ -103,11 +109,14 @@ public sealed partial class ProbeMergeTests
                 (marched, steps, most) = (marched + 1, steps + taken, Math.Max(most, taken));
             if (taken > 0)
                 (onward, onwardSteps, onwardMost) = (onward + 1, onwardSteps + taken, Math.Max(onwardMost, taken));
+            // A ray that stopped at its cap ends as the fourth way, RayCapped.
+            if (rays[k * 6] == 3)
+                capped++;
         }
         var light = new float[levels[0].Texels * levels[0].Texels];
         for (int k = 0; k < light.Length; k++)
             light[k] = merged[k * 3];
-        return new(surfaces[3], marched, steps, most, light, onward, onwardSteps, onwardMost);
+        return new(surfaces[3], marched, steps, most, light, onward, onwardSteps, onwardMost, capped);
     }
 
     [CpuKernelFact]

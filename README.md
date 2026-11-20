@@ -91,7 +91,7 @@ library's functions, and the engine keeps its bindings, its threads and its atom
 | `IFieldCells` | Reads a cascade's cells' paint, faces and distances | `paintFacing`, `paintAt` |
 | `IFieldVolume` | Reads the finest cascade holding a point, a cascade's corner and cell, its field between cells and a cell as it is | `fieldDistanceIn`, `fieldDistanceSheetIn`, `fieldNormalIn`, `traceField`, `traceFieldSheets`, `reachAlong`, `reachTexel` |
 | `IMarchSteps` | Takes each step a march makes, which `NoSteps` passes over | `traceField`, `traceFieldSheets`, `traceProbeRay`, `marchToOpenSpace`, `mergedLight`, `mergeTexel` |
-| `IProbeField` | Reads, beyond `IFieldVolume`, the light a ray's hit sends back along the ray as the engine shades it, from the hit's place, the ray's way, the cascade and the cell, and the share of light that passes a unit of a surface's depth | `traceProbeRay`, `marchToOpenSpace`, `mergedLight`, `traceTexel`, `mergeTexel`, `gatherAt` |
+| `IProbeField` | Reads, beyond `IFieldVolume`, the light a surface a ray meets or crosses sends back along the ray as the engine shades it, from the hit's place, the ray's way, the cascade and the cell, and the share of light that passes a unit of a surface's depth | `traceProbeRay`, `marchToOpenSpace`, `mergedLight`, `traceTexel`, `mergeTexel`, `gatherAt` |
 | `IFarProbes` | Reads a far probe's light at a texel and how far its ray toward each way of its reach map went, the merged light and reach maps of the level above a merge's or of the finest level a gather's | `mergedLight`, `farTexelsLight`, `farProbeSees`, `mergeTexel`, `gatherAt` |
 | `IProbePlaces` | Reads where a cascade's probe stands, by the engine's own rule where it moves a probe off a surface, which `GridPlaces` gives as the grid's place | `traceTexel`, `reachTexel`, `mergedLight`, `mergeTexel`, `gatherAt` |
 | `ISky` | Reads the sky's light along a way, for a ray that leaves the field, which `UniformSky` gives as one light | `lastCascadeLight`, `mergedLight`, `settleTexel`, `mergeTexel` |
@@ -115,6 +115,16 @@ The conventions the module stands on:
 - A cell of an engine's field carries its nearest surface's share of light through, the share
   that passes a unit of its depth, as a value of its own, which `IProbeField.throughAt` reads, and
   not in the paint's alpha, which `lightThroughPaint` makes of it for the blend of colors alone.
+- A ray that crosses a surface letting light through takes the surface's own light where it meets
+  it (`IProbeField.hitLight`), weighed by what the surface keeps, one less what it passes, and by
+  the share of light carried to it, and carries on what the surface passes. A closed surface passes
+  its share to the power of the depth crossed, from where the march meets it to where it comes out,
+  and a double-sided sheet thinner than a cell, which has no depth to cross, passes its share once,
+  as a unit of depth would.
+- A cascade's `stepCap` in its `ProbeCascade` is the most steps a march of its rays takes, 0 for no
+  count. A ray that stops at it ends as `RayCapped` and is handed to the cascade above from where it
+  stopped, as from its end, and at the coarsest cascade it takes no light past its stop. The
+  marches past a ray's end, to open space and on itself, take the cascade above's cap.
 - A cascade above keeps as many texels along each side of a probe's octahedron as the cascade below
   or a whole multiple of them, and each texel below takes the texels above that its solid angle
   covers, each weighed by its own (`farTexelsLight`). At any other count a texel below takes the

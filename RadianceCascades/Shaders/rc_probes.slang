@@ -10,9 +10,10 @@ __exported import rc_field_read;
 static const float Pi = 3.14159265358979;
 
 // A cascade's probes on a grid, the place of its first probe in the world, the spacing between
-// probes, how many stand along each axis, the texels along each side of a probe's octahedron, and
-// the interval of distances from a probe along each of its texels' rays its trace takes, from
-// start to end.
+// probes, how many stand along each axis, the texels along each side of a probe's octahedron, the
+// interval of distances from a probe along each of its texels' rays its trace takes, from start to
+// end, and the most steps a march of its rays takes, 0 for no count (stepCap). A binding sets
+// every field, stepCap 0 where it caps nothing.
 public struct ProbeCascade
 {
     public float3 corner;
@@ -21,6 +22,7 @@ public struct ProbeCascade
     public uint texels;
     public float start;
     public float end;
+    public uint stepCap;
 }
 
 // Where a probe of the cascade stands.
@@ -76,15 +78,20 @@ public interface IProbeField : IFieldVolume
     float throughAt(int cascade, int3 cell);
 }
 
-// How a probe's ray ended, at a surface it met, at the end of its interval with nothing met, or
-// where it left every cascade of the field.
+// How a probe's ray ended, at a surface it met, at the end of its interval with nothing met, where
+// it left every cascade of the field, or where its march took the most steps its cascade allows
+// (stepCap) with nothing met, short of its end.
 public static const uint RayMet = 0u;
 public static const uint RayPast = 1u;
 public static const uint RayLeft = 2u;
+public static const uint RayCapped = 3u;
 
-// A probe's ray as its trace ended, how it ended (RayMet, RayPast or RayLeft), the distance along
-// it where it did, the share of light it carries past the surfaces it crossed, and the light of the
-// surface it met times that share, none where it met none.
+// A probe's ray as its trace ended, how it ended (RayMet, RayPast, RayLeft or RayCapped), the
+// distance along it where it did, the share of light it carries past the surfaces it crossed, and
+// the light it took on its way, each surface it crossed sending its own light weighed by what that
+// surface keeps of the light and the share carried to it, and the surface it met its light times
+// the share carried to it. What lies past where it ended, the level above's light or the sky's,
+// is weighed by the share it carries and added.
 public struct ProbeRay
 {
     public uint ended;
@@ -107,14 +114,25 @@ int3 cellOf<F : IFieldVolume>(F field, int i, float3 p)
 // share of light through is above zero the ray crosses, stepping out of the solid by half a cell or
 // the distance read below zero, whichever is more, and its carried share is multiplied by the
 // surface's share to the power of the depth it crossed, from where the march met the surface, the
-// distance read on, to where it came out, the distance read back, so a sheet of no depth passes
-// its light whole. A cell met within it whose surface lets no light through stops the ray there.
-// The march takes no count of steps at most, since each goes on by a quarter of a cell at least
-// and the field ends, so a ray of an interval that runs to the field's edge takes every step to
-// its end.
+// distance read on, to where it came out, the distance read back, and a sheet thinner than a
+// cell, which has no depth to cross, passes its share once, as a unit of depth would. The ray
+// takes the light the surface sends where it met it (hitLight) weighed by what the surface keeps,
+// one less what it passes, and the share carried to it, so a lit canopy of leaves reads lit from
+// below as well as dimming what lies past it. A cell met within it whose surface lets no light
+// through stops the ray there. The march takes no count of steps at most, since each goes on by a
+// quarter of a cell at least and the field ends, so a ray of an interval that runs to the field's
+// edge takes every step to its end.
 public ProbeRay traceProbeRay<F : IProbeField, S : IMarchSteps>(F field, float3 origin, float3 way, float start, float end, inout S steps)
 {
-    return marchProbeRay(field, origin, way, start, end, 0.0, steps);
+    return marchProbeRay(field, origin, way, start, end, 0.0, 0u, steps);
+}
+
+// The same, ending as RayCapped where the march has taken cap steps short of its end, cap 0 for
+// no count, as a cascade's stepCap gives it.
+public ProbeRay traceProbeRay<F : IProbeField, S : IMarchSteps>(F field, float3 origin, float3 way, float start, float end, uint cap,
+    inout S steps)
+{
+    return marchProbeRay(field, origin, way, start, end, 0.0, cap, steps);
 }
 
 // How far the distance a march reads must reach for the ray to stand in open space, the lesser of
@@ -130,18 +148,40 @@ float openAt(float clearance, float cell)
 // field as traceProbeRay marches it, crossing surfaces that let light through, until it meets a
 // surface, reaches end, leaves every cascade, or stands where the distance read reaches clearance
 // or the field's band, whichever is less (openAt), outside any surface it crosses, where it ends
-// as RayPast at that distance along it. A ray that starts in open space ends there with no step
-// taken. Each step on is handed to steps, and the march takes no count of steps at most.
+// as RayPast at that distance along it, or as RayCapped where it has taken cap steps, cap 0 for no
+// count. A ray that starts in open space ends there with no step taken. Each step on is handed to
+// steps.
 public ProbeRay marchToOpenSpace<F : IProbeField, S : IMarchSteps>(F field, float3 origin, float3 way, float start, float end, float clearance,
-    inout S steps)
+    uint cap, inout S steps)
 {
-    return marchProbeRay(field, origin, way, start, end, clearance, steps);
+    return marchProbeRay(field, origin, way, start, end, clearance, cap, steps);
+}
+
+// Whether the cell of cascade i keeps the plane of a double-sided face (sheetOf), a sheet thinner
+// than a cell, which a ray crosses with no depth.
+bool keepsSheet<F : IFieldVolume>(F field, int i, int3 at)
+{
+    float3 plane = field.cellAt(i, at).yzw;
+    float3 second = field.secondAt(i, at);
+    return dot(plane, plane) >= 0.25 || dot(second, second) >= 0.25;
+}
+
+// Ends a ray's crossing of a surface that passes through of the light a unit of its depth takes,
+// over depth, or through once where it is a sheet, the surface's own light at the crossing, light,
+// weighed by what it keeps and the share carried to it, and the share carried on by what it
+// passes.
+void crossSurface(inout ProbeRay ray, float through, float depth, bool sheet, float3 light)
+{
+    float passed = sheet ? through : pow(through, max(depth, 0.0));
+    ray.light += light * (ray.carried * (1.0 - passed));
+    ray.carried *= passed;
 }
 
 // The march traceProbeRay and marchToOpenSpace share, which ends in open space as well where
-// clearance is above zero (openAt).
+// clearance is above zero (openAt), and as RayCapped where cap is above zero and it has taken cap
+// steps.
 ProbeRay marchProbeRay<F : IProbeField, S : IMarchSteps>(F field, float3 origin, float3 way, float start, float end, float clearance,
-    inout S steps)
+    uint cap, inout S steps)
 {
     ProbeRay ray;
     ray.ended = RayPast;
@@ -149,12 +189,21 @@ ProbeRay marchProbeRay<F : IProbeField, S : IMarchSteps>(F field, float3 origin,
     ray.carried = 1.0;
     ray.light = float3(0.0);
     float t = start;
-    // Where the ray met the surface it is crossing and that surface's share, or below zero where it
-    // crosses none.
+    // Where the ray met the surface it is crossing, that surface's share, whether it is a sheet and
+    // the light it sends where the ray met it, or below zero where it crosses none.
     float entered = -1.0, through = 0.0;
+    bool sheet = false;
+    float3 crossed = float3(0.0);
+    uint taken = 0u;
     [loop]
     while (t < end)
     {
+        if (cap > 0u && taken >= cap)
+        {
+            ray.ended = RayCapped;
+            ray.t = t;
+            break;
+        }
         float3 p = origin + way * t;
         int c = field.cascadeOf(p, 1.0);
         if (c < 0)
@@ -171,6 +220,7 @@ ProbeRay marchProbeRay<F : IProbeField, S : IMarchSteps>(F field, float3 origin,
             return ray;
         }
         steps.at(t, d);
+        taken++;
         if (entered >= 0.0)
         {
             if (d < cell * MarchHit)
@@ -180,16 +230,16 @@ ProbeRay marchProbeRay<F : IProbeField, S : IMarchSteps>(F field, float3 origin,
                 // floor's underside.
                 if (field.throughAt(c, cellOf(field, c, p)) <= 0.0)
                 {
-                    ray.carried *= pow(through, max(t - entered, 0.0));
+                    crossSurface(ray, through, t - entered, sheet, crossed);
                     ray.ended = RayMet;
                     ray.t = t;
-                    ray.light = field.hitLight(p, way, c, cellOf(field, c, p)) * ray.carried;
+                    ray.light += field.hitLight(p, way, c, cellOf(field, c, p)) * ray.carried;
                     return ray;
                 }
                 t += max(cell * 0.5, -d);
                 continue;
             }
-            ray.carried *= pow(through, max(t - d - entered, 0.0));
+            crossSurface(ray, through, t - d - entered, sheet, crossed);
             entered = -1.0;
         }
         else if (d < cell * MarchHit)
@@ -199,10 +249,12 @@ ProbeRay marchProbeRay<F : IProbeField, S : IMarchSteps>(F field, float3 origin,
             {
                 ray.ended = RayMet;
                 ray.t = t;
-                ray.light = field.hitLight(p, way, c, cellOf(field, c, p)) * ray.carried;
+                ray.light += field.hitLight(p, way, c, cellOf(field, c, p)) * ray.carried;
                 return ray;
             }
             entered = t + max(d, 0.0);
+            sheet = keepsSheet(field, c, cellOf(field, c, p));
+            crossed = field.hitLight(p, way, c, cellOf(field, c, p));
             t += max(cell * 0.5, -d);
             continue;
         }
@@ -210,7 +262,7 @@ ProbeRay marchProbeRay<F : IProbeField, S : IMarchSteps>(F field, float3 origin,
     }
     // A ray that ends within a surface it crosses passes the depth it crossed of it.
     if (entered >= 0.0)
-        ray.carried *= pow(through, max(min(t, end) - entered, 0.0));
+        crossSurface(ray, through, min(t, end) - entered, sheet, crossed);
     return ray;
 }
 
@@ -237,12 +289,14 @@ public struct UniformSky : ISky
     public float3 skyAlong(float3 way) { return light; }
 }
 
-// The light a ray of the last cascade along way brings, the light of the surface it met, or, past
-// its interval or the field, where no cascade beyond holds the light, the sky's along its way times
-// the share it carries.
+// The light a ray of the last cascade along way brings, the light it took on its way, and past its
+// interval or the field, where no cascade beyond holds the light, the sky's along its way times
+// the share it carries. A ray that met a surface or stopped at its cap takes nothing past where it
+// ended, since no cascade above holds the light past a capped ray's stop, and a ray out of steps
+// mostly grazes a surface inside the field, where the sky would light a closed room through it.
 public float3 lastCascadeLight<K : ISky>(ProbeRay ray, float3 way, K sky)
 {
-    return ray.ended == RayMet ? ray.light : sky.skyAlong(way) * ray.carried;
+    return ray.ended == RayMet || ray.ended == RayCapped ? ray.light : ray.light + sky.skyAlong(way) * ray.carried;
 }
 
 // Where a cascade's probes stand, which an engine implements over its own rule where it moves a

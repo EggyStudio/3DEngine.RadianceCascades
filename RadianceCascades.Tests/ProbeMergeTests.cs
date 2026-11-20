@@ -66,11 +66,12 @@ public sealed partial class ProbeMergeTests(ITestOutputHelper output)
             }
     }
 
-    // A double-sided sheet across y at height, half wide either way along x and z.
-    private static IEnumerable<Triangle> Sheet(float height, float half, int instance)
+    // A double-sided sheet across y at height, half wide either way along x and z, passing the
+    // share of light through given.
+    private static IEnumerable<Triangle> Sheet(float height, float half, int instance, float through = 0)
     {
-        yield return new(new(-half, height, -half), new(half, height, -half), new(half, height, half), instance, true, 0);
-        yield return new(new(-half, height, -half), new(half, height, half), new(-half, height, half), instance, true, 0);
+        yield return new(new(-half, height, -half), new(half, height, -half), new(half, height, half), instance, true, through);
+        yield return new(new(-half, height, -half), new(half, height, half), new(-half, height, half), instance, true, through);
     }
 
     // The box open at its top, its floor from -1.5 to 0 and its walls up to 8.

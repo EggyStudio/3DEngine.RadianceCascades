@@ -127,4 +127,64 @@ public sealed partial class ProbeMergeTests
         // they read 0.09885, 37 percent under.
         Assert.True(Math.Abs(reading.Reflected - expected) <= 0.10 * expected, said);
     }
+
+    [CpuKernelFact]
+    public void Sunlit_Sheets_That_Pass_Half_Their_Light_Add_What_They_Keep_Of_It_To_What_They_Pass_Of_The_Sky()
+    {
+        // Two sheets 14 units a side over the floor, at 2 and at 3.5, each passing half its light
+        // and lit by a sun 0.8 of the way straight onto it, under the uniform sky, read by a probe
+        // a quarter of a unit over the floor facing up, through the march, its rays reaching 8, and
+        // through the march-on, its rays reaching 1 and the far probes outside the field.
+        const float pass = 0.5f;
+        var cells = Field(Cuboid(new(-7.5f, -1.5f, -7.5f), new(7.5f, 0, 7.5f), 1).Concat(Sheet(2, 7, 2, pass)).Concat(Sheet(3.5f, 7, 3, pass)));
+        var setting = new Setting { Sun = new Vector3(0.6f, 0.8f, 0) * 3 };
+        var marched = Passes(cells, [new(Floor, 1, 1, 1, 1, NearTexels, 8), Pair(Floor)[1]], Floor, setting);
+        var marchedOn = Passes(cells, [new(Floor, 1, 1, 1, 1, NearTexels, 1), new(new(100, 100, 100), FarSpacing, 2, 2, 2, FarTexels, FarEnd)], Floor, setting);
+        // A sheet's own light, as the test's binding shades it from below, and the shares of the
+        // dome its square covers seen from the probe, the higher one's within the lower one's. A
+        // ray through both takes the lower one's light weighed by what it keeps, then the higher
+        // one's weighed by what the lower passes and the higher keeps, then the sky beyond.
+        var sheet = WallAlbedo * 3 * 0.8f / MathF.PI;
+        var (lower, higher) = (4 * CornerShare(7 / 1.75, 7 / 1.75), 4 * CornerShare(7 / 3.25, 7 / 3.25));
+        var throughOne = sheet * (1 - pass) + pass * Sky;
+        var throughTwo = sheet * (1 - pass) + pass * throughOne;
+        var expected = Albedo * (higher * throughTwo + (lower - higher) * throughOne + (1 - lower) * Sky);
+        var said = $"a probe under two sunlit sheets through the march {marched}, and through the march-on {marchedOn}, where the sheets and the sky give {expected:0.00000}";
+        output.WriteLine(said);
+        // 0.46398 through the march and 0.46484 through the march-on against 0.46937, 1.1 and 1.0
+        // percent under, where with a sheet passing its light whole and keeping none of its own
+        // they read 0.77157 and 0.76696.
+        Assert.True(Math.Abs(marched.Reflected - expected) <= 0.03 * expected && Math.Abs(marchedOn.Reflected - expected) <= 0.03 * expected, said);
+    }
+
+    [CpuKernelFact]
+    public void A_Capped_Ray_Hands_On_Where_It_Stopped_And_A_Closed_Room_Stays_Dark_Under_A_Tight_Cap()
+    {
+        const float o = 4 + Wall;
+        var high = 8 - Floor.Y;
+        var expected = Albedo * 4 * CornerShare(4 / high, 4 / high) * Sky;
+        var (open, lidded) = (Field(OpenBox()), Field(OpenBox().Concat(Cuboid(new(-o, 8, -o), new(o, 8 + Wall, o), 6))));
+        var said = "";
+        // The near probe's marches capped at a few counts of steps and the far cascade's not, each
+        // capped ray handed on where it stopped, then every level's capped tightly.
+        foreach (var cap in new[] { 16, 8, 4, 2 })
+        {
+            var reading = Passes(open, Pair(Floor), Floor, new Setting { Caps = [cap, 0] });
+            said += $"the open box's floor with the near rays capped at {cap} {reading}, where the sky's share gives {expected:0.00000}\n";
+            // 0.25396 at 16 and at 8, of 256 texels 30 and 66 capped, 0.26572 at 4, 198 capped, and
+            // 0.23094 at 2, 238 capped, against 0.25111, 8.0 percent under at most.
+            Assert.True(Math.Abs(reading.Reflected - expected) <= 0.10 * expected, said);
+            if (cap <= 4)
+                Assert.True(reading.Capped > 0, said);
+        }
+        foreach (var cap in new[] { 4, 2 })
+        {
+            var reading = Passes(lidded, Pair(Floor), Floor, new Setting { Caps = [cap, cap] });
+            said += $"the lidded box's floor with every level capped at {cap} {reading}\n";
+            // 0.00000 at 4 and at 2, 198 and 238 texels capped, the coarsest level's capped rays
+            // taking no light past their stop.
+            Assert.True(reading.Reflected < 0.01 * expected && reading.Capped > 0, said);
+        }
+        output.WriteLine(said);
+    }
 }
