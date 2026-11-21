@@ -152,7 +152,13 @@ The conventions the module stands on:
   the sky and lets 6.2 percent of that light through a lid thinner than a cell, and reaching 2 it
   reads 1.5 percent over and the lid dark. The lower bound keeps a cascade's reach map covering the
   cell about any point handed to it. The rules lessen the smear and do not end it, in any chain, and
-  the tests hold the two boxes, the lids and the wall alone.
+  the tests hold the two boxes, the lids, the wall and a room under a lintel alone. A hand-off
+  within a far spacing of an opening's edge reads the room behind it about 1.4 times the light
+  traced finely against its surfaces at its deep end. In a room open to the sky under a lintel, at
+  8, 8, 16 and 16 texels a side, the probes 6.5 and 7.5 units in from the opening read their faces
+  toward it 1.47 and 1.41 times the trace on the mean, and doubling the texels every cascade up to
+  128 leaves 1.33 and 1.28, so the limit is the hand-off's and not the texels'. The tests hold these
+  figures as a bound a later rule is to better.
 - A surface point takes from `gatherAt` the light the finest cascade's probes about it bring at
   their own places, weighed as the merge weighs the probes about a ray's end, and nothing corrects
   it for a probe that stands off the surface. A probe a spacing above a floor sees what that height

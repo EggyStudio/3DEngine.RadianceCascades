@@ -16,6 +16,12 @@ boxes and each probe's own texels marched on, the deep end at x 0.5 and 1.5 on t
 to 41 percent over the fine trace under the committed merge at every set, run on the CPU from the
 library's Slang.
 
+Commits that day
+
+- `e39dbb8` The gather says it gives a surface point the light of the probes about it at their own
+  places and corrects nothing for a probe that stands off the surface, and the lintel room's probes
+  are read against a fine trace at three counts of texels.
+
 ## 2026-11-20
 
 Commits that day

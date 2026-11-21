@@ -730,6 +730,18 @@ and texels kept 8.5 and 34 times at 8 probes a side, 1.6 and 6.3 times where pro
 cascade. The light-through reach stops at the first surface on purpose, since a probe across one
 lends light it has not dimmed, and the binding keeps the module's.
 
+The lintel's limit, stated and held. The committed rule stands: the README states that a hand-off
+within a far spacing of an opening's edge reads the room behind it about 1.4 times the fine trace at
+its deep end, and a test holds the lintel room's probe at 1.402 of the trace and its deep end at
+1.472 and 1.405, bounded at 1.45, 1.52 and 1.46 and below at 0.75, in 16 seconds. The bounded
+attempt, a near ray whose far probes disagree on their hits along its way marching on itself to the
+far cascade's own end and handing off there, brings the deep end to 0.99 and 0.96 of the trace and
+62 of 64 probes within a quarter, at 1.15 times the steps, with the open box unchanged and the
+two-cascade lids dark. It stops at its condition: the three-cascade sheet lid lets 1.57 percent
+through at every share tried, against its bound of 1, as the agree march did, read as, though not
+traced to the texel, through the field's slit where the sheet meets the walls' tops, and a
+four-cascade open box, not a test, reads 19 percent over. The patch is kept outside the tree.
+
 Handoff, for a fresh session, in place of those above. Where the work stands: the library holds the
 field's plan, the triangles' layout and the glow lights in C#, and in Slang the probes' octahedron,
 the cell code, resolve and pinch, the hit's color read, the splat, the stamp, the field's distance
@@ -745,17 +757,19 @@ surface a ray crosses adds its own light weighed by what it keeps, and a binding
 steps (`ProbeCascade.stepCap`). A binding gives the passes its probes' places (`IProbePlaces`), a
 hit's light (`IProbeField.hitLight`) and the sky along a way (`ISky`), and a near texel takes the
 far texels it covers (`farTexelsLight`). A binding's struct holds no array, which the tests check on
-the module's own kernels by their SPIR-V. The lintel's smear is held, its figures in its Reply, the
-truth a fine trace. Next in order: the engines' further findings as they take the passes, then the
-split sum at a hit, the screen probes, the light on the picture and the contact shadow's march. Left
-behind each part's Reply: the field's normal, the cascades' table, the march held within a cascade,
-the splat's second plane, the lending of thin emitters, the repaint and the clearing of codes. Open:
-AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md wait for the owner. Read first:
-AGENTS.md, this file's head and Decisions, the Replies from the field's distance on, the README's
-binding section, NORM.md's N 4.8 to 4.11 and N 7.9, `CpuKernel.cs` and the head of
-`rc_probe_passes.slang`. Every build and test goes through N 7.9's lock, restored outside it, built
-with `--no-restore -p:UseSharedCompilation=false`, its output written to a file of which the summary
-line and the failing lines alone are read, and each commit is read by `commitcheck.py . --staged
+the module's own kernels by their SPIR-V. A hand-off near an opening's edge reads the room behind it
+about 1.4 times the fine trace, which the README states and a test holds, and a rule marching on
+where far probes disagree mends it but lets a three-cascade sheet lid leak, its figures in its
+Reply. Next in order: the engines' further findings as they take the passes, then the split sum at a
+hit, the screen probes, the light on the picture and the contact shadow's march. Left behind each
+part's Reply: the field's normal, the cascades' table, the march held within a cascade, the splat's
+second plane, the lending of thin emitters, the repaint and the clearing of codes. Open: AGENTS.md's
+documents rows for DEVLOG.md and CHEATSHEET.md wait for the owner. Read first: AGENTS.md, this
+file's head and Decisions, the Replies from the field's distance on, the README's binding section,
+NORM.md's N 4.8 to 4.11 and N 7.9, `CpuKernel.cs` and the head of `rc_probe_passes.slang`. Every
+build and test goes through N 7.9's lock, restored outside it, built with `--no-restore
+-p:UseSharedCompilation=false`, its output written to a file of which the summary line and the
+failing lines alone are read, and each commit is read by `commitcheck.py . --staged
 --message=<file>` first. At a binding's request, in the commit carrying this line:
 `build/fetch-slang.sh` reads an archive's sha256 with `shasum -a 256`, on macOS, Linux and Git's
 bash on Windows alike, and Python's hashlib where a system has none, in place of `sha256sum`, which

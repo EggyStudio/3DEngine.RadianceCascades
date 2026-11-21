@@ -11,8 +11,10 @@ namespace RadianceCascades.Tests;
 public sealed partial class ProbeMergeTests
 {
     // A level of a chain of cascades, its first probe's place, its spacing, its probes along each
-    // axis, its texels along each side and the end of its rays, which begin at the probe.
-    private readonly record struct Level(Vector3 Corner, float Spacing, int X, int Y, int Z, int Texels, float End)
+    // axis, its texels along each side, the end of its rays, which begin at the probe, and the
+    // texels along a side the level below and the gather read it at, each the mean of the traced
+    // texels it covers, 0 for those it traces.
+    private readonly record struct Level(Vector3 Corner, float Spacing, int X, int Y, int Z, int Texels, float End, int Kept = 0)
     {
         public int Probes => X * Y * Z;
         public int TexelCount => Probes * Texels * Texels;
@@ -23,7 +25,7 @@ public sealed partial class ProbeMergeTests
     // Onward, OnwardSteps and OnwardMost those that took any step past their end, and Capped those
     // whose trace stopped at its cap of steps.
     private readonly record struct Chained(float Reflected, int Marched, int Steps, int Most, float[] Light, int Onward, int OnwardSteps, int OnwardMost,
-        int Capped)
+        int Capped, float[] Taken)
     {
         public override string ToString() =>
             $"reflects {Reflected:0.00000}, {Marched} of the finest level's texels marching on themselves in {Steps} steps in all and {Most} at most, "
@@ -41,9 +43,16 @@ public sealed partial class ProbeMergeTests
     // to a quarter unit off it, VaryingSky takes the sky along each way (SkyAlong), Sun is the way
     // toward a sun times its irradiance, which lights a surface of albedo WallAlbedo, a sheet from
     // either side, Reference marches each of the finest level's texels on itself to the coarsest
-    // level's end, and Caps holds each level's cap of steps a march takes, 0 for none.
+    // level's end in place of the chain, and Caps holds each level's cap of steps a march takes, 0
+    // for none. FieldCascades gives the field's cascades, each its least corner and its cell, the
+    // finest first, the cells built for each one after another, CellLight the light a hit takes
+    // from each of their cells, and Points the surface points read and their normals, in place of
+    // the one at place.
     private sealed record Setting
     {
+        public Vector4[]? FieldCascades { get; init; }
+        public float[]? CellLight { get; init; }
+        public (Vector3 Place, Vector3 Normal)[]? Points { get; init; }
         public Vector3 Normal { get; init; } = Vector3.UnitY;
         public float SkyLight { get; init; } = Sky;
         public bool VaryingSky { get; init; }
@@ -67,39 +76,59 @@ public sealed partial class ProbeMergeTests
     private static Chained Passes(float[] cells, Level[] levels, Vector3 place, Setting? setting = null)
     {
         setting ??= new Setting();
-        var setup = new float[96];
+        var points = setting.Points ?? [(place, setting.Normal)];
+        var setup = new float[129 + 7 * points.Length];
         (setup[0], setup[1], setup[2], setup[3], setup[4], setup[5]) = (Corner.X, Corner.Y, Corner.Z, Cell, Size, setting.SkyLight);
-        float[] binding = [setting.Moved ? 1 : 0, Margin, setting.VaryingSky ? 1 : 0, setting.Sun.X, setting.Sun.Y, setting.Sun.Z, WallAlbedo];
+        float[] binding = [setting.Moved ? 1 : 0, Margin, setting.VaryingSky ? 1 : 0, setting.Sun.X, setting.Sun.Y, setting.Sun.Z, WallAlbedo,
+            setting.CellLight is null ? 0 : 1];
         binding.CopyTo(setup, 80);
+        if (setting.FieldCascades is { } field)
+        {
+            setup[96] = field.Length;
+            for (int c = 0; c < field.Length; c++)
+                (setup[97 + c * 4], setup[98 + c * 4], setup[99 + c * 4], setup[100 + c * 4]) = (field[c].X, field[c].Y, field[c].Z, field[c].W);
+        }
         (setup[8], setup[9]) = (levels[^1].End, levels.Length);
         var (texels, reaches) = (0, 0);
         for (int l = 0; l < levels.Length; l++)
         {
             var (level, at) = (levels[l], 16 + l * 16);
             float[] cascade = [level.Corner.X, level.Corner.Y, level.Corner.Z, level.Spacing, level.X, level.Y, level.Z, level.Texels, 0, level.End, texels, reaches, texels,
-                setting.Caps?[l] ?? 0];
+                setting.Caps?[l] ?? 0, level.Kept];
             cascade.CopyTo(setup, at);
             (texels, reaches) = (texels + level.TexelCount, reaches + level.ReachCount);
         }
-        float[] point = [1, place.X, place.Y, place.Z, setting.Normal.X, setting.Normal.Y, setting.Normal.Z, Albedo];
-        point.CopyTo(setup, 64);
-        var (rays, reach, merged, marches, surfaces) = (new float[6 * texels], new float[reaches], new float[3 * texels], new float[2 * texels], new float[6]);
+        setup[128] = points.Length;
+        for (int k = 0; k < points.Length; k++)
+        {
+            float[] point = [points[k].Place.X, points[k].Place.Y, points[k].Place.Z, points[k].Normal.X, points[k].Normal.Y, points[k].Normal.Z, Albedo];
+            point.CopyTo(setup, 129 + k * 7);
+        }
+        var (rays, reach, merged, marches, surfaces) = (new float[6 * texels], new float[reaches], new float[3 * texels], new float[2 * texels], new float[6 * points.Length]);
+        var cellLight = setting.CellLight ?? [0];
         void Pass(int pass, int level, int threads)
         {
             (setup[6], setup[7]) = (pass, level);
-            CpuKernel.Run("probe_passes_cpu.slang", ((uint)(threads + 63) / 64, 1, 1), cells, setup, rays, reach, merged, marches, surfaces);
+            CpuKernel.Run("probe_passes_cpu.slang", ((uint)(threads + 63) / 64, 1, 1), cells, setup, rays, reach, merged, marches, surfaces, cellLight);
         }
-        for (int l = 0; l < levels.Length; l++)
-        {
-            Pass(0, l, levels[l].TexelCount);
-            Pass(1, l, levels[l].ReachCount);
-        }
-        Pass(2, levels.Length - 1, levels[^1].TexelCount);
-        for (int l = levels.Length - 2; l >= 0; l--)
-            Pass(3, l, levels[l].TexelCount);
         if (setting.Reference)
+        {
+            // The finest level's reach map, which the gather reads, and its texels marched on.
+            Pass(1, 0, levels[0].ReachCount);
             Pass(5, 0, levels[0].TexelCount);
-        Pass(4, 0, 1);
+        }
+        else
+        {
+            for (int l = 0; l < levels.Length; l++)
+            {
+                Pass(0, l, levels[l].TexelCount);
+                Pass(1, l, levels[l].ReachCount);
+            }
+            Pass(2, levels.Length - 1, levels[^1].TexelCount);
+            for (int l = levels.Length - 2; l >= 0; l--)
+                Pass(3, l, levels[l].TexelCount);
+        }
+        Pass(4, 0, points.Length);
         var (marched, steps, most) = (0, 0, 0);
         var (onward, onwardSteps, onwardMost, capped) = (0, 0, 0, 0);
         for (int k = 0; k < levels[0].TexelCount; k++)
@@ -116,7 +145,8 @@ public sealed partial class ProbeMergeTests
         var light = new float[levels[0].Texels * levels[0].Texels];
         for (int k = 0; k < light.Length; k++)
             light[k] = merged[k * 3];
-        return new(surfaces[3], marched, steps, most, light, onward, onwardSteps, onwardMost, capped);
+        var takenAt = Enumerable.Range(0, points.Length).Select(k => surfaces[k * 6]).ToArray();
+        return new(surfaces[3], marched, steps, most, light, onward, onwardSteps, onwardMost, capped, takenAt);
     }
 
     [CpuKernelFact]
