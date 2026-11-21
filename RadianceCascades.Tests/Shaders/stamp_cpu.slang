@@ -1,6 +1,7 @@
 // A cascade of 32 cells a side stamped with the shapes given over the still cells given, a thread
 // a cell, each cell taking the least of its still distance and its distance to each shape, and
-// the nearer surface's paint and face.
+// the nearer surface's paint, face and share of light sent through, each still cell sending a
+// quarter.
 import rc_field_stamp;
 
 // The count of shapes first, then each shape's StampFloats floats as FieldShape.WriteStamp writes
@@ -13,6 +14,7 @@ RWStructuredBuffer<float> stillPaints;
 RWStructuredBuffer<float> stampedDistances;
 RWStructuredBuffer<float> stampedPaints;
 RWStructuredBuffer<uint> stampedFaces;
+RWStructuredBuffer<float> stampedThrough;
 
 static const int Size = 32;
 static const float Cell = 0.25;
@@ -49,6 +51,7 @@ void test(uint3 id : SV_DispatchThreadID)
     still.paint = float4(stillPaints[index * 4], stillPaints[index * 4 + 1], stillPaints[index * 4 + 2], stillPaints[index * 4 + 3]);
     still.glow = float4(0.0);
     still.face = 0u;
+    still.through = 0.25;
     GivenShapes given;
     FieldCell stamped = stampCell(given, p, Band * Cell, still);
     stampedDistances[index] = stamped.distance;
@@ -57,4 +60,5 @@ void test(uint3 id : SV_DispatchThreadID)
     stampedPaints[index * 4 + 2] = stamped.paint.b;
     stampedPaints[index * 4 + 3] = stamped.paint.a;
     stampedFaces[index] = stamped.face;
+    stampedThrough[index] = stamped.through;
 }

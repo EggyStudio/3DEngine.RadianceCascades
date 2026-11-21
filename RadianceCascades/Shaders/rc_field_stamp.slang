@@ -36,8 +36,8 @@ public struct StampShape
 }
 
 // One cell of the field as a reader reads it, its distance and the plane of a double-sided face it
-// keeps (sheetOf), its paint, its emission times the paint's alpha, and its face's way and gloss
-// (glossBits).
+// keeps (sheetOf), its paint, its emission times the paint's alpha, its face's way and gloss
+// (glossBits), and the share of its diffuse light its surface sends through to its far side.
 public struct FieldCell
 {
     public float distance;
@@ -45,6 +45,7 @@ public struct FieldCell
     public float4 paint;
     public float4 glow;
     public uint face;
+    public float through;
 }
 
 // The shapes of a brick's run, which an engine implements over its buffers.
@@ -58,7 +59,8 @@ public interface IStampShapes
 }
 
 // The cell whose middle is p as the shapes given stamp it over the still cell, the distance held
-// to reach either side, the nearer surface painting it and giving it its face. A box nearer than
+// to reach either side, the nearer surface painting it and giving it its face and the share of
+// its diffuse light it sends through, which a still cell keeps as it came. A box nearer than
 // the still surface takes away the plane the still cell kept.
 public FieldCell stampCell<S : IStampShapes>(S shapes, float3 p, float reach, FieldCell still)
 {
@@ -79,6 +81,7 @@ public FieldCell stampCell<S : IStampShapes>(S shapes, float3 p, float reach, Fi
         float coverage = lightThroughPaint(shape.color.w);
         cell.paint = float4(shape.color.rgb * coverage, coverage);
         cell.glow = float4(shape.emission.rgb * coverage, 0.0);
+        cell.through = saturate(shape.emission.w);
         // The box's face nearest the cell, the axis it lies furthest out along, its way in the
         // world the gradient of that axis of its own space.
         int axis = q.x >= q.y && q.x >= q.z ? 0 : q.y >= q.z ? 1 : 2;
