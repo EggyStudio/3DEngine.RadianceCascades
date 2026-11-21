@@ -129,12 +129,16 @@ The conventions the module stands on:
 - A cell of an engine's field carries its nearest surface's share of light through, the share
   that passes a unit of its depth, as a value of its own, which `IProbeField.throughAt` reads, and
   not in the paint's alpha, which `lightThroughPaint` makes of it for the blend of colors alone.
-- A ray that crosses a surface letting light through takes the surface's own light where it meets
-  it (`IProbeField.hitLight`), weighed by what the surface keeps, one less what it passes, and by
-  the share of light carried to it, and carries on what the surface passes. A closed surface passes
-  its share to the power of the depth crossed, from where the march meets it to where it comes out,
-  and a double-sided sheet thinner than a cell, which has no depth to cross, passes its share once,
-  as a unit of depth would.
+- A ray that crosses a surface letting light through takes the surface's own light where it meets it
+  (`IProbeField.hitLight`), weighed by what the surface keeps, one less what it passes, and by the
+  share of light carried to it, and carries on what the surface passes. A closed surface passes over
+  the depth crossed, from where the march meets it to where it comes out, the share of the cell each
+  step within began in to the power of that step's depth, so a crown whose leaves pass more at its
+  edge than at its core dims what lies past it as its depth does: one 6 units deep passing 0.9 a
+  unit within a unit of its faces and 0.3 within, held as one region half a cell inside throughout,
+  reads the sky a probe 2 units before it takes through it 0.99 of its trace, where with the share
+  it was met at taken for its whole depth it read 1.23 times it, and a double-sided sheet thinner
+  than a cell, which has no depth to cross, passes its share once, as a unit of depth would.
 - A cascade's `stepCap` in its `ProbeCascade` is the most steps a march of its rays takes, 0 for no
   count. A ray that stops at it ends as `RayCapped` and is handed to the cascade above from where it
   stopped, as from its end, and at the coarsest cascade it takes no light past its stop. The

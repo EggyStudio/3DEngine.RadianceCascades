@@ -112,16 +112,16 @@ int3 cellOf<F : IFieldVolume>(F field, int i, float3 p)
 // distance read or MarchStep of a cell at least and each handed to steps. It ends where it comes
 // within MarchHit of a cell of a surface, at end, or where it leaves every cascade. A surface whose
 // share of light through is above zero the ray crosses, stepping out of the solid by half a cell or
-// the distance read below zero, whichever is more, and its carried share is multiplied by the
-// surface's share to the power of the depth it crossed, from where the march met the surface, the
-// distance read on, to where it came out, the distance read back, and a sheet thinner than a
-// cell, which has no depth to cross, passes its share once, as a unit of depth would. The ray
-// takes the light the surface sends where it met it (hitLight) weighed by what the surface keeps,
-// one less what it passes, and the share carried to it, so a lit canopy of leaves reads lit from
-// below as well as dimming what lies past it. A cell met within it whose surface lets no light
-// through stops the ray there. The march takes no count of steps at most, since each goes on by a
-// quarter of a cell at least and the field ends, so a ray of an interval that runs to the field's
-// edge takes every step to its end.
+// the distance read below zero, whichever is more, and its carried share is multiplied over the
+// depth it crossed, from where the march met the surface, the distance read on, to where it came
+// out, the distance read back, by the share of the cell each step within began in to the power of
+// that step's depth, and a sheet thinner than a cell, which has no depth to cross, passes its share
+// once, as a unit of depth would. The ray takes the light the surface sends where it met it
+// (hitLight) weighed by what the surface keeps, one less what it passes, and the share carried to
+// it, so a lit canopy of leaves reads lit from below as well as dimming what lies past it. A cell
+// met within it whose surface lets no light through stops the ray there. The march takes no count
+// of steps at most, since each goes on by a quarter of a cell at least and the field ends, so a ray
+// of an interval that runs to the field's edge takes every step to its end.
 public ProbeRay traceProbeRay<F : IProbeField, S : IMarchSteps>(F field, float3 origin, float3 way, float start, float end, inout S steps)
 {
     return marchProbeRay(field, origin, way, start, end, 0.0, 0u, steps);
@@ -167,15 +167,21 @@ bool keepsSheet<F : IFieldVolume>(F field, int i, int3 at)
     return dot(plane, plane) >= 0.25 || dot(second, second) >= 0.25;
 }
 
-// Ends a ray's crossing of a surface that passes through of the light a unit of its depth takes,
-// over depth, or through once where it is a sheet, the surface's own light at the crossing, light,
-// weighed by what it keeps and the share carried to it, and the share carried on by what it
-// passes.
-void crossSurface(inout ProbeRay ray, float through, float depth, bool sheet, float3 light)
+// Ends a ray's crossing of a surface that passed the share passed of the light it carried in, the
+// surface's own light at the crossing, light, weighed by what it keeps and the share carried to
+// it, and the share carried on by what it passes.
+void crossSurface(inout ProbeRay ray, float passed, float3 light)
 {
-    float passed = sheet ? through : pow(through, max(depth, 0.0));
     ray.light += light * (ray.carried * (1.0 - passed));
     ray.carried *= passed;
+}
+
+// The share a crossing passes, passed over the steps it took and the share through of the cell
+// its last step began in over the depth since, or passed alone where it crossed a sheet, which
+// passes its share once.
+float crossedShare(float passed, float through, float depth, bool sheet)
+{
+    return sheet ? passed : passed * pow(through, max(depth, 0.0));
 }
 
 // The march traceProbeRay and marchToOpenSpace share, which ends in open space as well where
@@ -190,9 +196,10 @@ ProbeRay marchProbeRay<F : IProbeField, S : IMarchSteps>(F field, float3 origin,
     ray.carried = 1.0;
     ray.light = float3(0.0);
     float t = start;
-    // Where the ray met the surface it is crossing, that surface's share, whether it is a sheet and
-    // the light it sends where the ray met it, or below zero where it crosses none.
-    float entered = -1.0, through = 0.0;
+    // Where the ray met the surface it is crossing, or below zero where it crosses none, the share
+    // it passed over the steps it took within it, where its last step began and the share of the
+    // cell it began in, whether it is a sheet and the light it sends where the ray met it.
+    float entered = -1.0, passed = 1.0, from = 0.0, through = 0.0;
     bool sheet = false;
     float3 crossed = float3(0.0);
     uint taken = 0u;
@@ -231,19 +238,27 @@ ProbeRay marchProbeRay<F : IProbeField, S : IMarchSteps>(F field, float3 origin,
             {
                 // A solid that lets no light through, met within the one the ray crosses, as a
                 // floor under a glass wall, stops it, where marched on it would come out past the
-                // floor's underside.
-                if (field.throughAt(c, cellOf(field, c, p)) > 0.0)
+                // floor's underside. Each step within passes the share of the cell it began in, as
+                // a crown's leaves pass more at its edge than at its core, and a crown 6 units deep
+                // passing 0.9 a unit within a unit of its faces and 0.3 within read the sky a probe
+                // before it takes through it 0.99 of its trace, where with the share it was met at
+                // taken for its whole depth it read 1.23 times it.
+                float share = field.throughAt(c, cellOf(field, c, p));
+                if (share > 0.0)
                 {
+                    passed = crossedShare(passed, through, t - from, sheet);
+                    from = t;
+                    through = sheet ? through : share;
                     t += max(cell * 0.5, -d);
                     continue;
                 }
-                crossSurface(ray, through, t - entered, sheet, crossed);
+                crossSurface(ray, crossedShare(passed, through, t - from, sheet), crossed);
                 entered = -1.0;
                 stops = true;
             }
             else
             {
-                crossSurface(ray, through, t - d - entered, sheet, crossed);
+                crossSurface(ray, crossedShare(passed, through, t - d - from, sheet), crossed);
                 entered = -1.0;
             }
         }
@@ -267,7 +282,9 @@ ProbeRay marchProbeRay<F : IProbeField, S : IMarchSteps>(F field, float3 origin,
                 return ray;
             }
             entered = t + max(d, 0.0);
+            from = entered;
             sheet = keepsSheet(field, c, cellOf(field, c, p));
+            passed = sheet ? through : 1.0;
             crossed = light;
             t += max(cell * 0.5, -d);
             continue;
@@ -276,7 +293,7 @@ ProbeRay marchProbeRay<F : IProbeField, S : IMarchSteps>(F field, float3 origin,
     }
     // A ray that ends within a surface it crosses passes the depth it crossed of it.
     if (entered >= 0.0)
-        crossSurface(ray, through, min(t, end) - entered, sheet, crossed);
+        crossSurface(ray, crossedShare(passed, through, min(t, end) - from, sheet), crossed);
     return ray;
 }
 
