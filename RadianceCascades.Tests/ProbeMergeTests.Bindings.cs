@@ -55,6 +55,27 @@ public sealed partial class ProbeMergeTests
     }
 
     [CpuKernelFact]
+    public void A_Floor_In_The_Open_Box_Takes_The_Share_Of_The_Sky_Its_Ways_Reach_Beside_Its_Light()
+    {
+        // The share of the sky the passes keep beside the light (IMergedSkyLight and
+        // ISurfaceSkyPoints), under the uniform sky and under the varying one, against the share of
+        // the floor's ways that reach the sky past the box's black walls, their cosine weighed,
+        // four corners of 4 by 4 at 7.75.
+        var uniform = Passes(Field(OpenBox()), Pair(Floor), Floor);
+        var varying = Passes(Field(OpenBox()), Pair(Floor), Floor, new Setting { VaryingSky = true });
+        var high = 8 - Floor.Y;
+        var share = 4 * CornerShare(4 / high, 4 / high);
+        var said = $"the open box's floor takes {uniform.SkyShare:0.00000} of the sky under the uniform sky and {varying.SkyShare:0.00000} under the varying one, "
+            + $"where its ways reaching the sky give {share:0.00000}, and reflects {uniform.Reflected:0.00000} of the {Albedo * Sky:0.00000} the whole sky gives";
+        output.WriteLine(said);
+        // 0.24696 under either sky against 0.25111, 1.7 percent under. Under the uniform sky with
+        // every wall black the light is the sky's times the share, and the share is the same under
+        // any sky.
+        Assert.True(Math.Abs(uniform.SkyShare - share) <= 0.05 * share, said);
+        Assert.True(Math.Abs(uniform.SkyShare - uniform.Reflected / (Albedo * Sky)) <= 1e-5f && Math.Abs(varying.SkyShare - uniform.SkyShare) <= 1e-6f, said);
+    }
+
+    [CpuKernelFact]
     public void A_Floor_In_The_Open_Box_Under_A_Sky_That_Varies_With_The_Way_Reflects_Its_Integral_Over_The_Opening()
     {
         var varying = Passes(Field(OpenBox()), Pair(Floor), Floor, new Setting { VaryingSky = true });
@@ -254,6 +275,8 @@ public sealed partial class ProbeMergeTests
         // 2 over the floor, and 0.24697 along its own rays, 1.031 of it, 128 rays and about 1,000
         // steps.
         Assert.True(probes.Reflected > 1.2f * expected && Math.Abs(traced.Reflected - expected) <= 0.1f * expected, said);
+        // Its share of the sky along its own rays is its light over the sky's, every wall black.
+        Assert.True(Math.Abs(traced.SkyShare - traced.Reflected / (Albedo * Sky)) <= 1e-5f, $"{said}, its share of the sky {traced.SkyShare:0.00000}");
     }
 
     [CpuKernelFact]

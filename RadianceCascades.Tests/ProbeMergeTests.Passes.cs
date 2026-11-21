@@ -23,11 +23,13 @@ public sealed partial class ProbeMergeTests
     }
 
     // Marched, Steps and Most count the finest level's texels no probe above saw the end of,
-    // Onward, OnwardSteps and OnwardMost those that took any step past their end, and Capped those
-    // whose trace stopped at its cap of steps.
+    // Onward, OnwardSteps and OnwardMost those that took any step past their end, Capped those
+    // whose trace stopped at its cap of steps, and SkyShare is the first point's share of the sky.
     private readonly record struct Chained(float Reflected, int Marched, int Steps, int Most, float[] Light, int Onward, int OnwardSteps, int OnwardMost,
         int Capped, float[] Taken)
     {
+        public float SkyShare { get; init; }
+
         public override string ToString() =>
             $"reflects {Reflected:0.00000}, {Marched} of the finest level's texels marching on themselves in {Steps} steps in all and {Most} at most, "
             + $"{Onward} stepping past their end in {(Onward == 0 ? 0 : OnwardSteps / (float)Onward):0.0} steps on the mean and {OnwardMost} at most, "
@@ -107,11 +109,15 @@ public sealed partial class ProbeMergeTests
             point.CopyTo(setup, 129 + k * 7);
         }
         var (rays, reach, merged, marches, surfaces) = (new float[6 * texels], new float[reaches], new float[3 * texels], new float[2 * texels], new float[6 * points.Length]);
+        // Each texel's share of the sky, then each point's.
+        var skyShares = new float[texels + points.Length];
+        setup[124] = texels;
         var cellLight = setting.CellLight ?? [0];
         void Pass(int pass, int level, int threads)
         {
             (setup[6], setup[7]) = (pass, level);
-            CpuKernel.Run("probe_passes_cpu.slang", ((uint)(threads + 63) / 64, 1, 1), cells, setup, rays, reach, merged, marches, surfaces, cellLight);
+            CpuKernel.Run("probe_passes_cpu.slang", ((uint)(threads + 63) / 64, 1, 1), cells, setup, rays, reach, merged, marches, surfaces, cellLight,
+                skyShares);
         }
         if (setting.Reference)
         {
@@ -148,7 +154,7 @@ public sealed partial class ProbeMergeTests
         for (int k = 0; k < light.Length; k++)
             light[k] = merged[k * 3];
         var takenAt = Enumerable.Range(0, points.Length).Select(k => surfaces[k * 6]).ToArray();
-        return new(surfaces[3], marched, steps, most, light, onward, onwardSteps, onwardMost, capped, takenAt);
+        return new(surfaces[3], marched, steps, most, light, onward, onwardSteps, onwardMost, capped, takenAt) { SkyShare = skyShares[texels] };
     }
 
     [CpuKernelFact]

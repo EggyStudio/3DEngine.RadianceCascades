@@ -62,6 +62,24 @@ public interface IMergedLight
     void keepMerged(uint index, float3 light);
 }
 
+// A cascade's merged light with the share of the sky in it, as the merge keeps them, which the
+// level below reads back through IFarSkyProbes.
+public interface IMergedSkyLight : IMergedLight
+{
+    // Keeps the share of the sky in the light the texel at index brings, what its light would be
+    // under a sky of 1 along every way with every surface unlit, from 0 to 1.
+    void keepSkyShare(uint index, float share);
+}
+
+// A merge's kept light alone, its share of the sky let go, which the passes that keep no share
+// keep through.
+struct NoSkyMerged<M : IMergedLight> : IMergedSkyLight
+{
+    M merged;
+    void keepMerged(uint index, float3 light) { merged.keepMerged(index, light); }
+    void keepSkyShare(uint index, float share) {}
+}
+
 // The surface points the gather lights, which an engine implements over its buffers, as a pixel's
 // point and normal read from its depth and normals.
 public interface ISurfacePoints
@@ -75,6 +93,24 @@ public interface ISurfacePoints
     // Keeps the light the point at index takes (lightTaken), which a diffuse surface reflects
     // albedo over pi of (reflectedLight).
     void keepTaken(uint index, float3 taken);
+}
+
+// Surface points that keep the share of the sky in the light each takes beside it.
+public interface ISurfaceSkyPoints : ISurfacePoints
+{
+    // Keeps the share of the sky in the light the point at index takes, what it would take under
+    // a sky of 1 along every way with every surface unlit over pi, from 0 to 1.
+    void keepSkyShare(uint index, float share);
+}
+
+// Surface points that keep their light alone, their share of the sky let go.
+struct NoSkyPoints<A : ISurfacePoints> : ISurfaceSkyPoints
+{
+    A surfaces;
+    float3 placeAt(uint index) { return surfaces.placeAt(index); }
+    float3 normalAt(uint index) { return surfaces.normalAt(index); }
+    void keepTaken(uint index, float3 taken) { surfaces.keepTaken(index, taken); }
+    void keepSkyShare(uint index, float share) {}
 }
 
 // How many probes a cascade holds.
@@ -147,11 +183,20 @@ public void reachTexel<F : IFieldVolume, R : IReachTexels, Q : IProbePlaces>(F f
 // above holds more.
 public void settleTexel<R : IProbeRays, M : IMergedLight, K : ISky>(R rays, M merged, ProbeCascade cascade, K sky, uint index)
 {
+    NoSkyMerged<M> kept = { merged };
+    settleTexel(rays, kept, cascade, sky, index);
+}
+
+// settleTexel keeping beside the light the share of the sky in it (lastCascadeSkyShare).
+public void settleTexel<R : IProbeRays, M : IMergedSkyLight, K : ISky>(R rays, M merged, ProbeCascade cascade, K sky, uint index)
+{
     if (index >= cascadeTexels(cascade))
         return;
     uint texels = cascade.texels * cascade.texels;
     uint2 texel = uint2((index % texels) % cascade.texels, (index % texels) / cascade.texels);
-    merged.keepMerged(index, lastCascadeLight(rays.rayAt(index), texelWay(cascade.texels, texel), sky));
+    ProbeRay ray = rays.rayAt(index);
+    merged.keepMerged(index, lastCascadeLight(ray, texelWay(cascade.texels, texel), sky));
+    merged.keepSkyShare(index, lastCascadeSkyShare(ray));
 }
 
 // Merges the texel at index of a level finer than the coarsest with the merged light of the level
@@ -167,15 +212,28 @@ public bool mergeTexel<F : IProbeField, R : IProbeRays, Q : IProbePlaces, P : IF
     S : IMarchSteps>(F field, R rays, Q places, P above, U abovePlaces, M merged, ProbeCascade cascade, ProbeCascade aboveCascade,
     float marchEnd, K sky, inout S steps, uint index)
 {
+    NoSkyShares<P> lights = { above };
+    NoSkyMerged<M> kept = { merged };
+    return mergeTexel(field, rays, places, lights, abovePlaces, kept, cascade, aboveCascade, marchEnd, sky, steps, index);
+}
+
+// mergeTexel keeping beside the light the share of the sky in it, above's shares read through
+// IFarSkyProbes (mergedLight).
+public bool mergeTexel<F : IProbeField, R : IProbeRays, Q : IProbePlaces, P : IFarSkyProbes, U : IProbePlaces, M : IMergedSkyLight, K : ISky,
+    S : IMarchSteps>(F field, R rays, Q places, P above, U abovePlaces, M merged, ProbeCascade cascade, ProbeCascade aboveCascade,
+    float marchEnd, K sky, inout S steps, uint index)
+{
     if (index >= cascadeTexels(cascade))
         return false;
     uint texels = cascade.texels * cascade.texels;
     uint2 texel = uint2((index % texels) % cascade.texels, (index % texels) / cascade.texels);
     float3 place = places.placeOf(probeAt(cascade, index / texels));
     bool marched;
+    float skyShare;
     float3 light = mergedLight(field, above, abovePlaces, aboveCascade, marchEnd, place, cascade.texels, texel, rays.rayAt(index), sky, steps,
-        marched);
+        marched, skyShare);
     merged.keepMerged(index, light);
+    merged.keepSkyShare(index, skyShare);
     return marched;
 }
 
@@ -200,13 +258,39 @@ struct ProbeTexels<P : IFarProbes> : IProbeLight
 public void gatherAt<F : IProbeField, P : IFarProbes, Q : IProbePlaces, A : ISurfacePoints>(F field, P probes, Q places, ProbeCascade cascade,
     A surfaces, uint index)
 {
+    NoSkyShares<P> lights = { probes };
+    NoSkyPoints<A> points = { surfaces };
+    gatherAt(field, lights, places, cascade, points, index);
+}
+
+// The share of the sky in the light a probe's texels give a surface facing n, each texel's share
+// (IFarSkyProbes) weighed as lightTaken weighs its light, over pi.
+float skyShareTaken<P : IFarSkyProbes>(P probes, int3 probe, uint texels, float3 n)
+{
+    float shares = octahedronShares(texels);
+    float taken = 0.0;
+    for (uint k = 0u; k < texels * texels; k++)
+    {
+        uint2 texel = uint2(k % texels, k / texels);
+        float facing = max(dot(n, texelWay(texels, texel)), 0.0);
+        if (facing > 0.0)
+            taken += probes.skyShareAt(probe, texel) * (facing * texelSolidAngle(texels, texel, shares));
+    }
+    return taken / 3.14159265;
+}
+
+// gatherAt keeping beside the point's light the share of the sky in it, each probe's share
+// (skyShareTaken) weighed as its light is.
+public void gatherAt<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces, A : ISurfaceSkyPoints>(F field, P probes, Q places,
+    ProbeCascade cascade, A surfaces, uint index)
+{
     float3 p = surfaces.placeAt(index);
     float3 n = surfaces.normalAt(index);
     int3 base;
     float3 f;
     farProbesAbout(cascade, p, base, f);
     float3 sum = float3(0.0);
-    float weights = 0.0;
+    float skyShares = 0.0, weights = 0.0;
     for (int corner = 0; corner < 8; corner++)
     {
         int3 offset = int3(corner & 1, (corner >> 1) & 1, corner >> 2);
@@ -223,9 +307,11 @@ public void gatherAt<F : IProbeField, P : IFarProbes, Q : IProbePlaces, A : ISur
         texels.probes = probes;
         texels.probe = probe;
         sum += lightTaken(texels, cascade.texels, n) * weight;
+        skyShares += skyShareTaken(probes, probe, cascade.texels, n) * weight;
         weights += weight;
     }
     surfaces.keepTaken(index, weights > 0.0 ? sum / weights : float3(0.0));
+    surfaces.keepSkyShare(index, weights > 0.0 ? skyShares / weights : 0.0);
 }
 
 // Gathers the light the surface point at index takes along its own rays, and keeps it, a thread a
@@ -243,13 +329,23 @@ public void gatherAt<F : IProbeField, P : IFarProbes, Q : IProbePlaces, A : ISur
 public void gatherTraced<F : IProbeField, P : IFarProbes, Q : IProbePlaces, K : ISky, A : ISurfacePoints, S : IMarchSteps>(F field, P probes, Q places,
     ProbeCascade cascade, float marchEnd, K sky, A surfaces, inout S steps, uint index)
 {
+    NoSkyShares<P> lights = { probes };
+    NoSkyPoints<A> points = { surfaces };
+    gatherTraced(field, lights, places, cascade, marchEnd, sky, points, steps, index);
+}
+
+// gatherTraced keeping beside the point's light the share of the sky in it, each ray's share
+// (mergedLight) weighed as its light is, over the weights.
+public void gatherTraced<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces, K : ISky, A : ISurfaceSkyPoints, S : IMarchSteps>(F field,
+    P probes, Q places, ProbeCascade cascade, float marchEnd, K sky, A surfaces, inout S steps, uint index)
+{
     float3 p = surfaces.placeAt(index);
     float3 n = surfaces.normalAt(index);
     int c = field.cascadeOf(p, 1.0);
     float3 origin = p + n * (c >= 0 ? field.cornerAndCell(c).w : 0.0);
     float shares = octahedronShares(cascade.texels);
     float3 taken = float3(0.0);
-    float weights = 0.0;
+    float skyShares = 0.0, weights = 0.0;
     ProbeRay begun;
     begun.ended = RayPast;
     begun.t = 0.0;
@@ -264,8 +360,11 @@ public void gatherTraced<F : IProbeField, P : IFarProbes, Q : IProbePlaces, K : 
             continue;
         float weight = facing * texelSolidAngle(cascade.texels, texel, shares);
         bool marched;
-        taken += mergedLight(field, probes, places, cascade, marchEnd, origin, cascade.texels, texel, begun, sky, steps, marched) * weight;
+        float skyShare;
+        taken += mergedLight(field, probes, places, cascade, marchEnd, origin, cascade.texels, texel, begun, sky, steps, marched, skyShare) * weight;
+        skyShares += skyShare * weight;
         weights += weight;
     }
     surfaces.keepTaken(index, weights > 0.0 ? taken * (3.14159265 / weights) : float3(0.0));
+    surfaces.keepSkyShare(index, weights > 0.0 ? skyShares / weights : 0.0);
 }

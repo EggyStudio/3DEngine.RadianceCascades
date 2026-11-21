@@ -814,6 +814,17 @@ nor its hits say what lies between the surface and the probes' height. It costs 
 1,000 to 1,600 steps a point at 16 texels a side, which the README states, and a binding calls it
 where it chooses; `gatherAt` stands unchanged.
 
+The sky's share beside the light, at 3DEngine's second merge pass, which merged every texel again
+under a sky of 1 with every surface unlit and cost it 1.4 of 6.46 ms. The merge keeps the share in
+the same pass: a ray that takes the sky brings the share it carries there (`lastCascadeSkyShare`),
+and a hand-off the far probes' shares weighed as their light is. Each pass and `mergedLight` has a
+form over `IFarSkyProbes` with `IMergedSkyLight` or `ISurfaceSkyPoints`, and the form over
+`IFarProbes` reads through `NoSkyShares`, so no binding of `IFarProbes` changes and the march holds
+a binding's shading once in either. The open box's floor takes a share of 0.24696 against the
+0.25111 of the sky its black walls leave open, 1.7 percent under, the same under the uniform and the
+varying sky, and every light figure the suite prints is that of e660713. A binding that dims its sky
+for a cascade dims the share it keeps by its own rule, which the README states.
+
 Handoff, for a fresh session, in place of those above. Where the work stands: the library holds the
 field's plan, the triangles' layout and the glow lights in C#, and in Slang the probes' octahedron,
 the cell code, resolve and pinch, the hit's color read, the splat, the stamp, the field's distance
@@ -836,7 +847,8 @@ box's floor 8 percent under, its figures in its Reply. A field's build runs `sea
 pinch. The march calls `hitLight` at one place and the merge marches at one place, which a test
 holds by the SPIR-V. A cascade is traced at `TracedMeans.perRead` texels a side of each it is read
 at, 2 at four times the rays, which the lintel's sampling asks, or 1. A surface whose probes stand
-off it gathers along its own rays (`gatherTraced`). Next in order: the merge's cost, counted by leg
+off it gathers along its own rays (`gatherTraced`). The merge keeps the sky's share beside the light
+in one pass (`IFarSkyProbes`, `IMergedSkyLight`). Next in order: the merge's cost, counted by leg
 and brought to a few steps a ray, then the crossing of a crown by each step's own share and the
 lintel's mixed texels, then the engines' further findings as they take the passes, then the split
 sum at a hit, the screen probes, the light on the picture and the contact shadow's march. Left

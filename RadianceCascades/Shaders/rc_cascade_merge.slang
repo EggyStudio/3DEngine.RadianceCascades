@@ -19,6 +19,27 @@ public interface IFarProbes
     float reachAt(int3 probe, uint2 texel);
 }
 
+// The far cascade's probes as a merge that keeps the sky's share beside the light reads them, the
+// share of the sky in each texel's light, which a binding keeps from the level's own merge
+// (IMergedSkyLight). A binding that reads the share this way merges once where a second merge of
+// every texel, with the sky's light 1 along every way and every surface unlit, gave it the share.
+public interface IFarSkyProbes : IFarProbes
+{
+    // The share of the sky in a far probe's texel's light, what its light would be under a sky of
+    // 1 along every way with every surface unlit, from 0 to 1.
+    float skyShareAt(int3 probe, uint2 texel);
+}
+
+// Far probes read through IFarProbes alone, their texels' share of the sky none, which the merge
+// and the passes that keep no share read them through, so each has one form that keeps both.
+public struct NoSkyShares<P : IFarProbes> : IFarSkyProbes
+{
+    public P probes;
+    public float3 lightAt(int3 probe, uint2 texel) { return probes.lightAt(probe, texel); }
+    public float reachAt(int3 probe, uint2 texel) { return probes.reachAt(probe, texel); }
+    public float skyShareAt(int3 probe, uint2 texel) { return 0.0; }
+}
+
 // How far past a far probe's reach toward a point the point may lie for the probe to see it, as a
 // share of the far cascade's spacing, an eighth, a cell of a quarter unit at a spacing of 2. A
 // probe's reach map keeps the ray of each texel's middle way, which passes up to half a texel off
@@ -54,19 +75,34 @@ public void farProbesAbout(ProbeCascade far, float3 e, out int3 base, out float3
 // off its own ray marched on.
 public float3 farTexelsLight<P : IFarProbes>(P probes, ProbeCascade far, int3 probe, uint texels, uint2 texel)
 {
+    NoSkyShares<P> lights = { probes };
+    float skyShare;
+    return farTexelsLight(lights, far, probe, texels, texel, skyShare);
+}
+
+// farTexelsLight with in skyShare the share of the sky in that light, taken from the same far
+// texels at the same weights.
+public float3 farTexelsLight<P : IFarSkyProbes>(P probes, ProbeCascade far, int3 probe, uint texels, uint2 texel, out float skyShare)
+{
     uint k = far.texels / texels;
     if (k <= 1u || k * texels != far.texels)
-        return probes.lightAt(probe, texelOfWay(far.texels, texelWay(texels, texel)));
+    {
+        uint2 at = texelOfWay(far.texels, texelWay(texels, texel));
+        skyShare = probes.skyShareAt(probe, at);
+        return probes.lightAt(probe, at);
+    }
     float3 sum = float3(0.0);
-    float shares = 0.0;
+    float shares = 0.0, sky = 0.0;
     for (uint j = 0u; j < k; j++)
         for (uint i = 0u; i < k; i++)
         {
             uint2 covered = texel * k + uint2(i, j);
             float share = octahedronShare((float2(covered) + 0.5) / float(far.texels));
             sum += probes.lightAt(probe, covered) * share;
+            sky += probes.skyShareAt(probe, covered) * share;
             shares += share;
         }
+    skyShare = sky / shares;
     return sum / shares;
 }
 
@@ -112,6 +148,35 @@ public struct TracedMeans<P : IFarProbes> : IFarProbes
     public float reachAt(int3 probe, uint2 texel) { return traced.reachAt(probe, texel); }
 }
 
+// TracedMeans of probes that keep the sky's share, each read texel's share the mean of the traced
+// texels' it holds at the weights its light takes.
+public struct TracedSkyMeans<P : IFarSkyProbes> : IFarSkyProbes
+{
+    // The probes as traced, read at their traced texels, the traced texels along a side and those
+    // of each read texel, as TracedMeans holds them.
+    public TracedMeans<P> means;
+
+    public float3 lightAt(int3 probe, uint2 texel) { return means.lightAt(probe, texel); }
+
+    public float reachAt(int3 probe, uint2 texel) { return means.reachAt(probe, texel); }
+
+    public float skyShareAt(int3 probe, uint2 texel)
+    {
+        if (means.perRead <= 1u)
+            return means.traced.skyShareAt(probe, texel);
+        float sum = 0.0, shares = 0.0;
+        for (uint j = 0u; j < means.perRead; j++)
+            for (uint i = 0u; i < means.perRead; i++)
+            {
+                uint2 at = texel * means.perRead + uint2(i, j);
+                float share = octahedronShare((float2(at) + 0.5) / float(means.texels));
+                sum += means.traced.skyShareAt(probe, at) * share;
+                shares += share;
+            }
+        return sum / shares;
+    }
+}
+
 // A cascade traced at its texels as the level below and the gather read it, at perRead traced
 // texels along a side of each read texel (TracedMeans).
 public ProbeCascade readCascade(ProbeCascade cascade, uint perRead)
@@ -121,15 +186,17 @@ public ProbeCascade readCascade(ProbeCascade cascade, uint perRead)
 }
 
 // The far cascade's light over a near texel from the far probes about e, each at its trilinear
-// weight on the far grid, a probe inside a mesh or not seeing e weighing nothing, and in weights
-// the sum of the weights taken, which divides it.
-float3 farLightAbout<F : IProbeField, P : IFarProbes, Q : IProbePlaces>(F field, P probes, Q places, ProbeCascade far, float3 e, uint texels,
-    uint2 texel, out float weights)
+// weight on the far grid, a probe inside a mesh or not seeing e weighing nothing, in skyShares
+// the sum of their shares of the sky at the same weights, and in weights the sum of the weights
+// taken, which divides both.
+float3 farLightAbout<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces>(F field, P probes, Q places, ProbeCascade far, float3 e, uint texels,
+    uint2 texel, out float skyShares, out float weights)
 {
     int3 base;
     float3 f;
     farProbesAbout(far, e, base, f);
     float3 sum = float3(0.0);
+    skyShares = 0.0;
     weights = 0.0;
     for (int corner = 0; corner < 8; corner++)
     {
@@ -143,7 +210,9 @@ float3 farLightAbout<F : IProbeField, P : IFarProbes, Q : IProbePlaces>(F field,
             continue;
         float3 lerps = lerp(1.0 - f, f, float3(offset));
         float weight = lerps.x * lerps.y * lerps.z;
-        sum += farTexelsLight(probes, far, probe, texels, texel) * weight;
+        float skyShare;
+        sum += farTexelsLight(probes, far, probe, texels, texel, skyShare) * weight;
+        skyShares += skyShare * weight;
         weights += weight;
     }
     return sum;
@@ -230,10 +299,27 @@ bool farProbesSplit<F : IProbeField, P : IFarProbes, Q : IProbePlaces>(F field, 
 public float3 mergedLight<F : IProbeField, P : IFarProbes, Q : IProbePlaces, K : ISky, S : IMarchSteps>(F field, P probes, Q places,
     ProbeCascade far, float marchEnd, float3 origin, uint texels, uint2 texel, ProbeRay near, K sky, inout S steps, out bool marched)
 {
+    NoSkyShares<P> lights = { probes };
+    float skyShare;
+    return mergedLight(field, lights, places, far, marchEnd, origin, texels, texel, near, sky, steps, marched, skyShare);
+}
+
+// mergedLight with in skyShare the share of the sky in the light, what it would be under a sky of
+// 1 along every way with every surface unlit, tracked beside the light: the share the ray carries
+// where it takes the sky (lastCascadeSkyShare), and at a hand-off the far probes' shares
+// (IFarSkyProbes) weighed as their light is, times the share carried there.
+public float3 mergedLight<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces, K : ISky, S : IMarchSteps>(F field, P probes, Q places,
+    ProbeCascade far, float marchEnd, float3 origin, uint texels, uint2 texel, ProbeRay near, K sky, inout S steps, out bool marched,
+    out float skyShare)
+{
     marched = false;
+    skyShare = 0.0;
     float3 way = texelWay(texels, texel);
     if (near.ended != RayPast && near.ended != RayCapped)
+    {
+        skyShare = lastCascadeSkyShare(near);
         return lastCascadeLight(near, way, sky);
+    }
     // The light each march took on its way is added as it goes, each weighed by the share carried
     // to it. The marches past the ray's end are legs of one loop with one call of the march, since
     // a driver inlines an engine's shading (hitLight) at every call of the march, and with a call
@@ -253,7 +339,10 @@ public float3 mergedLight<F : IProbeField, P : IFarProbes, Q : IProbePlaces, K :
         float end = leg == 1u ? min(from + far.end, marchEnd) : marchEnd;
         ProbeRay ray = marchToOpenSpace(field, origin, way, from, end, leg == 0u ? far.spacing : 0.0, far.stepCap, steps);
         if (ray.ended == RayMet || ray.ended == RayLeft || (ray.ended == RayPast && ray.t >= marchEnd))
+        {
+            skyShare = lastCascadeSkyShare(ray) * carried;
             return taken + lastCascadeLight(ray, way, sky) * carried;
+        }
         taken += ray.light * carried;
         carried *= ray.carried;
         from = ray.t;
@@ -266,10 +355,13 @@ public float3 mergedLight<F : IProbeField, P : IFarProbes, Q : IProbePlaces, K :
             leg = 1u;
             continue;
         }
-        float weights;
-        float3 sum = farLightAbout(field, probes, places, far, origin + way * from, texels, texel, weights);
+        float skyShares, weights;
+        float3 sum = farLightAbout(field, probes, places, far, origin + way * from, texels, texel, skyShares, weights);
         if (weights > 0.0)
+        {
+            skyShare = skyShares / weights * carried;
             return taken + sum / weights * carried;
+        }
         // A march on capped short of marchEnd takes nothing past where it stopped where none of
         // the far probes about it counts.
         if (leg == 2u)

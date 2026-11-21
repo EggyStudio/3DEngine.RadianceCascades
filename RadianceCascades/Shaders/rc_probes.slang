@@ -313,6 +313,15 @@ public float3 lastCascadeLight<K : ISky>(ProbeRay ray, float3 way, K sky)
     return ray.ended == RayMet || ray.ended == RayCapped ? ray.light : ray.light + sky.skyAlong(way) * ray.carried;
 }
 
+// The share of the sky in what a ray of the last cascade brings, as lastCascadeLight takes the sky,
+// the share the ray carries where it takes the sky and none where it met a surface or stopped at
+// its cap, its light to the sky's as a sky of 1 along every way would give it with every surface
+// unlit.
+public float lastCascadeSkyShare(ProbeRay ray)
+{
+    return ray.ended == RayMet || ray.ended == RayCapped ? 0.0 : ray.carried;
+}
+
 // Where a cascade's probes stand, which an engine implements over its own rule where it moves a
 // probe that would stand in or against a surface off it, and GridPlaces gives the grid's places.
 // The merge and the gather weigh probes by their places on the grid alone and read their places

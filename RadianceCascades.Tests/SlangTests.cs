@@ -144,6 +144,7 @@ public sealed class SlangTests
     [SlangTheory]
     [InlineData("traceProbeRay(field, float3(0.0), float3(1.0, 0.0, 0.0), 0.0, read[9]).light.x")]
     [InlineData("mergedLight(field, probes, gridPlaces(far), far, read[9], float3(0.0), 4u, uint2(1u), near, sky, none, marched).x")]
+    [InlineData("mergedLight(field, probes, gridPlaces(far), far, read[9], float3(0.0), 4u, uint2(1u), near, sky, none, marched, share).x + share")]
     public void A_Ray_Traced_Or_Merged_Shades_A_Surface_It_Meets_At_One_Place(string light)
     {
         var kernel = $$"""
@@ -166,10 +167,11 @@ public sealed class SlangTests
                     return float3(float(before));
                 }
             };
-            struct OneLight : IFarProbes
+            struct OneLight : IFarSkyProbes
             {
                 float3 lightAt(int3 probe, uint2 texel) { return float3(read[3]); }
                 float reachAt(int3 probe, uint2 texel) { return read[4]; }
+                float skyShareAt(int3 probe, uint2 texel) { return read[10]; }
             };
             [numthreads(1, 1, 1)]
             void test(uint3 id : SV_DispatchThreadID)
@@ -185,6 +187,7 @@ public sealed class SlangTests
                 UniformSky sky = { float3(read[7]) };
                 NoSteps none;
                 bool marched;
+                float share;
                 read[8] = {{light}};
             }
             """;

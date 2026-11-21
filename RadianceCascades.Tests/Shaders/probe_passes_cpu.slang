@@ -18,8 +18,9 @@ RWStructuredBuffer<float> cells;
 // them to, whether the sky varies with the way, the way toward the sun times its irradiance, the
 // albedo of the surfaces it lights and whether a hit takes its light from cellLight. From the float
 // at 96 come the count of the field's cascades, none for the one above, and each one's least corner
-// and cell, four floats each, and from the float at 128 the count of surface points and each
-// point's place, normal and albedo, seven floats each.
+// and cell, four floats each, at 124 where the surface points' shares of the sky begin in
+// skyFloats, and from the float at 128 the count of surface points and each point's place, normal
+// and albedo, seven floats each.
 RWStructuredBuffer<float> setup;
 
 // Each texel's ray as its trace ended, how, where, its carried share and its light, six floats a
@@ -36,6 +37,10 @@ RWStructuredBuffer<float> surfaceFloats;
 
 // The light a surface sends from each cell of the field, as the test's binding shades it ahead.
 RWStructuredBuffer<float> cellLight;
+
+// Each texel's merged share of the sky, one float a texel, the levels one after another, then from
+// the float the setup gives at 124 each surface point's share.
+RWStructuredBuffer<float> skyFloats;
 
 static const int Levels = 16;
 static const int Field = 96;
@@ -158,7 +163,7 @@ struct LevelReach : IReachTexels
     void keepReach(uint index, float reach) { reachFloats[first + index] = reach; }
 };
 
-struct LevelMerged : IMergedLight
+struct LevelMerged : IMergedSkyLight
 {
     uint first;
     void keepMerged(uint index, float3 light)
@@ -168,11 +173,12 @@ struct LevelMerged : IMergedLight
         mergedFloats[i + 1] = light.y;
         mergedFloats[i + 2] = light.z;
     }
+    void keepSkyShare(uint index, float share) { skyFloats[first + index] = share; }
 };
 
-// A level's merged light and reach map as traced, which the level below it and the gather read
-// through TracedMeans.
-struct LevelProbes : IFarProbes
+// A level's merged light, its share of the sky and its reach map as traced, which the level below
+// it and the gather read through TracedSkyMeans.
+struct LevelProbes : IFarSkyProbes
 {
     ProbeCascade cascade;
     uint merged;
@@ -183,10 +189,12 @@ struct LevelProbes : IFarProbes
         return float3(mergedFloats[i], mergedFloats[i + 1], mergedFloats[i + 2]);
     }
     float reachAt(int3 probe, uint2 texel) { return reachFloats[reach + reachTexelIndex(cascade, probe, texel)]; }
+    float skyShareAt(int3 probe, uint2 texel) { return skyFloats[merged + cascadeTexelIndex(cascade, probe, texel)]; }
 };
 
-struct SurfacePoints : ISurfacePoints
+struct SurfacePoints : ISurfaceSkyPoints
 {
+    void keepSkyShare(uint index, float share) { skyFloats[uint(setup[124]) + index] = share; }
     float3 placeAt(uint index) { uint i = uint(Points) + 1u + index * 7u; return float3(setup[i], setup[i + 1], setup[i + 2]); }
     float3 normalAt(uint index) { uint i = uint(Points) + 4u + index * 7u; return float3(setup[i], setup[i + 1], setup[i + 2]); }
     void keepTaken(uint index, float3 taken)
@@ -228,14 +236,15 @@ ProbeCascade levelCascade(int level)
 uint firstOf(int level, int which) { return uint(setup[Levels + level * 16 + which]); }
 
 // A level's probes as the level below or the gather reads them, at read texels a side, the mean
-// of the traced texels each holds, or as traced where read is 0 or not fewer.
-TracedMeans<LevelProbes> meansOf(int level, uint read)
+// of the traced texels each holds, or as traced where read is 0 or not fewer, with their shares of
+// the sky.
+TracedSkyMeans<LevelProbes> meansOf(int level, uint read)
 {
-    TracedMeans<LevelProbes> means;
-    means.traced = probesOf(level);
-    means.texels = levelCascade(level).texels;
-    means.perRead = read > 0u && read < means.texels ? means.texels / read : 1u;
-    return means;
+    TracedSkyMeans<LevelProbes> probes;
+    probes.means.traced = probesOf(level);
+    probes.means.texels = levelCascade(level).texels;
+    probes.means.perRead = read > 0u && read < probes.means.texels ? probes.means.texels / read : 1u;
+    return probes;
 }
 
 TestPlaces placesOf(int level)
@@ -278,9 +287,9 @@ void test(uint3 id : SV_DispatchThreadID)
         // them, as a binding that reads a level above at the side it traced it at does, and
         // otherwise at those it keeps.
         uint read = firstOf(level + 1, 15) > 0u ? firstOf(level + 1, 15) : firstOf(level + 1, 14);
-        TracedMeans<LevelProbes> above = meansOf(level + 1, read);
+        TracedSkyMeans<LevelProbes> above = meansOf(level + 1, read);
         bool marched = mergeTexel(field, rays, placesOf(level), above, placesOf(level + 1), merged, cascade,
-            readCascade(levelCascade(level + 1), above.perRead), setup[8], sky, counted, index);
+            readCascade(levelCascade(level + 1), above.means.perRead), setup[8], sky, counted, index);
         if (index < cascadeTexels(cascade))
         {
             marches[(firstOf(level, 10) + index) * 2u] = marched ? 1.0 : 0.0;
@@ -307,14 +316,14 @@ void test(uint3 id : SV_DispatchThreadID)
             return;
         SurfacePoints surfaces;
         uint read = firstOf(0, 15) > 0u ? firstOf(0, 15) : firstOf(0, 14);
-        TracedMeans<LevelProbes> finest = meansOf(0, read);
+        TracedSkyMeans<LevelProbes> finest = meansOf(0, read);
         NoSteps none;
-        gatherTraced(field, finest, placesOf(0), readCascade(levelCascade(0), finest.perRead), setup[8], sky, surfaces, none, index);
+        gatherTraced(field, finest, placesOf(0), readCascade(levelCascade(0), finest.means.perRead), setup[8], sky, surfaces, none, index);
     }
     else if (index < uint(setup[Points]))
     {
         SurfacePoints surfaces;
-        TracedMeans<LevelProbes> finest = meansOf(0, firstOf(0, 14));
-        gatherAt(field, finest, placesOf(0), readCascade(levelCascade(0), finest.perRead), surfaces, index);
+        TracedSkyMeans<LevelProbes> finest = meansOf(0, firstOf(0, 14));
+        gatherAt(field, finest, placesOf(0), readCascade(levelCascade(0), finest.means.perRead), surfaces, index);
     }
 }
