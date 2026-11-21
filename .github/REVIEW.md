@@ -881,6 +881,17 @@ module's march: its hitLight marches the crossing again, up to 64 half-cell step
 the leaves stop the ray, which a crossing lit by the march where it has stopped half the light would
 spare, at a second place of the shading or a stop deferred a step.
 
+The closed rooms' 5 percent over, held. On the CPU the passes add no light to a closed room on one
+bounce: the open box with a lid, every face sending a light of 1, reads 1.0000 at all 24 points
+through four cascades, which a test holds. Under broad light, a wall, half the floor or the lid
+alone sending it, the points read 0.99 to 1.12 of the light traced against the room's faces on the
+mean, and each texel marched on to the coarsest level's end alone 0.97 to 1.15, single points up to
+a quarter either way in both, the sampling of 16 by 16 texels and no rule of the merge's.
+BevyCSharp's rooms take a bounce at each hit, its probes' faces read there, and its smooth room's
+second bounce read 11.1 percent of its light under its own code and 12.1 under the passes, so the 5
+percent is asked of it split, its views 2, 4 and 7 read under the cheap hit it binds with the
+probes' light at the hit and without it.
+
 Handoff, for a fresh session, in place of those above. Where the work stands: the library holds the
 field's plan, the triangles' layout and the glow lights in C#, and in Slang the probes' octahedron,
 the cell code, resolve and pinch, the hit's color read, the splat, the stamp, the field's distance
@@ -909,18 +920,19 @@ reach map, and the far probes about a hand-off are tested once. The shading at a
 most of its cost, and each binding passes the merge a cheap hit of its own, the sun's reach read at
 the surface and the probes' light half a spacing off it, or the held light of the field's cells
 (`HeldHitLight`, `holdCellLight`) held whole each frame. A crossing passes each step's own share.
-Next in order: the closed rooms read about 5 percent over and the lintel's mixed texels, then the
-engines' further findings as they take the passes, then the split sum at a hit, the screen probes,
-the light on the picture and the contact shadow's march. Left behind each part's Reply: the field's
-normal, the cascades' table, the march held within a cascade, the splat's second plane, the lending
-of thin emitters, the repaint and the clearing of codes. Open: AGENTS.md's documents rows for
-DEVLOG.md and CHEATSHEET.md wait for the owner. Read first: AGENTS.md, this file's head and
-Decisions, the Replies from the field's distance on, the README's binding section, NORM.md's N 4.8
-to 4.11 and N 7.9, `CpuKernel.cs` and the head of `rc_probe_passes.slang`. Every build and test goes
-through N 7.9's lock, restored outside it, built with `--no-restore -p:UseSharedCompilation=false`,
-its output written to a file of which the summary line and the failing lines alone are read, and
-each commit is read by `commitcheck.py . --staged --message=<file>` first. At a binding's request,
-in the commit carrying this line: `build/fetch- slang.sh` reads an archive's sha256 with `shasum -a
-256`, on macOS, Linux and Git's bash on Windows alike, and Python's hashlib where a system has none,
-in place of `sha256sum`, which N 6.6's check refuses. This repository's own tests do not run that
-check on its scripts; the binding's suite found it.
+The closed rooms' 5 percent over waits on BevyCSharp's views read with the bounce at a hit and
+without it. Next in order: the lintel's mixed texels, then the engines' further findings as they
+take the passes, then the split sum at a hit, the screen probes, the light on the picture and the
+contact shadow's march. Left behind each part's Reply: the field's normal, the cascades' table, the
+march held within a cascade, the splat's second plane, the lending of thin emitters, the repaint and
+the clearing of codes. Open: AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md wait for the
+owner. Read first: AGENTS.md, this file's head and Decisions, the Replies from the field's distance
+on, the README's binding section, NORM.md's N 4.8 to 4.11 and N 7.9, `CpuKernel.cs` and the head of
+`rc_probe_passes.slang`. Every build and test goes through N 7.9's lock, restored outside it, built
+with `--no-restore -p:UseSharedCompilation=false`, its output written to a file of which the summary
+line and the failing lines alone are read, and each commit is read by `commitcheck.py . --staged
+--message=<file>` first. At a binding's request, in the commit carrying this line: `build/fetch-
+slang.sh` reads an archive's sha256 with `shasum -a 256`, on macOS, Linux and Git's bash on Windows
+alike, and Python's hashlib where a system has none, in place of `sha256sum`, which N 6.6's check
+refuses. This repository's own tests do not run that check on its scripts; the binding's suite found
+it.
