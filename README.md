@@ -249,14 +249,18 @@ The conventions the module stands on:
   the sunlit wall reads 0.6 percent under the light it takes shading its hits and the sunlit sheets
   0.04 percent over. A share of the cells a frame, `share` above 1, lags a change in the scene by as
   many frames, so a binding whose lighting is to show a change in the next frame holds the cells
-  whole. A cell keeping a sheet thinner than a cell holds a light a side and the read takes the side
-  the ray meets, since one light a cell read a sheet lit on one side by its lit side from the other,
-  the foot of a thin room's wall lit by a lamp outside 2.11 times its light on one engine, and on
-  the CPU a probe under a sheet lit from above alone 0.27710 where it takes nothing; the holding
-  pass shades a sheet's cells twice, 6,272 of a lone sheet's 9,860 held cells and 2,144 of a box's
-  27,856 under a sheet for a lid. A cell holds its own light apart from the light of the engine's
-  probes it reflects (`IHeldShading`), and the read weighs the probes' light by the share the
-  engine's own hit gives it (`IHeldLight.probeShare`), since a held light taking it whole kept a
+  whole. A cell holds a light a side and the read takes the side the ray meets, by the cell's
+  normal, a kept sheet's plane's or the field's at its middle, the far side a sheet's or the far
+  face of a solid thinner than a cell found within 1.2 cells of the middle, and side 0's light again
+  where none lies there, since one light a cell read a sheet lit on one side by its lit side from
+  the other, the foot of a thin room's wall lit by a lamp outside 2.11 times its light on one
+  engine, and on the CPU a probe under a sheet lit from above alone 0.27710 where it takes nothing,
+  and one before a solid wall 0.1 thick lit from beyond it 0.27366; the holding pass shades twice a
+  sheet's cells, 6,272 of a lone sheet's 9,860 held cells and 2,144 of a box's 27,856 under a sheet
+  for a lid, and the cells about a thin solid, 2,944 about that wall, and reads the field up to 8
+  times more for each other held cell. A cell holds its own light apart from the light of the
+  engine's probes it reflects (`IHeldShading`), and the read weighs the probes' light by the share
+  the engine's own hit gives it (`IHeldLight.probeShare`), since a held light taking it whole kept a
   panel's light that went out at 5.67 times its light two frames on where the engine's gather lets
   it go within two, and on the CPU read a sunlit wall whose hits take a quarter of their probes'
   light 29 percent over and with the share 0.6 percent under. A held light gives up the gloss toward

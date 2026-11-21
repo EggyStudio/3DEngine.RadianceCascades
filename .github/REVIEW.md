@@ -934,6 +934,16 @@ rays end in open space and agree with their neighbors; its quarters handed on wi
 share and the wall past the near rays' reach 22 percent under. A test on how the merged ray ended
 would take three dispatches a cascade, a second mechanism for one case, and is not built.
 
+The held light's sides for thin solids, from 3DEngine's binding at 389f951, whose thin room's wall
+is a box 0.1 thick in cells of 0.15, kept as a solid and not a sheet, so its cell held the face its
+middle lies on, the lamp's. A solid's cell holds side 1 too, the far face found within 1.2 cells of
+its middle against the field's normal, shaded where a march from beyond it stops, or side 0's light
+again where none lies there, and the read takes the side by the field's normal at the cell's middle.
+On the CPU a wall 0.1 thick lit from beyond it reads a probe before its dark face 0.00000 against
+0.00000 shaded and before its lit face 0.27366 against 0.27616, where the one side read the dark
+face 0.27366, run failing first; 2,944 cells about it hold their sides apart, and the holding pass
+reads the field up to 8 times more for each other held cell. Every other held figure stands.
+
 Handoff, for a fresh session, in place of those above. Where the work stands: the library holds the
 field's plan, the triangles' layout and the glow lights in C#, and in Slang the probes' octahedron,
 the cell code, resolve and pinch, the hit's color read, the splat, the stamp, the field's distance

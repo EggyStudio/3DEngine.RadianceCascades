@@ -211,6 +211,33 @@ public sealed partial class ProbeMergeTests
     }
 
     [CpuKernelFact]
+    public void A_Solid_Wall_Thinner_Than_A_Cell_Lit_On_One_Side_Reads_Each_Side_Through_The_Held_Light_As_Its_Own_Shading_Does()
+    {
+        // A wall 0.1 thick from x 3.05 to 3.15, 8 units a side, within one cell of the field and
+        // kept as a solid, lit by a sun along -x from beyond its +x face alone under a black sky,
+        // read by a probe a unit before its dark face facing it and one a unit before its lit face
+        // facing it, their rays reaching half a unit and the far probes outside the field, so every
+        // ray toward the wall marches on to it in the merge.
+        var cells = Field(Cuboid(new(3.05f, 0, -4), new(3.15f, 8, 4), 1));
+        var sunlit = new Setting { SkyLight = 0, Sun = new Vector3(3, 0, 0) };
+        Level Beyond = new(new(100, 100, 100), FarSpacing, 2, 2, 2, FarTexels, FarEnd);
+        Chained Read(Vector3 at, Vector3 normal, bool held) =>
+            Passes(cells, [new(at, 1, 1, 1, 1, NearTexels, 0.5f), Beyond], at, sunlit with { Normal = normal, Held = held });
+        var (dark, lit) = (new Vector3(2.05f, 4, 0), new Vector3(4.15f, 4, 0));
+        var (shadedDark, heldDark) = (Read(dark, Vector3.UnitX, false), Read(dark, Vector3.UnitX, true));
+        var (shadedLit, heldLit) = (Read(lit, -Vector3.UnitX, false), Read(lit, -Vector3.UnitX, true));
+        var said = $"held against shaded, the probe before the wall's dark face {heldDark.Reflected:0.00000} against {shadedDark.Reflected:0.00000} and "
+            + $"the one before its lit face {heldLit.Reflected:0.00000} against {shadedLit.Reflected:0.00000}, {heldLit.HeldTwice} cells holding "
+            + "their sides apart";
+        output.WriteLine(said);
+        // 0.00000 against 0.00000 before the dark face and 0.27366 against 0.27616 before the lit
+        // one, 2,944 cells holding their sides apart, where a solid's cell holding one side read
+        // the dark face 0.27366, the lit face's light.
+        Assert.True(Math.Abs(heldDark.Reflected - shadedDark.Reflected) <= 0.02 * shadedLit.Reflected
+            && Math.Abs(heldLit.Reflected - shadedLit.Reflected) <= 0.02 * shadedLit.Reflected && shadedLit.Reflected > 0.05, said);
+    }
+
+    [CpuKernelFact]
     public void A_Merge_Reading_The_Held_Light_Weighs_The_Probes_Light_A_Hit_Reflects_By_The_Share_The_Binding_Gives()
     {
         // The sunlit wall through the march-on, its every surface reflecting a light of 0.2 of the

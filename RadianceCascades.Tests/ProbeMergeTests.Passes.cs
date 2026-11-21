@@ -34,6 +34,9 @@ public sealed partial class ProbeMergeTests
         public float TraceSteps { get; init; }
         public int TraceMost { get; init; }
         public float AllTraceSteps { get; init; }
+        // The field's cells whose two held sides hold different light, those the holding pass
+        // shaded twice where their sides are lit differently.
+        public int HeldTwice { get; init; }
 
         public override string ToString() =>
             $"reflects {Reflected:0.00000}, {Marched} of the finest level's texels marching on themselves in {Steps} steps in all and {Most} at most, "
@@ -189,6 +192,7 @@ public sealed partial class ProbeMergeTests
             TraceSteps = finest.Average(),
             TraceMost = (int)finest.Max(),
             AllTraceSteps = traceSteps.Sum(),
+            HeldTwice = Enumerable.Range(0, fieldCells).Count(i => held[i * 12] != held[i * 12 + 6]),
         };
     }
 
