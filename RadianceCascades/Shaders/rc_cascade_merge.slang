@@ -300,15 +300,17 @@ public float3 mergedLight<F : IProbeField, P : IFarProbes, Q : IProbePlaces, K :
     ProbeCascade far, float marchEnd, float3 origin, uint texels, uint2 texel, ProbeRay near, K sky, inout S steps, out bool marched)
 {
     NoSkyShares<P> lights = { probes };
+    WholeShare<K> whole = { sky };
     float skyShare;
-    return mergedLight(field, lights, places, far, marchEnd, origin, texels, texel, near, sky, steps, marched, skyShare);
+    return mergedLight(field, lights, places, far, marchEnd, origin, texels, texel, near, whole, steps, marched, skyShare);
 }
 
 // mergedLight with in skyShare the share of the sky in the light, what it would be under a sky of
 // 1 along every way with every surface unlit, tracked beside the light: the share the ray carries
-// where it takes the sky (lastCascadeSkyShare), and at a hand-off the far probes' shares
-// (IFarSkyProbes) weighed as their light is, times the share carried there.
-public float3 mergedLight<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces, K : ISky, S : IMarchSteps>(F field, P probes, Q places,
+// where it takes the sky, times the share the sky lends along the way (lastCascadeSkyShare), and at
+// a hand-off the far probes' shares (IFarSkyProbes) weighed as their light is, times the share
+// carried there.
+public float3 mergedLight<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces, K : ISkyShare, S : IMarchSteps>(F field, P probes, Q places,
     ProbeCascade far, float marchEnd, float3 origin, uint texels, uint2 texel, ProbeRay near, K sky, inout S steps, out bool marched,
     out float skyShare)
 {
@@ -317,7 +319,7 @@ public float3 mergedLight<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces, 
     float3 way = texelWay(texels, texel);
     if (near.ended != RayPast && near.ended != RayCapped)
     {
-        skyShare = lastCascadeSkyShare(near);
+        skyShare = lastCascadeSkyShare(near, way, sky);
         return lastCascadeLight(near, way, sky);
     }
     // The light each march took on its way is added as it goes, each weighed by the share carried
@@ -340,7 +342,7 @@ public float3 mergedLight<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces, 
         ProbeRay ray = marchToOpenSpace(field, origin, way, from, end, leg == 0u ? far.spacing : 0.0, far.stepCap, steps);
         if (ray.ended == RayMet || ray.ended == RayLeft || (ray.ended == RayPast && ray.t >= marchEnd))
         {
-            skyShare = lastCascadeSkyShare(ray) * carried;
+            skyShare = lastCascadeSkyShare(ray, way, sky) * carried;
             return taken + lastCascadeLight(ray, way, sky) * carried;
         }
         taken += ray.light * carried;

@@ -295,12 +295,35 @@ public interface ISky
     float3 skyAlong(float3 way);
 }
 
-// A sky of one light along every way.
-public struct UniformSky : ISky
+// The sky as a merge that keeps the sky's share reads it, its light along a way and the share of
+// a sky of 1 a ray leaving the field along it takes, which a binding that lends a cascade no sky,
+// as one does before its field holds every mesh in reach, gives as 0 beside its light.
+public interface ISkyShare : ISky
+{
+    // The share of a sky of 1 along every way that a ray leaving the field along way takes, 1 for
+    // a sky lent whole.
+    float shareAlong(float3 way);
+}
+
+// A sky read through ISky alone, lent whole, its share 1 along every way, which the passes that
+// keep no share read it through.
+public struct WholeShare<K : ISky> : ISkyShare
+{
+    public K sky;
+
+    public float3 skyAlong(float3 way) { return sky.skyAlong(way); }
+
+    public float shareAlong(float3 way) { return 1.0; }
+}
+
+// A sky of one light along every way, lent whole.
+public struct UniformSky : ISkyShare
 {
     public float3 light;
 
     public float3 skyAlong(float3 way) { return light; }
+
+    public float shareAlong(float3 way) { return 1.0; }
 }
 
 // The light a ray of the last cascade along way brings, the light it took on its way, and past its
@@ -313,13 +336,13 @@ public float3 lastCascadeLight<K : ISky>(ProbeRay ray, float3 way, K sky)
     return ray.ended == RayMet || ray.ended == RayCapped ? ray.light : ray.light + sky.skyAlong(way) * ray.carried;
 }
 
-// The share of the sky in what a ray of the last cascade brings, as lastCascadeLight takes the sky,
-// the share the ray carries where it takes the sky and none where it met a surface or stopped at
-// its cap, its light to the sky's as a sky of 1 along every way would give it with every surface
-// unlit.
-public float lastCascadeSkyShare(ProbeRay ray)
+// The share of the sky in what a ray of the last cascade along way brings, as lastCascadeLight
+// takes the sky, the share the ray carries where it takes the sky times the share the sky lends
+// along way (ISkyShare), and none where it met a surface or stopped at its cap, its light to the
+// sky's as a sky of 1 along every way would give it with every surface unlit.
+public float lastCascadeSkyShare<K : ISkyShare>(ProbeRay ray, float3 way, K sky)
 {
-    return ray.ended == RayMet || ray.ended == RayCapped ? 0.0 : ray.carried;
+    return ray.ended == RayMet || ray.ended == RayCapped ? 0.0 : ray.carried * sky.shareAlong(way);
 }
 
 // Where a cascade's probes stand, which an engine implements over its own rule where it moves a

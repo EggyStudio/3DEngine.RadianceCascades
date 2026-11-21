@@ -823,7 +823,12 @@ form over `IFarSkyProbes` with `IMergedSkyLight` or `ISurfaceSkyPoints`, and the
 a binding's shading once in either. The open box's floor takes a share of 0.24696 against the
 0.25111 of the sky its black walls leave open, 1.7 percent under, the same under the uniform and the
 varying sky, and every light figure the suite prints is that of e660713. A binding that dims its sky
-for a cascade dims the share it keeps by its own rule, which the README states.
+for a cascade dims the share it keeps by its own rule, which the README states. The share takes its
+weight from the sky beside its light (`ISkyShare.shareAlong`), since 3DEngine lends a finer
+cascade's leaving rays no sky until its field holds every mesh in reach and cannot dim a share the
+merge has mixed; a sky read through `ISky` alone lends its share whole (`WholeShare`). The open
+box's floor with its finer cascade's sky gated off takes a share of 0.06367, its light over the
+sky's to 1e-5.
 
 Handoff, for a fresh session, in place of those above. Where the work stands: the library holds the
 field's plan, the triangles' layout and the glow lights in C#, and in Slang the probes' octahedron,

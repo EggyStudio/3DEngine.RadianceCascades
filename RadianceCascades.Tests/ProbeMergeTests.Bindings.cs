@@ -76,6 +76,25 @@ public sealed partial class ProbeMergeTests
     }
 
     [CpuKernelFact]
+    public void A_Floor_In_The_Open_Box_Whose_Finer_Cascade_Lends_No_Sky_Takes_No_Share_It_Takes_No_Light_From()
+    {
+        // The near probe's merge lends a ray that leaves the field no sky, light or share alike
+        // (ISkyShare), as a binding gates a finer cascade's sky before its field holds every mesh
+        // in reach, and the far cascade's settle lends it whole.
+        var whole = Passes(Field(OpenBox()), Pair(Floor), Floor);
+        var gated = Passes(Field(OpenBox()), Pair(Floor), Floor, new Setting { GateFiner = true });
+        var said = $"the open box's floor takes {whole.SkyShare:0.00000} of the sky and reflects {whole.Reflected:0.00000} with the sky lent whole, "
+            + $"and {gated.SkyShare:0.00000} and {gated.Reflected:0.00000} with the near probe's sky gated off";
+        output.WriteLine(said);
+        // 0.24696 and 0.24696 whole, and 0.06367 and 0.06367 gated, the floor's rays that reach
+        // the sky along a march of their own past their end taking none, those handed to the far
+        // probes theirs. Under the uniform sky with every wall black the share is the light over
+        // the sky's either way, so the gate dims the share as it dims the light.
+        Assert.True(gated.SkyShare < 0.5f * whole.SkyShare, said);
+        Assert.True(Math.Abs(gated.SkyShare - gated.Reflected / (Albedo * Sky)) <= 1e-5f && Math.Abs(whole.SkyShare - whole.Reflected / (Albedo * Sky)) <= 1e-5f, said);
+    }
+
+    [CpuKernelFact]
     public void A_Floor_In_The_Open_Box_Under_A_Sky_That_Varies_With_The_Way_Reflects_Its_Integral_Over_The_Opening()
     {
         var varying = Passes(Field(OpenBox()), Pair(Floor), Floor, new Setting { VaryingSky = true });

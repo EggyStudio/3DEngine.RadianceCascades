@@ -96,6 +96,7 @@ library's functions, and the engine keeps its bindings, its threads and its atom
 | `IFarSkyProbes` | Reads, beyond `IFarProbes`, the share of the sky in a far probe's texel's light, what it would be under a sky of 1 with every surface unlit, which `TracedSkyMeans` reads at fewer texels than traced | `mergedLight`, `farTexelsLight`, `mergeTexel`, `gatherAt`, `gatherTraced` |
 | `IProbePlaces` | Reads where a cascade's probe stands, by the engine's own rule where it moves a probe off a surface, which `GridPlaces` gives as the grid's place | `traceTexel`, `reachTexel`, `mergedLight`, `mergeTexel`, `gatherAt`, `gatherTraced` |
 | `ISky` | Reads the sky's light along a way, for a ray that leaves the field, which `UniformSky` gives as one light | `lastCascadeLight`, `mergedLight`, `settleTexel`, `mergeTexel`, `gatherTraced` |
+| `ISkyShare` | Reads, beyond `ISky`, the share of a sky of 1 a ray leaving the field along a way takes, 1 for a sky lent whole, which `WholeShare` and `UniformSky` give | `lastCascadeSkyShare`, `mergedLight`, `settleTexel`, `mergeTexel`, `gatherTraced` |
 | `IProbeLight` | Reads a probe's merged light at each of its texels | `lightTaken` |
 | `IProbeRays` | Keeps the ray each texel of a cascade traced, how it ended, where, the share of light it carries and the light it met, and reads it back | `traceTexel`, `settleTexel`, `mergeTexel` |
 | `IReachTexels` | Keeps how far each ray of a cascade's reach maps went, `ReachOpen` where it met no surface, which `IFarProbes` reads back | `reachTexel` |
@@ -217,9 +218,11 @@ The conventions the module stands on:
   their light is, times the share carried. Each pass and `mergedLight` has a form over
   `IFarSkyProbes` and `IMergedSkyLight` or `ISurfaceSkyPoints` that keeps the share, and its form
   over `IFarProbes` reads the probes through `NoSkyShares`, whose shares are none, so the march
-  holds a binding's shading once in either. The sky's share counts every ray that leaves the field
-  whole, so a binding that dims its sky for a cascade, as one does before its field holds every
-  mesh in reach, dims the share it keeps by its own rule.
+  holds a binding's shading once in either. A ray that leaves the field takes the share the sky
+  lends along its way (`ISkyShare.shareAlong`), so a binding that lends a cascade no sky, as one
+  does before its field holds every mesh in reach, gives its share 0 there beside its light, and
+  the share form of each pass takes an `ISkyShare`. Its form over `ISky` lends the sky whole
+  through `WholeShare`.
 - A surface point takes from `gatherAt` the light the finest cascade's probes about it bring at
   their own places, weighed as the merge weighs the probes about a ray's end, and nothing corrects
   it for a probe that stands off the surface. A probe a spacing above a floor sees what that height

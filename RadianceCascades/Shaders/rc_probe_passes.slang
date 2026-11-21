@@ -184,19 +184,22 @@ public void reachTexel<F : IFieldVolume, R : IReachTexels, Q : IProbePlaces>(F f
 public void settleTexel<R : IProbeRays, M : IMergedLight, K : ISky>(R rays, M merged, ProbeCascade cascade, K sky, uint index)
 {
     NoSkyMerged<M> kept = { merged };
-    settleTexel(rays, kept, cascade, sky, index);
+    WholeShare<K> whole = { sky };
+    settleTexel(rays, kept, cascade, whole, index);
 }
 
-// settleTexel keeping beside the light the share of the sky in it (lastCascadeSkyShare).
-public void settleTexel<R : IProbeRays, M : IMergedSkyLight, K : ISky>(R rays, M merged, ProbeCascade cascade, K sky, uint index)
+// settleTexel keeping beside the light the share of the sky in it, as the sky lends it
+// (lastCascadeSkyShare).
+public void settleTexel<R : IProbeRays, M : IMergedSkyLight, K : ISkyShare>(R rays, M merged, ProbeCascade cascade, K sky, uint index)
 {
     if (index >= cascadeTexels(cascade))
         return;
     uint texels = cascade.texels * cascade.texels;
     uint2 texel = uint2((index % texels) % cascade.texels, (index % texels) / cascade.texels);
     ProbeRay ray = rays.rayAt(index);
-    merged.keepMerged(index, lastCascadeLight(ray, texelWay(cascade.texels, texel), sky));
-    merged.keepSkyShare(index, lastCascadeSkyShare(ray));
+    float3 way = texelWay(cascade.texels, texel);
+    merged.keepMerged(index, lastCascadeLight(ray, way, sky));
+    merged.keepSkyShare(index, lastCascadeSkyShare(ray, way, sky));
 }
 
 // Merges the texel at index of a level finer than the coarsest with the merged light of the level
@@ -214,12 +217,13 @@ public bool mergeTexel<F : IProbeField, R : IProbeRays, Q : IProbePlaces, P : IF
 {
     NoSkyShares<P> lights = { above };
     NoSkyMerged<M> kept = { merged };
-    return mergeTexel(field, rays, places, lights, abovePlaces, kept, cascade, aboveCascade, marchEnd, sky, steps, index);
+    WholeShare<K> whole = { sky };
+    return mergeTexel(field, rays, places, lights, abovePlaces, kept, cascade, aboveCascade, marchEnd, whole, steps, index);
 }
 
 // mergeTexel keeping beside the light the share of the sky in it, above's shares read through
 // IFarSkyProbes (mergedLight).
-public bool mergeTexel<F : IProbeField, R : IProbeRays, Q : IProbePlaces, P : IFarSkyProbes, U : IProbePlaces, M : IMergedSkyLight, K : ISky,
+public bool mergeTexel<F : IProbeField, R : IProbeRays, Q : IProbePlaces, P : IFarSkyProbes, U : IProbePlaces, M : IMergedSkyLight, K : ISkyShare,
     S : IMarchSteps>(F field, R rays, Q places, P above, U abovePlaces, M merged, ProbeCascade cascade, ProbeCascade aboveCascade,
     float marchEnd, K sky, inout S steps, uint index)
 {
@@ -331,12 +335,13 @@ public void gatherTraced<F : IProbeField, P : IFarProbes, Q : IProbePlaces, K : 
 {
     NoSkyShares<P> lights = { probes };
     NoSkyPoints<A> points = { surfaces };
-    gatherTraced(field, lights, places, cascade, marchEnd, sky, points, steps, index);
+    WholeShare<K> whole = { sky };
+    gatherTraced(field, lights, places, cascade, marchEnd, whole, points, steps, index);
 }
 
 // gatherTraced keeping beside the point's light the share of the sky in it, each ray's share
 // (mergedLight) weighed as its light is, over the weights.
-public void gatherTraced<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces, K : ISky, A : ISurfaceSkyPoints, S : IMarchSteps>(F field,
+public void gatherTraced<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces, K : ISkyShare, A : ISurfaceSkyPoints, S : IMarchSteps>(F field,
     P probes, Q places, ProbeCascade cascade, float marchEnd, K sky, A surfaces, inout S steps, uint index)
 {
     float3 p = surfaces.placeAt(index);

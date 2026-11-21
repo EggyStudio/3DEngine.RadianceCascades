@@ -50,7 +50,9 @@ public sealed partial class ProbeMergeTests
     // for none. FieldCascades gives the field's cascades, each its least corner and its cell, the
     // finest first, the cells built for each one after another, CellLight the light a hit takes
     // from each of their cells, and Points the surface points read and their normals, in place of
-    // the one at place, and Traced gathers each point along its own rays (gatherTraced).
+    // the one at place, Traced gathers each point along its own rays (gatherTraced), and
+    // GateFiner lends the finer levels' merges no sky, as a binding does before its field holds
+    // every mesh in reach.
     private sealed record Setting
     {
         public Vector4[]? FieldCascades { get; init; }
@@ -64,6 +66,7 @@ public sealed partial class ProbeMergeTests
         public bool Reference { get; init; }
         public int[]? Caps { get; init; }
         public bool Traced { get; init; }
+        public bool GateFiner { get; init; }
     }
 
     private const float WallAlbedo = 0.6f;
@@ -112,6 +115,7 @@ public sealed partial class ProbeMergeTests
         // Each texel's share of the sky, then each point's.
         var skyShares = new float[texels + points.Length];
         setup[124] = texels;
+        setup[125] = setting.GateFiner ? 1 : 0;
         var cellLight = setting.CellLight ?? [0];
         void Pass(int pass, int level, int threads)
         {

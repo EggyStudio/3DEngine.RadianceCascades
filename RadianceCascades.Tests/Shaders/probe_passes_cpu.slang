@@ -19,8 +19,8 @@ RWStructuredBuffer<float> cells;
 // albedo of the surfaces it lights and whether a hit takes its light from cellLight. From the float
 // at 96 come the count of the field's cascades, none for the one above, and each one's least corner
 // and cell, four floats each, at 124 where the surface points' shares of the sky begin in
-// skyFloats, and from the float at 128 the count of surface points and each point's place, normal
-// and albedo, seven floats each.
+// skyFloats, at 125 whether the finer levels' merges lend no sky, and from the float at 128 the
+// count of surface points and each point's place, normal and albedo, seven floats each.
 RWStructuredBuffer<float> setup;
 
 // Each texel's ray as its trace ended, how, where, its carried share and its light, six floats a
@@ -106,13 +106,17 @@ struct ProbeCells : IProbeField
 };
 
 // The sky the setup asks for, its light along every way, or brightest toward the top and toward x.
-struct TestSky : ISky
+struct TestSky : ISkyShare
 {
+    // 1 where the sky is lent whole, 0 where the setup gates it off for a level, light and share
+    // alike.
+    float on;
     float3 skyAlong(float3 way)
     {
         float up = max(way.y, 0.0);
-        return float3(setup[82] < 0.5 ? setup[5] : setup[5] * (0.6 + 0.4 * way.x + 1.5 * up * up));
+        return on * float3(setup[82] < 0.5 ? setup[5] : setup[5] * (0.6 + 0.4 * way.x + 1.5 * up * up));
     }
+    float shareAlong(float3 way) { return on; }
 };
 
 // The test's own rule for where a probe stands, at its grid place, or where the setup asks for it
@@ -267,6 +271,10 @@ void test(uint3 id : SV_DispatchThreadID)
     ProbeCells field;
     TestSky sky;
     uint pass = uint(setup[6]);
+    // Where the setup sets 125, a finer level's merge lends no sky to a ray that leaves the
+    // field, as a binding gates its sky before its field holds every mesh in reach, and the
+    // coarsest level's settle lends it whole.
+    sky.on = pass == 3u && setup[125] > 0.5 ? 0.0 : 1.0;
     int level = int(setup[7]);
     ProbeCascade cascade = levelCascade(level);
     LevelRays rays = { firstOf(level, 10) };
