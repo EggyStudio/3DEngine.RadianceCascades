@@ -89,7 +89,7 @@ library's functions, and the engine keeps its bindings, its threads and its atom
 | `IResolvedCells` | Reads a cascade's resolved distances about a cell | `pinched` |
 | `IStampShapes` | Reads the shapes of a brick's run, each as `FieldShape.WriteStamp` writes it | `stampCell` |
 | `IFieldCells` | Reads a cascade's cells' paint, faces and distances | `paintFacing`, `paintAt` |
-| `IFieldVolume` | Reads the finest cascade holding a point, a cascade's corner and cell, its field between cells and a cell as it is | `fieldDistanceIn`, `fieldDistanceSheetIn`, `fieldNormalIn`, `traceField`, `traceFieldSheets`, `reachAlong`, `reachTexel` |
+| `IFieldVolume` | Reads the finest cascade holding a point, a cascade's corner and cell, its field between cells and a cell as it is | `seamSheet`, `fieldDistanceIn`, `fieldDistanceSheetIn`, `fieldNormalIn`, `traceField`, `traceFieldSheets`, `reachAlong`, `reachTexel` |
 | `IMarchSteps` | Takes each step a march makes, which `NoSteps` passes over | `traceField`, `traceFieldSheets`, `traceProbeRay`, `marchToOpenSpace`, `mergedLight`, `mergeTexel` |
 | `IProbeField` | Reads, beyond `IFieldVolume`, the light a surface a ray meets or crosses sends back along the ray as the engine shades it, from the hit's place, the ray's way, the cascade and the cell, and the share of light that passes a unit of a surface's depth | `traceProbeRay`, `marchToOpenSpace`, `mergedLight`, `traceTexel`, `mergeTexel`, `gatherAt` |
 | `IFarProbes` | Reads a far probe's light at a texel and how far its ray toward each way of its reach map went, the merged light and reach maps of the level above a merge's or of the finest level a gather's | `mergedLight`, `farTexelsLight`, `farProbeSees`, `mergeTexel`, `gatherAt` |
@@ -149,16 +149,21 @@ The conventions the module stands on:
   band is 4 cells, a unit at a first cell of a quarter, so an edge farther than that past a hand-off
   is still smeared. In a box open to the sky, a middle cascade of probes a unit apart reaching 4
   hands the floor's rays on within 2 of the rim and reads the floor 12.4 percent under its share of
-  the sky and lets 6.2 percent of that light through a lid thinner than a cell, and reaching 2 it
-  reads 1.5 percent over and the lid dark. The lower bound keeps a cascade's reach map covering the
-  cell about any point handed to it. The rules lessen the smear and do not end it, in any chain, and
-  the tests hold the two boxes, the lids, the wall and a room under a lintel alone. A hand-off
-  within a far spacing of an opening's edge reads the room behind it about 1.4 times the light
-  traced finely against its surfaces at its deep end. In a room open to the sky under a lintel, at
-  8, 8, 16 and 16 texels a side, the probes 6.5 and 7.5 units in from the opening read their faces
-  toward it 1.47 and 1.41 times the trace on the mean, and doubling the texels every cascade up to
-  128 leaves 1.33 and 1.28, so the limit is the hand-off's and not the texels'. The tests hold these
-  figures as a bound a later rule is to better.
+  the sky, and reaching 2 it reads 1.5 percent over. The lower bound keeps a cascade's reach map
+  covering the cell about any point handed to it. The rules lessen the smear and do not end it, in
+  any chain, and the tests hold the two boxes, the lids, the wall and a room under a lintel alone. A
+  hand-off within a far spacing of an opening's edge reads the room behind it about 1.4 times the
+  light traced finely against its surfaces at its deep end. In a room open to the sky under a
+  lintel, at 8, 8, 16 and 16 texels a side, the probes 6.5 and 7.5 units in from the opening read
+  their faces toward it 1.47 and 1.41 times the trace on the mean, and doubling the texels every
+  cascade up to 128 leaves 1.33 and 1.28, so the limit is the hand-off's and not the texels'. The
+  tests hold these figures as a bound a later rule is to better.
+- A field's build runs `seamSheet` over its resolved cells, as it runs the pinch, and keeps the
+  plane it gives in the cell, whose distance stays its own. A sheet thinner than a cell resting on a
+  solid's top passes over the cells in front of the solid's face, which keep the solid's code, and
+  without the plane a neighboring cell lends them a march slips between their middles past the
+  sheet: a lid laid on a box's walls let 0.81 percent of an open box's light through in three
+  cascades and 0.70 in two, and none with it.
 - A surface point takes from `gatherAt` the light the finest cascade's probes about it bring at
   their own places, weighed as the merge weighs the probes about a ray's end, and nothing corrects
   it for a probe that stands off the surface. A probe a spacing above a floor sees what that height

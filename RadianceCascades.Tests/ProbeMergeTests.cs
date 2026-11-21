@@ -104,15 +104,25 @@ public sealed partial class ProbeMergeTests(ITestOutputHelper output)
     private const float WallDepth = 0.5f;
 
     // The cells the triangles resolve to, five floats each.
-    private static float[] Field(IEnumerable<Triangle> triangles)
+    private static float[] Field(IEnumerable<Triangle> triangles) => FieldCascade(triangles, Corner, Cell);
+
+    // The cells of one cascade of the triangles' field, its least corner and its cell given, each
+    // cell in front of a solid's face taking the plane of a sheet passing over it (seamSheet) once
+    // every cell is built.
+    private static float[] FieldCascade(IEnumerable<Triangle> triangles, Vector3 corner, float cell)
     {
         var all = triangles.ToList();
         var floats = new List<float> { all.Count };
         foreach (var t in all)
             floats.AddRange([t.A.X, t.A.Y, t.A.Z, t.B.X, t.B.Y, t.B.Z, t.C.X, t.C.Y, t.C.Z, t.Instance, t.DoubleSided ? 1 : 0, t.Through]);
-        var cells = new float[5 * Size * Size * Size];
-        float[] setup = [Corner.X, Corner.Y, Corner.Z, Cell, Size];
-        CpuKernel.Run("probe_field_cpu.slang", (Size / 4, Size / 4, Size / 4), setup, floats.ToArray(), cells);
+        var (cells, seams) = (new float[5 * Size * Size * Size], new float[3 * Size * Size * Size]);
+        float[] setup = [corner.X, corner.Y, corner.Z, cell, Size, 0];
+        CpuKernel.Run("probe_field_cpu.slang", (Size / 4, Size / 4, Size / 4), setup, floats.ToArray(), cells, seams);
+        setup[5] = 1;
+        CpuKernel.Run("probe_field_cpu.slang", (Size / 4, Size / 4, Size / 4), setup, floats.ToArray(), cells, seams);
+        for (int i = 0; i < Size * Size * Size; i++)
+            if (seams[i * 3] != 0 || seams[i * 3 + 1] != 0 || seams[i * 3 + 2] != 0)
+                (cells[i * 5 + 1], cells[i * 5 + 2], cells[i * 5 + 3]) = (seams[i * 3], seams[i * 3 + 1], seams[i * 3 + 2]);
         return cells;
     }
 
@@ -183,10 +193,10 @@ public sealed partial class ProbeMergeTests(ITestOutputHelper output)
         var sheeted = Gather(Field(OpenBox().Concat(Sheet(8, 4 + Wall, 6))), Floor);
         var said = $"the sheeted box's floor {sheeted}, the open box's reflecting {Open.Value.Reflected:0.00000}";
         output.WriteLine(said);
-        // 0.00177, 0.70 percent of the open box's, the light a few far probes' rays bring past the
-        // sheet.
+        // 0.00000, no ray passing the sheet where it rests on the walls' tops, which the field's
+        // seam closes (seamSheet).
         Assert.True(sheeted.Reflected < 0.01f * Open.Value.Reflected, said);
-        // By trilinear weights alone 0.05975, 24 percent of the open box's.
+        // By trilinear weights alone 0.05798, 23 percent of the open box's.
         Assert.True(sheeted.Trilinear > 0.2f * Open.Value.Reflected, said);
         // 0 of the 256 texels marched on themselves.
         Assert.True(sheeted.Marched <= 4 && sheeted.Most <= 16, said);

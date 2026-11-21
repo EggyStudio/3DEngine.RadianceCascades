@@ -50,17 +50,12 @@ public sealed partial class ProbeMergeTests
     private static (float[] Cells, float[] Light) LintelScene()
     {
         var triangles = LintelRoom.SelectMany((box, i) => Cuboid(box.Low, box.High, i + 1)).ToList();
-        var floats = new List<float> { triangles.Count };
-        foreach (var t in triangles)
-            floats.AddRange([t.A.X, t.A.Y, t.A.Z, t.B.X, t.B.Y, t.B.Z, t.C.X, t.C.Y, t.C.Z, t.Instance, 0, 0]);
         const int each = Size * Size * Size;
         var cells = new float[5 * each * LintelField.Length];
         var light = new float[each * LintelField.Length];
         for (int c = 0; c < LintelField.Length; c++)
         {
-            var one = new float[5 * each];
-            float[] setup = [LintelField[c].X, LintelField[c].Y, LintelField[c].Z, LintelField[c].W, Size];
-            CpuKernel.Run("probe_field_cpu.slang", (Size / 4, Size / 4, Size / 4), setup, floats.ToArray(), one);
+            var one = FieldCascade(triangles, new(LintelField[c].X, LintelField[c].Y, LintelField[c].Z), LintelField[c].W);
             one.CopyTo(cells, 5 * each * c);
             var corner = new Vector3(LintelField[c].X, LintelField[c].Y, LintelField[c].Z);
             var cell = LintelField[c].W;

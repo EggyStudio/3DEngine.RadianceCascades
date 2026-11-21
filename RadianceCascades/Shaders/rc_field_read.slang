@@ -1,6 +1,7 @@
 // The scene's distance field as its readers take it, the distance from a point to the nearest
 // surface and the march of a ray through it to the first surface it meets, through an interface
-// an engine implements over its own images, its samplers and the table of its cascades.
+// an engine implements over its own images, its samplers and the table of its cascades, and the
+// seam a field's build runs over its resolved cells where a sheet rests on a solid (seamSheet).
 module rc_field_read;
 
 __exported import rc_field_code;
@@ -94,6 +95,40 @@ public float3 fieldNormalIn<F : IFieldVolume>(F field, int i, float3 p)
         fieldDistanceIn(field, i, p + float3(0.0, 0.0, h)) - fieldDistanceIn(field, i, p - float3(0.0, 0.0, h)));
     float l = length(g);
     return l > 1e-6 ? g / l : float3(0.0);
+}
+
+// The plane a cell of cascade i keeps of a sheet that passes over it where the cell's own code is
+// a solid face's it lies in front of, as a sheet resting on a wall's top passes over the cells by
+// the wall's face, which keep the wall's code where the sheet and the face lie as near their
+// middles, and a march between those cells' middles passes the sheet. A cell beside it along an
+// axis that keeps a double-sided face's plane (sheetOf) lends it that plane where the plane passes
+// within half a cell of its middle, the plane's offset carried from the one cell's middle to the
+// other's; otherwise none. A field's build runs it over the resolved cells, as it runs the pinch,
+// and keeps the plane in the cell, whose distance stays its own.
+public float3 seamSheet<F : IFieldVolume>(F field, int i, int3 cell, uint code)
+{
+    if (code == EmptyCode || (code & (DoubleSided | Front)) != Front)
+        return float3(0.0);
+    int size = field.size();
+    for (int a = 0; a < 6; a++)
+    {
+        // The step to each of the six cells beside it, made from the index and kept in no array
+        // (axisOf).
+        int sign = (a & 1) != 0 ? 1 : -1;
+        int3 step = int3(a >> 1 == 0 ? sign : 0, a >> 1 == 1 ? sign : 0, a >> 1 == 2 ? sign : 0);
+        int3 beside = cell + step;
+        if (any(beside < 0) || any(beside >= size))
+            continue;
+        float3 sheet = field.cellAt(i, beside).yzw;
+        float kept = length(sheet);
+        if (kept < 0.5)
+            continue;
+        float3 way = sheet / kept;
+        float offset = kept - SheetLength + dot(way, float3(step));
+        if (abs(offset) <= 0.5)
+            return way * (offset + SheetLength);
+    }
+    return float3(0.0);
 }
 
 // How far a point local off a cell's middle lies from the plane the cell keeps as sheet, held

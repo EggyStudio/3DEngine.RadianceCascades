@@ -197,8 +197,8 @@ public sealed partial class ProbeMergeTests
         // 0.25480 against 0.25111, 1.5 percent over. With the middle reaching 4 it read 0.23165,
         // 7.7 percent under.
         Assert.True(Math.Abs(open.Reflected - expected) <= 0.05 * expected, said);
-        // 0.00000, and 0.00207, 0.81 percent of the open box's, where with the middle reaching 4
-        // the sheeted box read 4.3 percent.
+        // 0.00000 for both lids, the sheet's seam with the walls' tops closed in the field
+        // (seamSheet).
         Assert.True(lidded.Reflected < 0.01f * open.Reflected && sheeted.Reflected < 0.01f * open.Reflected, said);
     }
 }

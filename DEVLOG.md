@@ -16,8 +16,18 @@ boxes and each probe's own texels marched on, the deep end at x 0.5 and 1.5 on t
 to 41 percent over the fine trace under the committed merge at every set, run on the CPU from the
 library's Slang.
 
+![](.github/assets/readings/2026-11-21-item-3-split-decides.webp)
+The sheet lid from above with the far rays that passed it in three cascades, every one through the
+cells by the walls' faces that the field's seam closes, beside four cascades at the ends rule under
+the committed and the split rule, the split rule reading the lintel room's deep end at 0.990 and
+0.957 of the fine trace against 1.472 and 1.405 and the open box's floor 8.0 percent under its share
+against 4.0 over, run on the CPU from the library's Slang.
+
 Commits that day
 
+- `c465a21` A test holds a room open under a lintel at the light its probes read today against a
+  fine trace, and the README states that a hand-off near an opening's edge reads the room behind it
+  about 1.4 times that trace.
 - `e39dbb8` The gather says it gives a surface point the light of the probes about it at their own
   places and corrects nothing for a probe that stands off the surface, and the lintel room's probes
   are read against a fine trace at three counts of texels.

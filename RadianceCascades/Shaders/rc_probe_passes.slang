@@ -15,10 +15,10 @@
 // over the ways about it. The ends are kept short against the spacings above. The tests' middle
 // level of probes a unit apart reaches 2, twice its spacing, and hands a ray from the floor to
 // the far probes, 2 apart, 4 units out, where reaching 4 it hands it on 6 out or past, within 2 of
-// an open box's rim, and the floor reads 12.4 percent under its share of the sky and a sheet lid
-// lets through 6.2 percent of the open box's light. A ray that reaches its end near a surface
-// marches on to open space before it is handed on (mergedLight, marchToOpenSpace), which mends an
-// edge within the field's band past the end and not one farther. A level's reach map runs to its
+// an open box's rim, and the floor reads 12.4 percent under its share of the sky. A ray that
+// reaches its end near a surface marches on to open space before it is handed on (mergedLight,
+// marchToOpenSpace), which mends an edge within the field's band past the end and not one
+// farther. A level's reach map runs to its
 // end too, so that end lies past the diagonal of the cell between its probes, the spacing times
 // the root of 3, for the seeing of a point among them to be read within the map. A texel's index
 // is its probe's, x fastest, times the texels of a probe, and its texel's along a row of the
