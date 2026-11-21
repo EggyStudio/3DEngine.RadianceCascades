@@ -195,9 +195,11 @@ with no quiet wait before it and held no longer than ten minutes, since two such
 side overfill the 8 GB. A session whose wait grows long tells the reviewing session in a line, which
 gives the order, an engine's illumination read first. By review.
 
-The Tools module's `scripts/gpu.py` is the one gate for this lock, and no session writes its own.
-`gpu.py shared -- <command>` and `gpu.py exclusive -- <command>` take the lock, write and clear the
-marks and keep the bounds, and `gpu.py status` lists who holds and who waits.
+The Tools module's `scripts/gpu.py` is the one gate for this lock, and no session writes its own or
+calls `flock` itself. `gpu.py shared -- <command>` and `gpu.py exclusive -- <command>` take the
+lock, write and clear the marks and keep the bounds, and `gpu.py status` lists who holds and who
+waits. A build or a test that opens no graphics device takes no lock at all, and a repository none
+of whose programs opens one never takes it.
 
 **N 7.10 A session's programs keep their caches in a folder of the session's own.** The engine's
 caches of shaders, pipelines and scene packs stand in the account's cache folder, which the

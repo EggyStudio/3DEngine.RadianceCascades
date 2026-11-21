@@ -45,10 +45,11 @@ internal static class Slangc
     /// <summary>
     /// Compiles the compute entry <c>test</c> of <paramref name="kernel"/> for
     /// <paramref name="target"/> into <paramref name="output"/>, the library's Slang on the import
-    /// path and every warning an error, as the build's are.
+    /// path and every warning an error, as the build's are, <paramref name="options"/> given after
+    /// the rest.
     /// </summary>
     /// <returns>The compiler's exit code and what it wrote to either stream.</returns>
-    internal static (int Code, string Said) Compile(string kernel, string target, string output)
+    internal static (int Code, string Said) Compile(string kernel, string target, string output, params string[] options)
     {
         var start = new ProcessStartInfo(Path ?? throw new InvalidOperationException(Missing))
         {
@@ -60,7 +61,7 @@ internal static class Slangc
                  {
                      kernel, "-I", Repository.Shaders, "-entry", "test", "-stage", "compute", "-target", target, "-o", output,
                      "-warnings-as-errors", "all",
-                 })
+                 }.Concat(options))
             start.ArgumentList.Add(argument);
 
         using var process = Process.Start(start)

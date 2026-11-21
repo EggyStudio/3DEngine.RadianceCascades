@@ -115,7 +115,20 @@ pointer. One commit an engine, after item 3's first part.
 
 ## Verdicts
 
-None yet.
+Verdict 1 is open, read at 21:57 on 2026-11-21, the build run 44943704829 on `d446283` ended with
+the Windows job stopped at its 30 minutes inside the tests.
+
+1. **The Windows job runs the tests past its 30 minutes.** In run 44943704829 on `d446283`, read at
+    21:57 on 2026-11-21, `test (windows-latest)` built in 18 seconds, began the tests and was
+    stopped at its time limit 30 minutes after its start with no test's result printed, while Linux
+    and macOS passed in 5 and 4 minutes. The job's time has grown over the day's pushes, 16 minutes
+    on `41f0e09`, 28 on `0f0ff99`, past 30 here, so the tests added since cost Windows far more than
+    the others. Run the suite on Windows by its log (the trx of an earlier green run names each
+    test's time) or time the newest tests one by one, name which take minutes there and why (the
+    fine traces of the closed room and the vestibule's kind, a kernel's compile, threads), and mend
+    the cost, a coarser trace where the bound allows or the heavy cases behind one shared fixture. A
+    larger limit is no mend. Settled when a run passes on the three systems with the Windows job's
+    minutes stated.
 
 ## Decisions
 
@@ -963,6 +976,35 @@ a binding's hit reads of its probes at the surface, which is the binding's, with
 spacing off the surface toward the ray the README asks of a cheap hit. The held cells read the views
 3.568, 1.069 and 1.027 at 6e16181, view 2's thin walls mended since.
 
+Verdict 1, the Windows job's time. The tests build each kernel for the CPU through slangc, which
+hands it to the system's C++ compiler at its own level, given by Slang's rules as -Os to gcc and
+clang and as no level at all to Visual Studio's cl, so cl built every kernel unoptimized and each
+test that runs one ran several times slower on Windows than on Linux and macOS, the day's new tests
+running the passes the longest. The probe merge tests run one after another in one class, and on a
+desktop at -Os the heaviest were the lintel's two (25.7 and 23.6 seconds), the four scenes' floors a
+thread a texel (21.8), the closed room lit by one wall (16.4) and the floor under probes two units
+over it (16.1), of a suite of 3 minutes 22 seconds. `CpuKernel` gives slangc -O2, which gives cl /O2
+and the others -O2: the closed room, the lintel lit by the sky alone and the four scenes' floors
+take 170 seconds at -O0, 67 at -Os and 30 at -O2, the suite 2 minutes 2 seconds, and every line the
+tests print reads the same at -O2 as at -Os. The Windows job's minutes are those of this commit's
+run.
+
+The vestibule behind a doorway onto a sunlit court, which 3DEngine's door view of Sponza's vault
+read at 1.70 of its traced light under the passes and 1.19 under its own code. No light is counted
+twice along a ray that marches on: the merge takes a leg's light once, the march's or its far
+probes', never both. 3DEngine's view, screen probes off, reads 1.562 of its 256-path trace under the
+passes and 1.483 with c0's merge reading every probe above as inside, so that each c0 texel marches
+on alone to the coarsest cascade's end: the chain adds 5 percent, and the rest is the light each
+texel's own rays bring from its probe's place and their hits. On the CPU a room behind a wall 1.2
+units thick, its doorway onto a lit court and its far probes in the wall, reads 1.268 of a fine
+trace through four cascades and 1.216 with its texels each marched on alone, and a wider vault 0.723
+and 0.761. The coarsest cascade's 0.60 of the trace alone, 0.01 under 3DEngine's own code, is the
+court's light a ray reaches past the third cascade's end, which the march alone brings as well,
+since every cascade's rays begin at its probe. A held shading that reads the probes' reach maps for
+visibility in place of a march to each probe reads the view at 2.07 and 2.16 in 3DEngine's trial, so
+in this vault what a hit sees of the probes it reads moves the figure far more than the chain does.
+Nothing in the library changed.
+
 Handoff, for a fresh session, in place of those above. Where the work stands: the library holds the
 field's plan, the triangles' layout and the glow lights in C#, and in Slang the probes' octahedron,
 the cell code, resolve and pinch, the hit's color read, the splat, the stamp, the field's distance
@@ -994,19 +1036,22 @@ the surface and the probes' light half a spacing off it, or the held light of th
 takes its light where it has stopped half the light it carried in. A cascade's traced texels a side
 of each read one are a binding's setting for each cascade, the finest two at 2 reading the lintel's
 face 0.825 at 2.2 times the trace's steps. The closed rooms' 5 percent over lies in the bounce a
-binding's hit reads of its probes, the passes adding none on one bounce. Next, as the bindings land
-the passes: the engines' further findings as they take the passes, then the split sum at a hit, the
-screen probes, the light on the picture and the contact shadow's march. Left behind each part's
-Reply: the field's normal, the cascades' table, the march held within a cascade, the splat's second
-plane, the lending of thin emitters, the repaint and the clearing of codes. Open: AGENTS.md's
-documents rows for DEVLOG.md and CHEATSHEET.md wait for the owner. Read first: AGENTS.md, this
-file's head and Decisions, the Replies from the field's distance on, the README's binding section,
-NORM.md's N 4.8 to 4.11 and N 7.9, `CpuKernel.cs` and the head of `rc_probe_passes.slang`. Every
-build and test goes through N 7.9's lock by `python3 -I modules/Tools/scripts/gpu.py shared --
-<part> -- <part>`, built with `--no-restore -p:UseSharedCompilation=false`, its output written to a
-file of which the summary line and the failing lines alone are read, and each commit is read by
-`commitcheck.py . --staged --message=<file>` first. At a binding's request, in the commit carrying
-this line: `build/fetch- slang.sh` reads an archive's sha256 with `shasum -a 256`, on macOS, Linux
-and Git's bash on Windows alike, and Python's hashlib where a system has none, in place of
-`sha256sum`, which N 6.6's check refuses. This repository's own tests do not run that check on its
-scripts; the binding's suite found it.
+binding's hit reads of its probes, the passes adding none on one bounce. A vestibule beside a sunlit
+court reads over its trace in the light its texels' own rays bring from their probes' places and
+their hits, the chain adding 5 percent. The tests build their kernels for the CPU at -O2, at which
+Visual Studio's cl optimizes them as gcc and clang do. Next, as the bindings land the passes: the
+engines' further findings as they take the passes, then the split sum at a hit, the screen probes,
+the light on the picture and the contact shadow's march. Left behind each part's Reply: the field's
+normal, the cascades' table, the march held within a cascade, the splat's second plane, the lending
+of thin emitters, the repaint and the clearing of codes. Open: AGENTS.md's documents rows for
+DEVLOG.md and CHEATSHEET.md wait for the owner. Read first: AGENTS.md, this file's head and
+Decisions, the Replies from the field's distance on, the README's binding section, NORM.md's N 4.8
+to 4.11 and N 7.9, `CpuKernel.cs` and the head of `rc_probe_passes.slang`. Every build and test goes
+through N 7.9's lock by `python3 -I modules/Tools/scripts/gpu.py shared -- <part> -- <part>`, built
+with `--no-restore -p:UseSharedCompilation=false`, its output written to a file of which the summary
+line and the failing lines alone are read, and each commit is read by `commitcheck.py . --staged
+--message=<file>` first. At a binding's request, in the commit carrying this line:
+`build/fetch-slang.sh` reads an archive's sha256 with `shasum -a 256`, on macOS, Linux and Git's
+bash on Windows alike, and Python's hashlib where a system has none, in place of `sha256sum`, which
+N 6.6's check refuses. This repository's own tests do not run that check on its scripts; the
+binding's suite found it.

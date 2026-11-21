@@ -85,7 +85,11 @@ internal static class CpuKernel
     private static Compiled Compile(string kernel)
     {
         var path = Path.Combine(Folder.Value.FullName, Path.GetFileNameWithoutExtension(kernel) + Extension);
-        var (code, said) = Slangc.Compile(Path.Combine(Repository.TestKernels, kernel), "shader-sharedlib", path);
+        // At slangc's own level the C++ compiler it hands a kernel to is given -Os by gcc's and
+        // clang's rules and no level by Visual Studio's, whose cl then builds it unoptimized, which
+        // made the tests several times slower on Windows than elsewhere. -O2 gives cl /O2 and the
+        // others -O2, and the heaviest tests take under half their time at -Os and a sixth at -O0.
+        var (code, said) = Slangc.Compile(Path.Combine(Repository.TestKernels, kernel), "shader-sharedlib", path, "-O2");
         Assert.True(code == 0, $"{kernel} for the CPU exited {code}:\n{said}");
         var library = NativeLibrary.Load(path);
         return new(library, Marshal.GetDelegateForFunctionPointer<Entry>(NativeLibrary.GetExport(library, "test")));

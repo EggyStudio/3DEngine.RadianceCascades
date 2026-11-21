@@ -27,9 +27,10 @@ jobs:
         # changes nothing with no commit to show for it.
         os: [ubuntu-24.04, windows-latest, macos-15]
     runs-on: ${{ matrix.os }}
-    # The build took 6 seconds and the test 2 on a desktop with the packages restored and slangc
-    # fetched (dotnet build RadianceCascades.slnx -warnaserror, dotnet test RadianceCascades.Tests),
-    # so 30 minutes is reached only where a restore, the download of slangc or a test hangs (N 6.8).
+    # The build took 6 seconds and the tests 2 minutes on a desktop with the packages restored and
+    # slangc fetched (dotnet build RadianceCascades.slnx -warnaserror, dotnet test
+    # RadianceCascades.Tests), so 30 minutes is reached only where a restore, the download of slangc
+    # or a test hangs (N 6.8).
     timeout-minutes: 30
     steps:
       # The tests take the checks every module keeps from the Tools submodule.
