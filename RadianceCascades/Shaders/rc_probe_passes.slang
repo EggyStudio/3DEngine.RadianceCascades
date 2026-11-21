@@ -137,8 +137,9 @@ public interface IHeldLight
 // room's deep end under a lintel 0.51 of the light traced there against 0.82, and a sunlit wall a
 // little past the near rays' reach 44 percent under. Read so, the merge costs what it costs taking
 // nothing there, and the sunlit wall reads 0.6 percent under what the merge reads shading its hits.
-// A held light gives up the gloss toward the eye a hit's own shading weighs by the ray's way, and
-// lags the scene by the frames it takes to hold every cell.
+// A held light gives up the gloss toward the eye a hit's own shading weighs by the ray's way. A
+// binding takes it where its lamps fail under a cheaper hit of its own (mergeTexel), held whole
+// each frame (holdCellLight).
 public struct HeldHitLight<F : IProbeField, H : IHeldLight> : IProbeField
 {
     // The field as the engine gives it.
@@ -222,17 +223,18 @@ public void reachTexel<F : IFieldVolume, R : IReachTexels, Q : IProbePlaces>(F f
         : reachAlong(field, place, texelWay(ReachTexels, texel), cascade.end));
 }
 
-// Holds for the cell of the field at the thread's place in one share of the field's cells the
-// light the surface nearest it sends along its normal (IHeldLight), shaded by the engine
-// (hitLight) where a march toward that surface along the normal from the cell's middle stops, a
-// tenth of a cell short of it, a thread a cell. The cells of the field's cascades are counted one
-// after another, each x fastest, and the thread at index takes the cell at index times share plus
-// turn modulo share, so that dispatched each frame over the cells over share threads with turn
-// counting the frames the engine holds every cell once in share frames. A cell whose middle lies
-// farther than a cell and a tenth from a surface holds nothing, since a march stops within a
-// tenth of a cell of a surface, short of it or past it by less than a step, in a cell whose middle
-// lies within a cell and a tenth of the surface, and so does one that lies whole where a march
-// reads a finer cascade (cascadeOf), so that no thread shades a cell no march meets a surface in.
+// Holds for the cell of the field at the thread's place in one share of the field's cells the light
+// the surface nearest it sends along its normal (IHeldLight), shaded by the engine (hitLight) where
+// a march toward that surface along the normal from the cell's middle stops, a tenth of a cell
+// short of it, a thread a cell. The cells of the field's cascades are counted one after another,
+// each x fastest, and the thread at index takes the cell at index times share plus turn modulo
+// share. A share above 1, with turn counting the frames, holds every cell once in share frames and
+// lags a change by as many, so a binding whose lighting is to show a change in the next frame
+// dispatches it each frame over every cell, share 1. A cell whose middle lies farther than a cell
+// and a tenth from a surface holds nothing, since a march stops within a tenth of a cell of a
+// surface, short of it or past it by less than a step, in a cell whose middle lies within a cell
+// and a tenth of the surface, and so does one that lies whole where a march reads a finer cascade
+// (cascadeOf), so that no thread shades a cell no march meets a surface in.
 public void holdCellLight<F : IProbeField, H : IHeldLight>(F field, H held, uint cascades, uint share, uint turn, uint index)
 {
     uint size = uint(field.size());

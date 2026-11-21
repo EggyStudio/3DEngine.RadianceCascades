@@ -213,21 +213,30 @@ The conventions the module stands on:
   one engine's, which shades with its sun's and lamps' shadows, took 46 s to compile in a trace and
   2.6 minutes and 3.75 GB in a merge. A binding shades a surface in hitLight itself, with nothing to
   gather after the march.
-- The engine's shading at the surfaces a merge's marches meet is most of what the merge costs: of
-  a merge of three cascades that took 4.9 ms on Sponza and 9.2 on the Bistro on one engine, its
+- The engine's shading at the surfaces a merge's marches meet is most of what the merge costs: of a
+  merge of three cascades that took 4.9 ms on Sponza and 9.2 on the Bistro on one engine, its
   marches and reads took 0.54 and 0.57. A merge that takes nothing at a hit reads the room's deep
   end under the lintel 0.51 of the light traced there against 0.82, 4 of its 64 probes within a
-  quarter against 62, and a sunlit wall a little past the near rays' reach 44 percent under, and
-  one that takes in its place the far probes' light about the hit reads an open box's floor 1.49
-  times its share. An engine that holds the light of the field's cells (`IHeldLight`) passes the
-  merge `HeldHitLight`, which reads at a hit the light held for the cell it lies in, and
-  dispatches `holdCellLight` each frame over a share of the cells, each within a cell and a tenth
-  of a surface shaded once where a march toward it along its normal stops. The merge so took 0.55
-  and 0.56 ms, the sunlit wall reads 0.6 percent under the light it takes shading its hits and the
-  sunlit sheets 0.04 percent over, and shading every cell within a cell of a surface once took 1.91
-  ms on Sponza and 3.07 on the Bistro, 170,000 and 125,000 cells of 1.3 million, a frame's share
-  of it a part of that. A held light gives up the gloss toward the eye a hit's own shading weighs,
-  and lags a change in the scene by the frames it takes to hold every cell.
+  quarter against 62, and a sunlit wall a little past the near rays' reach 44 percent under, and one
+  that takes in its place the far probes' light about the hit reads an open box's floor 1.49 times
+  its share, so the merge shades its hits. `mergeTexel` takes a field of its own, and a binding
+  passes it a cheaper hit than its trace's, which keeps two things. It reads the sun's reach at the
+  surface itself, its sun map at the hit or a march toward the sun where the map does not reach,
+  since a sun's reach read at the probes about the hit read a sunlit passage 0.37 of its light and a
+  shaded floor beside a sun patch 2.49 times its trace. And it reads the probes' light half a
+  spacing off the surface toward the ray, so that a probe behind the surface counts for nothing. One
+  engine's cheap hit, its probes' kept light in one filtered read and its sun map at the hit with no
+  lamps, took the whole merge of five cascades 1.03 ms on Sponza and 1.07 on the Bistro. Beside it
+  the module offers a held light, which a binding takes where its lamps fail under the cheap hit: an
+  engine that holds the light of the field's cells (`IHeldLight`) passes the merge `HeldHitLight`,
+  which reads at a hit the light held for the cell it lies in, and dispatches `holdCellLight` over
+  every cell each frame, each within a cell and a tenth of a surface shaded once where a march
+  toward it along its normal stops. The merge so took 0.55 and 0.56 ms, and shading every cell
+  within a cell of a surface once 1.91 and 3.07 more, 170,000 and 125,000 cells of 1.3 million, and
+  the sunlit wall reads 0.6 percent under the light it takes shading its hits and the sunlit sheets
+  0.04 percent over. A share of the cells a frame, `share` above 1, lags a change in the scene by as
+  many frames, so a binding whose lighting is to show a change in the next frame holds the cells
+  whole. A held light gives up the gloss toward the eye a hit's own shading weighs.
 - A field's build runs `seamSheet` over its resolved cells, as it runs the pinch, and keeps the
   plane it gives in the cell, whose distance stays its own. A sheet thinner than a cell resting on a
   solid's top passes over the cells in front of the solid's face, which keep the solid's code, and
