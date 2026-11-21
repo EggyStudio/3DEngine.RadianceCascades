@@ -944,6 +944,13 @@ On the CPU a wall 0.1 thick lit from beyond it reads a probe before its dark fac
 face 0.27366, run failing first; 2,944 cells about it hold their sides apart, and the holding pass
 reads the field up to 8 times more for each other held cell. Every other held figure stands.
 
+The held side's cost. On 41f0e09 3DEngine's thin room and its view pass, its holding pass taking
+2.25 ms on Sponza and 3.34 on the Bistro, where it took 2.06 and 2.80, a second side shaded apart
+for 10,183 of 153,245 held cells and 15,063 of 110,018, and its merge 0.77 and 0.98 ms, where it
+took 0.56 and 0.63, from the field's normal `heldSide` read at the cell's middle in six reads.
+`heldSide` reads a solid's side as the field's distance growing along the ray's way across half a
+cell either side of the middle, two reads, and every held figure stands.
+
 Handoff, for a fresh session, in place of those above. Where the work stands: the library holds the
 field's plan, the triangles' layout and the glow lights in C#, and in Slang the probes' octahedron,
 the cell code, resolve and pinch, the hit's color read, the splat, the stamp, the field's distance

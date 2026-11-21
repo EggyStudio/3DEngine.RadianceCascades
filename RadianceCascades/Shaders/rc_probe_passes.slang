@@ -167,14 +167,19 @@ public struct WholeShading<F : IProbeField> : IHeldShading
 
 // The side of the surface nearest a cell of the field that a ray along way meets (IHeldLight), 1
 // where the way runs along the cell's normal, its sheet's plane's where it keeps a sheet and the
-// field's at its middle otherwise (fieldNormalIn), and 0 where it runs against it.
+// field's at its middle otherwise, and 0 where it runs against it. A solid's is read as the field's
+// distance growing along the way across half a cell either side of the middle, two reads of the
+// field where its normal (fieldNormalIn) takes six, since the six took one engine's merge from 0.56
+// to 0.77 ms.
 public uint heldSide<F : IFieldVolume>(F field, int cascade, int3 cell, float3 way)
 {
     float3 sheet = field.cellAt(cascade, cell).yzw;
     if (dot(sheet, sheet) >= 0.25)
         return dot(way, sheet) > 0.0 ? 1u : 0u;
     float4 oc = field.cornerAndCell(cascade);
-    return dot(way, fieldNormalIn(field, cascade, oc.xyz + (float3(cell) + 0.5) * oc.w)) > 0.0 ? 1u : 0u;
+    float3 middle = oc.xyz + (float3(cell) + 0.5) * oc.w;
+    float3 half = way * (0.5 * oc.w);
+    return fieldDistanceIn(field, cascade, middle + half) > fieldDistanceIn(field, cascade, middle - half) ? 1u : 0u;
 }
 
 // The field as a merge marches through it where the engine holds the light of the field's cells
