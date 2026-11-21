@@ -6,10 +6,23 @@ kept under `.github/assets/readings` as WebP files named by their day, each on t
 says, and the notes written beside them as Markdown files named the same way. A line under Done
 names the item of .github/REVIEW.md or .github/REVIEW-ARCHIVE.md and the commit that closed it.
 
+## 2026-11-21
+
+![](.github/assets/readings/2026-11-21-item-3-lintel-texels.webp)
+The light the face toward an opening under a lintel takes at the finest probes across the room at
+1.5 m, for 8, 8, 16 and 16 texels a side kept as 2 by 2 means, 8, 16, 32 and 64, and 16, 32, 64 and
+128, under the committed merge and the agreement trial, beside the fine trace against the room's
+boxes and each probe's own texels marched on, the deep end at x 0.5 and 1.5 on that row staying 34
+to 41 percent over the fine trace under the committed merge at every set, run on the CPU from the
+library's Slang.
+
 ## 2026-11-20
 
 Commits that day
 
+- `a4748a7` The module takes Tools at its 3DEngine.Tools address and names its own repository
+  3DEngine.RadianceCascades in the README's links and its submodule command, as every module's
+  repository is named.
 - `fa46096` The tests check that no kernel of the module keeps an array in a thread's own memory,
   and the README tells a binding to hold no table of cascades by value, since one macOS device reads
   such a copy wrong.

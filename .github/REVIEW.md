@@ -713,6 +713,23 @@ each test kernel is compiled to SPIR-V assembly, in which no variable of Functio
 storage holds an array, a check a field holding two or eight cascades' corners by value is seen to
 fail. The one array the module kept, `pinched`'s three axes, is made from the index instead.
 
+The lintel, held: no rule lands. Against the fine trace, the truth a test holds, the -x face of the
+probe at (0.5, 1.5, 0.5) under the lintel reads 0.1686 against 0.1202, and the room's deep end, x
+0.5 and 1.5 over z, 1.47 and 1.41 times the trace at 8, 8, 16 and 16 texels a side kept as 2 by 2
+means. Doubling the texels every cascade moves that to 1.37 and 1.35 at 8 to 64 and 1.33 and 1.28 at
+16 to 128, so the texels are not the mend: about 30 percent stays, the hand-off's parallax at the
+opening's edges and the floor outside. The parallax read alone reads 0.2347. A march of the near ray
+on to the far probes' claimed hits, a probe whose own hit disagrees weighing nothing, reads x 0.5 at
+0.85 to 1.20 times the trace but x 1.5 at 1.55 to 1.84 and the sheet lid in three cascades 1.57 to
+2.71 percent, so it stays out. Each probe's own texels marched on read about half the trace at the
+deep end, one ray a texel missing the strip under the lintel. In the open box the probe at (2, 2, 2)
+reads its up face within 4 percent at every count, and the floor as `gatherAt` reads it 26 to 30
+percent over, its probes 2 units up seeing 1.248 times its share, which `gatherAt`'s comment and the
+README state, correcting nothing. Steps in the lintel room rise 6 and 23 times at the doubled counts
+and texels kept 8.5 and 34 times at 8 probes a side, 1.6 and 6.3 times where probes fall eightfold a
+cascade. The light-through reach stops at the first surface on purpose, since a probe across one
+lends light it has not dimmed, and the binding keeps the module's.
+
 Handoff, for a fresh session, in place of those above. Where the work stands: the library holds the
 field's plan, the triangles' layout and the glow lights in C#, and in Slang the probes' octahedron,
 the cell code, resolve and pinch, the hit's color read, the splat, the stamp, the field's distance
@@ -728,13 +745,14 @@ surface a ray crosses adds its own light weighed by what it keeps, and a binding
 steps (`ProbeCascade.stepCap`). A binding gives the passes its probes' places (`IProbePlaces`), a
 hit's light (`IProbeField.hitLight`) and the sky along a way (`ISky`), and a near texel takes the
 far texels it covers (`farTexelsLight`). A binding's struct holds no array, which the tests check on
-the module's own kernels by their SPIR-V. Next in order: the engines' further findings as they take
-the passes, then the split sum at a hit, the screen probes, the light on the picture and the contact
-shadow's march. Left behind each part's Reply: the field's normal, the cascades' table, the march
-held within a cascade, the splat's second plane, the lending of thin emitters, the repaint and the
-clearing of codes. Open: AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md wait for the
-owner. Read first: AGENTS.md, this file's head and Decisions, the Replies from the field's distance
-on, the README's binding section, NORM.md's N 4.8 to 4.11 and N 7.9, `CpuKernel.cs` and the head of
+the module's own kernels by their SPIR-V. The lintel's smear is held, its figures in its Reply, the
+truth a fine trace. Next in order: the engines' further findings as they take the passes, then the
+split sum at a hit, the screen probes, the light on the picture and the contact shadow's march. Left
+behind each part's Reply: the field's normal, the cascades' table, the march held within a cascade,
+the splat's second plane, the lending of thin emitters, the repaint and the clearing of codes. Open:
+AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md wait for the owner. Read first:
+AGENTS.md, this file's head and Decisions, the Replies from the field's distance on, the README's
+binding section, NORM.md's N 4.8 to 4.11 and N 7.9, `CpuKernel.cs` and the head of
 `rc_probe_passes.slang`. Every build and test goes through N 7.9's lock, restored outside it, built
 with `--no-restore -p:UseSharedCompilation=false`, its output written to a file of which the summary
 line and the failing lines alone are read, and each commit is read by `commitcheck.py . --staged

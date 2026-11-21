@@ -188,7 +188,11 @@ struct ProbeTexels<P : IFarProbes> : IProbeLight
 // grid, and by nothing where it stands inside a mesh or does not see the point from its place
 // (places, farProbeSees), as the merge weighs the probes about a ray's end, normalized by their
 // sum, and none where no probe counts. A point at a probe's grid place takes that probe's light
-// alone.
+// alone. It gives a point the probes' light at their own places and corrects nothing for a probe
+// that stands off the surface, so a floor a spacing below its probes takes what they see from that
+// height, more of the sky in a box open above it than the floor sees. A surface that wants its own
+// light traces its own short rays from the point and hands them on through mergedLight, as a
+// cascade finer than the finest would.
 public void gatherAt<F : IProbeField, P : IFarProbes, Q : IProbePlaces, A : ISurfacePoints>(F field, P probes, Q places, ProbeCascade cascade,
     A surfaces, uint index)
 {

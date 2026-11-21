@@ -153,6 +153,12 @@ The conventions the module stands on:
   reads 1.5 percent over and the lid dark. The lower bound keeps a cascade's reach map covering the
   cell about any point handed to it. The rules lessen the smear and do not end it, in any chain, and
   the tests hold the two boxes, the lids and the wall alone.
+- A surface point takes from `gatherAt` the light the finest cascade's probes about it bring at
+  their own places, weighed as the merge weighs the probes about a ray's end, and nothing corrects
+  it for a probe that stands off the surface. A probe a spacing above a floor sees what that height
+  sees, more of the sky in a box open above it than the floor sees. A surface that wants its own
+  light traces its own short rays from the point and hands them on through `mergedLight`, as a
+  cascade finer than the finest would.
 
 Each setting has a default an engine may leave, and each trades one thing for another.
 
