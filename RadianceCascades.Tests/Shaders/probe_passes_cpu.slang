@@ -235,7 +235,8 @@ ProbeCascade levelCascade(int level)
 }
 
 // Where a level's rays, its reach texels or its merged light begin in their buffers, at 10, 11
-// and 12 of its sixteen floats, its cap of steps at 13 and the texels it keeps at 14.
+// and 12 of its sixteen floats, its cap of steps at 13, the texels it keeps at 14 and at 15 those
+// the level below's merge reads it at, 0 for those it keeps.
 uint firstOf(int level, int which) { return uint(setup[Levels + level * 16 + which]); }
 
 // A level's cascade as the level below and the gather read it, at the texels it keeps.
@@ -284,8 +285,18 @@ void test(uint3 id : SV_DispatchThreadID)
     else if (pass == 3u)
     {
         CountedSteps counted = { 0u };
-        bool marched = mergeTexel(field, rays, placesOf(level), probesOf(level + 1), placesOf(level + 1), merged, cascade, keptCascade(level + 1),
-            setup[8], sky, counted, index);
+        // The level above as the merge reads it, at the texels it keeps or at those the setup asks
+        // for, as a binding that reads a level above at the side it traced it at does.
+        LevelProbes above = probesOf(level + 1);
+        ProbeCascade aboveCascade = keptCascade(level + 1);
+        uint read = firstOf(level + 1, 15);
+        if (read > 0u)
+        {
+            above.kept = read;
+            aboveCascade.texels = read;
+        }
+        bool marched = mergeTexel(field, rays, placesOf(level), above, placesOf(level + 1), merged, cascade, aboveCascade, setup[8], sky, counted,
+            index);
         if (index < cascadeTexels(cascade))
         {
             marches[(firstOf(level, 10) + index) * 2u] = marched ? 1.0 : 0.0;

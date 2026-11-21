@@ -46,8 +46,9 @@ public sealed partial class ProbeMergeTests
 
     // The cells of the field's cascades one after another, and the light a hit takes in each, the
     // lit light of the surface nearest the cell, its albedo over pi times the sky's irradiance
-    // there, read against the boxes, for each cell within a cell of a surface.
-    private static (float[] Cells, float[] Light) LintelScene()
+    // there, read against the boxes, for each cell within a cell of a surface, or none where lit
+    // is unset.
+    private static (float[] Cells, float[] Light) LintelScene(bool lit = true)
     {
         var triangles = LintelRoom.SelectMany((box, i) => Cuboid(box.Low, box.High, i + 1)).ToList();
         const int each = Size * Size * Size;
@@ -59,7 +60,7 @@ public sealed partial class ProbeMergeTests
             one.CopyTo(cells, 5 * each * c);
             var corner = new Vector3(LintelField[c].X, LintelField[c].Y, LintelField[c].Z);
             var cell = LintelField[c].W;
-            Parallel.For(0, each, i =>
+            Parallel.For(0, lit ? each : 0, i =>
             {
                 if (MathF.Abs(one[i * 5]) > cell)
                     return;
@@ -187,8 +188,8 @@ public sealed partial class ProbeMergeTests
 
     // The light a point facing normal takes, traced against the boxes, the sky's along each way the
     // boxes leave open and the lit light of the surface each other way meets, over 64 by 64 ways
-    // spread by their cosine and 16 by 16 at each surface met.
-    private static float TracedAgainstBoxes(Vector3 point, Vector3 normal)
+    // spread by their cosine and 16 by 16 at each surface met, or none where lit is unset.
+    private static float TracedAgainstBoxes(Vector3 point, Vector3 normal, bool lit = true)
     {
         var (u, v) = Basis(normal);
         const int side = 64;
@@ -199,7 +200,7 @@ public sealed partial class ProbeMergeTests
             {
                 var way = CosineWay(normal, u, v, (i + 0.5f) / side, (j + 0.5f) / side);
                 rows[i] += MeetsBox(point, way, out var at, out var face)
-                    ? LintelAlbedo / MathF.PI * Irradiance(point + way * at + face * 1e-3f, face, 16)
+                    ? lit ? LintelAlbedo / MathF.PI * Irradiance(point + way * at + face * 1e-3f, face, 16) : 0
                     : LintelSky;
             }
         });
@@ -239,5 +240,26 @@ public sealed partial class ProbeMergeTests
         // means, one ray a texel missing the opening's narrow strip. The probe and the two means
         // may lie neither a quarter under the trace nor a quarter over it.
         Assert.True(probe is >= 0.75f and <= 1.25f && nearer is >= 0.75 and <= 1.25 && deepest is >= 0.75 and <= 1.25 && within >= 60, said);
+    }
+
+    [CpuKernelFact]
+    public void A_Room_Open_Under_A_Lintel_Lit_By_The_Sky_Alone_Reads_Its_Face_Toward_The_Opening_Within_A_Fifth_Of_The_Sky_Traced_There()
+    {
+        // The room as an engine binds it, every surface a ray meets black, the light a bounce gives
+        // left out, each level read by the level below at 16 texels a side and the finest gathered
+        // at 8, every level traced at twice the texels it is read at, 32, each texel read the mean
+        // of the 2 by 2 traced texels it holds.
+        var (cells, _) = LintelScene(lit: false);
+        var levels = LintelLevels.Select(level => level with { Texels = 2 * level.Texels, Read = level.Texels }).ToArray();
+        var setting = new Setting { FieldCascades = LintelField, SkyLight = LintelSky, Points = [(UnderLintel, -Vector3.UnitX)] };
+        var merged = Passes(cells, levels, UnderLintel, setting).Taken[0];
+        var traced = TracedAgainstBoxes(UnderLintel, -Vector3.UnitX, lit: false);
+        var said = $"the probe at (0.5, 1.5, 0.5) lit by the sky alone takes {merged:0.0000} toward the opening against {traced:0.0000} traced, {merged / traced:0.000} of it";
+        output.WriteLine(said);
+        // 0.0725 against 0.0770, 0.942 of it. Traced at the 16 texels a side each level is read
+        // at, the face read 0.0473, 0.614 of it, the ways a few degrees under the horizon toward
+        // the opening meeting the ground outside along their texels' middle ways, where a third of
+        // their solid angle sees the sky past the ground's end.
+        Assert.True(merged / traced is >= 0.8f and <= 1.2f, said);
     }
 }

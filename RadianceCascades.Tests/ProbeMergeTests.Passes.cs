@@ -13,8 +13,9 @@ public sealed partial class ProbeMergeTests
     // A level of a chain of cascades, its first probe's place, its spacing, its probes along each
     // axis, its texels along each side, the end of its rays, which begin at the probe, and the
     // texels along a side the level below and the gather read it at, each the mean of the traced
-    // texels it covers, 0 for those it traces.
-    private readonly record struct Level(Vector3 Corner, float Spacing, int X, int Y, int Z, int Texels, float End, int Kept = 0)
+    // texels it covers, 0 for those it traces, and those the level below's merge reads it at where
+    // they differ from those, 0 where they do not.
+    private readonly record struct Level(Vector3 Corner, float Spacing, int X, int Y, int Z, int Texels, float End, int Kept = 0, int Read = 0)
     {
         public int Probes => X * Y * Z;
         public int TexelCount => Probes * Texels * Texels;
@@ -94,7 +95,7 @@ public sealed partial class ProbeMergeTests
         {
             var (level, at) = (levels[l], 16 + l * 16);
             float[] cascade = [level.Corner.X, level.Corner.Y, level.Corner.Z, level.Spacing, level.X, level.Y, level.Z, level.Texels, 0, level.End, texels, reaches, texels,
-                setting.Caps?[l] ?? 0, level.Kept];
+                setting.Caps?[l] ?? 0, level.Kept, level.Read];
             cascade.CopyTo(setup, at);
             (texels, reaches) = (texels + level.TexelCount, reaches + level.ReachCount);
         }

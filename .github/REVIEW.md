@@ -780,6 +780,21 @@ refuses, and BevyCSharp's merge was never made. The loop is bounded at three mar
 after it, and a test reads every kernel's WGSL for a function returning a value that may end with no
 return.
 
+The lintel's sampling, from 3DEngine's six cases built on the CPU from its numbers. Only its lintel
+is the module's: the face toward the opening read 0.047 under the passes and 0.0473 here against
+0.077 traced, where the module's test lit what rays meet by a bounce and read the far level at 8.
+The ways a few degrees under the horizon toward the opening meet the ground outside along their
+texels' middle ways where a third of their solid angle sees the sky past the ground's end, and read
+nothing. Every cascade traced at twice the texels a side it is read at, each texel read the mean of
+the 2 by 2 it holds, reads the face 0.94 of the trace at four times the rays and steps, which a test
+holds within a fifth with no library code changed. Traced at 16 and read at 8, as many rays as
+before, it reads 0.70; sub-ways past a ray's end alone read 0.84 at 1.7 times the steps and put the
+varying sky and the sunlit wall 4 percent under; a sub-way varied by probe reads 0.65. The open
+box's floor reads 1.205 here from probes 2 m up, the field's finest cascade holding y 4 to 20, its
+merge reading their face 1.013 of a trace there. The slab and the canopy read within 2 percent of
+their traces, the canopy at 2.5 m 10 percent under, and the bounce rooms and the board need the
+renderer.
+
 Handoff, for a fresh session, in place of those above. Where the work stands: the library holds the
 field's plan, the triangles' layout and the glow lights in C#, and in Slang the probes' octahedron,
 the cell code, resolve and pinch, the hit's color read, the splat, the stamp, the field's distance
@@ -800,13 +815,15 @@ about 1.4 times the fine trace, and the split rule, a ray marching on where its 
 (`HitSpread`), takes it within a quarter at about 1.15 times the steps, reading a four-cascade open
 box's floor 8 percent under, its figures in its Reply. A field's build runs `seamSheet` after the
 pinch. The march calls `hitLight` at one place and the merge marches at one place, which a test
-holds by the SPIR-V. Next in order: the engines' further findings as they take the passes, then the
-split sum at a hit, the screen probes, the light on the picture and the contact shadow's march. Left
-behind each part's Reply: the field's normal, the cascades' table, the march held within a cascade,
-the splat's second plane, the lending of thin emitters, the repaint and the clearing of codes. Open:
-AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md wait for the owner. Read first:
-AGENTS.md, this file's head and Decisions, the Replies from the field's distance on, the README's
-binding section, NORM.md's N 4.8 to 4.11 and N 7.9, `CpuKernel.cs` and the head of
+holds by the SPIR-V. A cascade is traced at twice the texels a side it is read at, at four times the
+rays, which the lintel's sampling asks. Next in order: a gather toward the surface for probes
+standing off it, which 3DEngine's open box asks, then the engines' further findings as they take the
+passes, then the split sum at a hit, the screen probes, the light on the picture and the contact
+shadow's march. Left behind each part's Reply: the field's normal, the cascades' table, the march
+held within a cascade, the splat's second plane, the lending of thin emitters, the repaint and the
+clearing of codes. Open: AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md wait for the
+owner. Read first: AGENTS.md, this file's head and Decisions, the Replies from the field's distance
+on, the README's binding section, NORM.md's N 4.8 to 4.11 and N 7.9, `CpuKernel.cs` and the head of
 `rc_probe_passes.slang`. Every build and test goes through N 7.9's lock, restored outside it, built
 with `--no-restore -p:UseSharedCompilation=false`, its output written to a file of which the summary
 line and the failing lines alone are read, and each commit is read by `commitcheck.py . --staged

@@ -169,6 +169,17 @@ The conventions the module stands on:
   about 1.15 times the steps under the lintel and in the four cascades' box. The rules lessen the
   smear and do not end it, in any chain, and the tests hold the boxes, the lids, the wall and the
   room under the lintel alone.
+- A cascade is traced at twice the texels a side the cascade below and the gather read it at, and
+  each texel they read is the mean of the 2 by 2 traced texels it holds, so its light is that of
+  four ways spread over its solid angle. Its middle way alone reads a thin strip of sky the texel
+  holds part of as all of it or none. In the room under the lintel lit by the sky alone, each
+  cascade read at 16 texels a side and the finest gathered at 8, the face toward the opening of the
+  probe 6.5 units in reads 0.94 of the light traced there with every cascade traced at 32, and 0.61
+  traced at 16, the ways a few degrees under the horizon toward the opening meeting the ground
+  outside along their middle ways where a third of their solid angle sees the sky past the ground's
+  end. Traced so, a chain traces four times the rays and takes 4.0 times the steps. Traced at 16 and
+  read at 8, as many rays as one traced and read at 16, the face reads 0.70, and a four-cascade
+  box's floor row reads 13.5 percent under at its ends.
 - `mergedLight` takes the far cascade as it stands, its own end the one its probes' rays and reach
   maps run to, and after it `marchEnd`, the coarsest cascade's end, to which a march past every far
   interval runs. A binding that calls it itself, and not through `mergeTexel`, which takes both,
