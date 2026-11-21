@@ -59,6 +59,32 @@ public sealed class SlangTests
         Assert.True(held.Count == 0, $"{kernel} keeps an array in a thread's own memory:\n" + string.Join("\n", held));
     }
 
+    // naga, which wgpu reads WGSL through, refuses a function returning a value whose end it does
+    // not prove unreached, and the merge's loop of marches, endless with each return inside it,
+    // kept one engine's merge from being made until a return followed the loop. slangc writes
+    // each WGSL function from a line beginning `fn` to a line of `}` alone.
+    [SlangTheory]
+    [MemberData(nameof(Kernels))]
+    public void A_Kernel_Of_The_Library_Ends_Every_Wgsl_Function_That_Returns_A_Value_On_A_Return(string kernel)
+    {
+        var open = new List<string>();
+        string? function = null, last = null;
+        foreach (var line in CompiledOf(File.ReadAllText(Path.Combine(Repository.TestKernels, kernel)), "wgsl"))
+        {
+            if (line.StartsWith("fn ", StringComparison.Ordinal) && line.Contains("->", StringComparison.Ordinal))
+                (function, last) = (line[..line.IndexOf('(')], null);
+            else if (function is not null && line == "}")
+            {
+                if (last is null || !last.TrimStart().StartsWith("return", StringComparison.Ordinal))
+                    open.Add(function);
+                function = null;
+            }
+            else if (function is not null && line.Trim().Length > 0)
+                last = line;
+        }
+        Assert.True(open.Count == 0, $"{kernel} has WGSL functions that may end with no return:\n" + string.Join("\n", open));
+    }
+
     // A field that holds every cascade's corner and cell by value, as the binding did whose reads
     // one macOS device drew wrong, so the scan above is seen to find what it looks for.
     [SlangTheory]
@@ -162,21 +188,21 @@ public sealed class SlangTests
                 read[8] = {{light}};
             }
             """;
-        var copies = SpirVOf(kernel).Count(line => line.Contains(" OpAtomicIAdd ", StringComparison.Ordinal));
+        var copies = CompiledOf(kernel, "spirv-asm").Count(line => line.Contains(" OpAtomicIAdd ", StringComparison.Ordinal));
         Assert.Equal(1, copies);
     }
 
-    // The lines of the SPIR-V assembly slangc writes for a kernel.
-    private static string[] SpirVOf(string kernel)
+    // The lines slangc writes for a kernel to target, SPIR-V assembly or WGSL.
+    private static string[] CompiledOf(string kernel, string target)
     {
         var folder = Directory.CreateTempSubdirectory("radiancecascades-slang-");
         try
         {
             var source = Path.Combine(folder.FullName, "kernel.slang");
-            var output = Path.Combine(folder.FullName, "kernel.spvasm");
+            var output = Path.Combine(folder.FullName, target == "wgsl" ? "kernel.wgsl" : "kernel.spvasm");
             File.WriteAllText(source, kernel);
-            var (code, said) = Slangc.Compile(source, "spirv-asm", output);
-            Assert.True(code == 0, $"to SPIR-V assembly exited {code}:\n{said}");
+            var (code, said) = Slangc.Compile(source, target, output);
+            Assert.True(code == 0, $"to {target} exited {code}:\n{said}");
             return File.ReadAllLines(output);
         }
         finally
@@ -194,7 +220,7 @@ public sealed class SlangTests
         var arrays = new HashSet<string>();
         var pointers = new HashSet<string>();
         var held = new List<string>();
-        foreach (var line in SpirVOf(kernel))
+        foreach (var line in CompiledOf(kernel, "spirv-asm"))
         {
             var words = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             if (words.Length < 4 || words[1] != "=")

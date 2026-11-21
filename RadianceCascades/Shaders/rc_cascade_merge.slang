@@ -194,8 +194,11 @@ public float3 mergedLight<F : IProbeField, P : IFarProbes, Q : IProbePlaces, K :
     float carried = near.carried;
     float from = near.t;
     uint leg = 0u;
+    // Three marches at most, since leg 2 returns, with a return after them that is never reached,
+    // since naga refuses WGSL whose function may end with no return, and the loop endless with no
+    // return after it kept one engine's merge from being made.
     [loop]
-    while (true)
+    for (uint marches = 0u; marches < 3u; marches++)
     {
         float end = leg == 1u ? min(from + far.end, marchEnd) : marchEnd;
         ProbeRay ray = marchToOpenSpace(field, origin, way, from, end, leg == 0u ? far.spacing : 0.0, far.stepCap, steps);
@@ -224,4 +227,5 @@ public float3 mergedLight<F : IProbeField, P : IFarProbes, Q : IProbePlaces, K :
         marched = true;
         leg = 2u;
     }
+    return taken;
 }

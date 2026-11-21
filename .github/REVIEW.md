@@ -774,7 +774,11 @@ surface and a march at each of the merge's three legs. The march takes a surface
 place a step, and `mergedLight` marches its legs in one loop at one call of `marchToOpenSpace`,
 clearance 0 for the legs that run to their end, so a trace holds the shading once where it held
 three copies and a merge once where it held nine, which a test counts by a `hitLight`'s atomics in
-the SPIR-V. No signature changed, and the README tells a binding it shades in `hitLight` itself.
+the SPIR-V. No signature changed, and the README tells a binding it shades in `hitLight` itself. Its
+loop of marches, endless with each return inside it, fell off the merge's end in WGSL, which naga
+refuses, and BevyCSharp's merge was never made. The loop is bounded at three marches with a return
+after it, and a test reads every kernel's WGSL for a function returning a value that may end with no
+return.
 
 Handoff, for a fresh session, in place of those above. Where the work stands: the library holds the
 field's plan, the triangles' layout and the glow lights in C#, and in Slang the probes' octahedron,
