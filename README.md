@@ -92,7 +92,7 @@ library's functions, and the engine keeps its bindings, its threads and its atom
 | `IFieldVolume` | Reads the finest cascade holding a point, a cascade's corner and cell, its field between cells and a cell as it is | `seamSheet`, `fieldDistanceIn`, `fieldDistanceSheetIn`, `fieldNormalIn`, `traceField`, `traceFieldSheets`, `reachAlong`, `reachTexel` |
 | `IMarchSteps` | Takes each step a march makes, which `NoSteps` passes over | `traceField`, `traceFieldSheets`, `traceProbeRay`, `marchToOpenSpace`, `reachAlong`, `mergedLight`, `mergeTexel` |
 | `IProbeField` | Reads, beyond `IFieldVolume`, the light a surface a ray meets or crosses sends back along the ray as the engine shades it, from the hit's place, the ray's way, the cascade and the cell, and the share of light that passes a unit of a surface's depth | `traceProbeRay`, `marchToOpenSpace`, `mergedLight`, `traceTexel`, `mergeTexel`, `gatherAt` |
-| `IFarProbes` | Reads a far probe's light at a texel and how far its ray toward each way of its reach map went, the merged light and reach maps of the level above a merge's or of the finest level a gather's | `mergedLight`, `farTexelsLight`, `farProbeSees`, `mergeTexel`, `gatherAt` |
+| `IFarProbes` | Reads a far probe's light at a texel and how far its ray toward each way of its reach map went, the merged light and reach maps of the level above a merge's or of the finest level a gather's, which `TracedMeans` reads at fewer texels than traced | `mergedLight`, `farTexelsLight`, `farProbeSees`, `mergeTexel`, `gatherAt` |
 | `IProbePlaces` | Reads where a cascade's probe stands, by the engine's own rule where it moves a probe off a surface, which `GridPlaces` gives as the grid's place | `traceTexel`, `reachTexel`, `mergedLight`, `mergeTexel`, `gatherAt` |
 | `ISky` | Reads the sky's light along a way, for a ray that leaves the field, which `UniformSky` gives as one light | `lastCascadeLight`, `mergedLight`, `settleTexel`, `mergeTexel` |
 | `IProbeLight` | Reads a probe's merged light at each of its texels | `lightTaken` |
@@ -169,17 +169,21 @@ The conventions the module stands on:
   about 1.15 times the steps under the lintel and in the four cascades' box. The rules lessen the
   smear and do not end it, in any chain, and the tests hold the boxes, the lids, the wall and the
   room under the lintel alone.
-- A cascade is traced at twice the texels a side the cascade below and the gather read it at, and
-  each texel they read is the mean of the 2 by 2 traced texels it holds, so its light is that of
-  four ways spread over its solid angle. Its middle way alone reads a thin strip of sky the texel
-  holds part of as all of it or none. In the room under the lintel lit by the sky alone, each
-  cascade read at 16 texels a side and the finest gathered at 8, the face toward the opening of the
-  probe 6.5 units in reads 0.94 of the light traced there with every cascade traced at 32, and 0.61
-  traced at 16, the ways a few degrees under the horizon toward the opening meeting the ground
-  outside along their middle ways where a third of their solid angle sees the sky past the ground's
-  end. Traced so, a chain traces four times the rays and takes 4.0 times the steps. Traced at 16 and
-  read at 8, as many rays as one traced and read at 16, the face reads 0.70, and a four-cascade
-  box's floor row reads 13.5 percent under at its ends.
+- A cascade is traced at `TracedMeans.perRead` texels along a side of each texel the cascade below
+  and the gather read it at, 1 or 2 as a binding chooses, and each texel they read is the mean of
+  the traced texels it holds weighed by their solid angle, so at 2 its light is that of four ways
+  spread over its solid angle. A binding wraps its own reads of the traced texels in `TracedMeans`
+  and passes `readCascade`'s cascade beside it to `mergeTexel` and `gatherAt`. Its middle way alone
+  reads a thin strip of sky the texel holds part of as all of it or none. In the room under the
+  lintel lit by the sky alone, each cascade read at 16 texels a side and the finest gathered at 8,
+  the face toward the opening of the probe 6.5 units in reads 0.83 of the light traced there at 2,
+  every cascade traced at 32, and 0.57 at 1, the ways a few degrees under the horizon toward the
+  opening meeting the ground outside along their middle ways where a third of their solid angle sees
+  the sky past the ground's end. At 2 a chain traces four times the rays and takes 4.0 times the
+  steps. Traced at 16 and read at 8, as many rays as at 1 read at 16, the face reads 0.64. Each
+  traced texel weighs by its solid angle, as `farTexelsLight` weighs the far texels a near texel
+  covers: an even mean read the face 0.94, counting the texels by the octahedron's corner toward the
+  opening, which see the sky and span the least solid angle, as whole ones.
 - `mergedLight` takes the far cascade as it stands, its own end the one its probes' rays and reach
   maps run to, and after it `marchEnd`, the coarsest cascade's end, to which a march past every far
   interval runs. A binding that calls it itself, and not through `mergeTexel`, which takes both,

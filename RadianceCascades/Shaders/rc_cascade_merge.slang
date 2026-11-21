@@ -70,6 +70,56 @@ public float3 farTexelsLight<P : IFarProbes>(P probes, ProbeCascade far, int3 pr
     return sum / shares;
 }
 
+// A cascade's probes read at fewer texels a side than they are traced at, perRead traced texels a
+// side in each read texel, 1 or 2 as a binding chooses for the level below, and more for a gather
+// that reads the finest coarser still. Each read texel is the mean of the traced texels it holds,
+// weighed by their solid angle (octahedronShare), and so takes the light of perRead squared ways
+// spread over it, where a texel traced at the side it is read at takes its middle way's alone and
+// reads a thin strip of sky it holds part of as all of it or none. A binding wraps its own reads of
+// the traced texels in it and passes readCascade's cascade beside it to the merge and the gather.
+// In a room under a lintel lit by the sky alone, each level read at 16 a side and the finest
+// gathered at 8, the face toward the opening read 0.83 of the light traced there at 2, for four
+// times the rays and steps, and 0.57 at 1. An even mean read it 0.94 at 2, counting the texels by
+// the octahedron's corner toward the opening, which see the sky and span the least solid angle,
+// as whole ones.
+public struct TracedMeans<P : IFarProbes> : IFarProbes
+{
+    // The probes as traced, read at their traced texels.
+    public P traced;
+    // The traced texels along a side.
+    public uint texels;
+    // The traced texels along a side of each read texel, 1 where they are read as traced.
+    public uint perRead;
+
+    public float3 lightAt(int3 probe, uint2 texel)
+    {
+        if (perRead <= 1u)
+            return traced.lightAt(probe, texel);
+        float3 sum = float3(0.0);
+        float shares = 0.0;
+        for (uint j = 0u; j < perRead; j++)
+            for (uint i = 0u; i < perRead; i++)
+            {
+                uint2 at = texel * perRead + uint2(i, j);
+                float share = octahedronShare((float2(at) + 0.5) / float(texels));
+                sum += traced.lightAt(probe, at) * share;
+                shares += share;
+            }
+        return sum / shares;
+    }
+
+    // The reach maps keep their own texels (ReachTexels), read as traced.
+    public float reachAt(int3 probe, uint2 texel) { return traced.reachAt(probe, texel); }
+}
+
+// A cascade traced at its texels as the level below and the gather read it, at perRead traced
+// texels along a side of each read texel (TracedMeans).
+public ProbeCascade readCascade(ProbeCascade cascade, uint perRead)
+{
+    cascade.texels /= max(perRead, 1u);
+    return cascade;
+}
+
 // The far cascade's light over a near texel from the far probes about e, each at its trilinear
 // weight on the far grid, a probe inside a mesh or not seeing e weighing nothing, and in weights
 // the sum of the weights taken, which divides it.

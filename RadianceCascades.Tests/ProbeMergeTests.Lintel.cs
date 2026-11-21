@@ -256,10 +256,11 @@ public sealed partial class ProbeMergeTests
         var traced = TracedAgainstBoxes(UnderLintel, -Vector3.UnitX, lit: false);
         var said = $"the probe at (0.5, 1.5, 0.5) lit by the sky alone takes {merged:0.0000} toward the opening against {traced:0.0000} traced, {merged / traced:0.000} of it";
         output.WriteLine(said);
-        // 0.0725 against 0.0770, 0.942 of it. Traced at the 16 texels a side each level is read
-        // at, the face read 0.0473, 0.614 of it, the ways a few degrees under the horizon toward
-        // the opening meeting the ground outside along their texels' middle ways, where a third of
-        // their solid angle sees the sky past the ground's end.
+        // 0.0635 against 0.0770, 0.825 of it. Traced at the 16 texels a side each level is read at,
+        // the face read 0.0440, 0.571 of it, the ways a few degrees under the horizon toward the
+        // opening meeting the ground outside along their texels' middle ways, where a third of
+        // their solid angle sees the sky past the ground's end. Each traced texel weighs by its
+        // solid angle in the texel read; an even mean read 0.0725, 0.942 of it.
         Assert.True(merged / traced is >= 0.8f and <= 1.2f, said);
     }
 }

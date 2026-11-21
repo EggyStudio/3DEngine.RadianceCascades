@@ -170,29 +170,17 @@ struct LevelMerged : IMergedLight
     }
 };
 
-// A level's merged light and reach map as the level below it, or the gather, reads them, at the
-// texels it keeps, where fewer than it traces each the mean of the traced texels it covers.
+// A level's merged light and reach map as traced, which the level below it and the gather read
+// through TracedMeans.
 struct LevelProbes : IFarProbes
 {
     ProbeCascade cascade;
     uint merged;
     uint reach;
-    uint kept;
-    float3 tracedAt(int3 probe, uint2 texel)
+    float3 lightAt(int3 probe, uint2 texel)
     {
         uint i = (merged + cascadeTexelIndex(cascade, probe, texel)) * 3u;
         return float3(mergedFloats[i], mergedFloats[i + 1], mergedFloats[i + 2]);
-    }
-    float3 lightAt(int3 probe, uint2 texel)
-    {
-        if (kept == 0u || kept >= cascade.texels)
-            return tracedAt(probe, texel);
-        uint k = cascade.texels / kept;
-        float3 sum = float3(0.0);
-        for (uint j = 0u; j < k; j++)
-            for (uint i = 0u; i < k; i++)
-                sum += tracedAt(probe, texel * k + uint2(i, j));
-        return sum / float(k * k);
     }
     float reachAt(int3 probe, uint2 texel) { return reachFloats[reach + reachTexelIndex(cascade, probe, texel)]; }
 };
@@ -239,14 +227,15 @@ ProbeCascade levelCascade(int level)
 // the level below's merge reads it at, 0 for those it keeps.
 uint firstOf(int level, int which) { return uint(setup[Levels + level * 16 + which]); }
 
-// A level's cascade as the level below and the gather read it, at the texels it keeps.
-ProbeCascade keptCascade(int level)
+// A level's probes as the level below or the gather reads them, at read texels a side, the mean
+// of the traced texels each holds, or as traced where read is 0 or not fewer.
+TracedMeans<LevelProbes> meansOf(int level, uint read)
 {
-    ProbeCascade cascade = levelCascade(level);
-    uint kept = firstOf(level, 14);
-    if (kept > 0u)
-        cascade.texels = kept;
-    return cascade;
+    TracedMeans<LevelProbes> means;
+    means.traced = probesOf(level);
+    means.texels = levelCascade(level).texels;
+    means.perRead = read > 0u && read < means.texels ? means.texels / read : 1u;
+    return means;
 }
 
 TestPlaces placesOf(int level)
@@ -257,7 +246,7 @@ TestPlaces placesOf(int level)
 
 LevelProbes probesOf(int level)
 {
-    LevelProbes probes = { levelCascade(level), firstOf(level, 12), firstOf(level, 11), firstOf(level, 14) };
+    LevelProbes probes = { levelCascade(level), firstOf(level, 12), firstOf(level, 11) };
     return probes;
 }
 
@@ -285,18 +274,13 @@ void test(uint3 id : SV_DispatchThreadID)
     else if (pass == 3u)
     {
         CountedSteps counted = { 0u };
-        // The level above as the merge reads it, at the texels it keeps or at those the setup asks
-        // for, as a binding that reads a level above at the side it traced it at does.
-        LevelProbes above = probesOf(level + 1);
-        ProbeCascade aboveCascade = keptCascade(level + 1);
-        uint read = firstOf(level + 1, 15);
-        if (read > 0u)
-        {
-            above.kept = read;
-            aboveCascade.texels = read;
-        }
-        bool marched = mergeTexel(field, rays, placesOf(level), above, placesOf(level + 1), merged, cascade, aboveCascade, setup[8], sky, counted,
-            index);
+        // The level above as the merge reads it, at the texels the setup asks for where it gives
+        // them, as a binding that reads a level above at the side it traced it at does, and
+        // otherwise at those it keeps.
+        uint read = firstOf(level + 1, 15) > 0u ? firstOf(level + 1, 15) : firstOf(level + 1, 14);
+        TracedMeans<LevelProbes> above = meansOf(level + 1, read);
+        bool marched = mergeTexel(field, rays, placesOf(level), above, placesOf(level + 1), merged, cascade,
+            readCascade(levelCascade(level + 1), above.perRead), setup[8], sky, counted, index);
         if (index < cascadeTexels(cascade))
         {
             marches[(firstOf(level, 10) + index) * 2u] = marched ? 1.0 : 0.0;
@@ -317,6 +301,7 @@ void test(uint3 id : SV_DispatchThreadID)
     else if (index < uint(setup[Points]))
     {
         SurfacePoints surfaces;
-        gatherAt(field, probesOf(0), placesOf(0), keptCascade(0), surfaces, index);
+        TracedMeans<LevelProbes> finest = meansOf(0, firstOf(0, 14));
+        gatherAt(field, finest, placesOf(0), readCascade(levelCascade(0), finest.perRead), surfaces, index);
     }
 }
