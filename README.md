@@ -185,19 +185,22 @@ The conventions the module stands on:
   smear and do not end it, in any chain, and the tests hold the boxes, the lids, the wall and the
   room under the lintel alone.
 - A cascade is traced at `TracedMeans.perRead` texels along a side of each texel the cascade below
-  and the gather read it at, 1 or 2 as a binding chooses, and each texel they read is the mean of
-  the traced texels it holds weighed by their solid angle, so at 2 its light is that of four ways
-  spread over its solid angle. A binding wraps its own reads of the traced texels in `TracedMeans`
-  and passes `readCascade`'s cascade beside it to `mergeTexel` and `gatherAt`. Its middle way alone
-  reads a thin strip of sky the texel holds part of as all of it or none. In the room under the
-  lintel lit by the sky alone, each cascade read at 16 texels a side and the finest gathered at 8,
-  the face toward the opening of the probe 6.5 units in reads 0.83 of the light traced there at 2,
-  every cascade traced at 32, and 0.57 at 1, the ways a few degrees under the horizon toward the
-  opening meeting the ground outside along their middle ways where a third of their solid angle sees
-  the sky past the ground's end. At 2 a chain traces four times the rays and takes 4.0 times the
-  steps. Traced at 16 and read at 8, as many rays as at 1 read at 16, the face reads 0.64. Each
-  traced texel weighs by its solid angle, as `farTexelsLight` weighs the far texels a near texel
-  covers: an even mean read the face 0.94, counting the texels by the octahedron's corner toward the
+  and the gather read it at, 1 or 2 as a binding chooses for each cascade, and each texel they read
+  is the mean of the traced texels it holds weighed by their solid angle, so at 2 its light is that
+  of four ways spread over its solid angle. A binding wraps its own reads of the traced texels in
+  `TracedMeans` and passes `readCascade`'s cascade beside it to `mergeTexel` and `gatherAt`. A
+  texel's middle way alone reads a thin strip of sky the texel holds part of as all of it or none,
+  and the merge's march past a ray's end runs along it too. In the room under the lintel lit by the
+  sky alone, each cascade read at 16 texels a side and the finest gathered at 8, the face toward the
+  opening of the probe 6.5 units in reads the light traced there as the table under this list gives,
+  the stated limit of one ray a texel: the march past a finer cascade's ray's end meets the ground
+  outside along the texel's middle way short of the ground's end, where a third of its solid angle
+  sees the sky past it. A texel whose ray ends unlike a neighbor's, traced from its quarters, reads
+  0.69 at 1.8 times the steps, since the finer cascades' rays end in open space and agree with their
+  neighbors, and its quarters handed on with no march read 1.07 and lose what the march mends, the
+  four cascades' open box reading up to 1.25 times its share. Each traced texel weighs by its solid
+  angle, as `farTexelsLight` weighs the far texels a near texel covers: an even mean read the face
+  0.94 with every cascade traced at 2, counting the texels by the octahedron's corner toward the
   opening, which see the sky and span the least solid angle, as whole ones.
 - A probe whose place lies inside a mesh keeps `ReachInside` along every way of its reach map, which
   `reachTexel` writes, and the merge and the gather pass a far probe over by its reach alone
@@ -291,6 +294,15 @@ The conventions the module stands on:
   a point at 16 texels a side and 1,000 to 1,600 steps. A ray that leaves the field takes the sky,
   so a slab reaching past the coarsest cascade reads open past its edge, and against the whole
   slab the floor reads 1.68 and 1.39 times its light.
+
+The face under the lintel by how many of the four cascades are traced at 2, the rest at 1:
+
+| Cascades traced at 2 | The face, of the light traced there | The trace's steps |
+|---|---|---|
+| None, the finest two read at 8 | 0.64 | 1 |
+| The finest two, read at 16 | 0.83 | 2.2 |
+| The coarser two | 0.64 | 2.8 |
+| All four | 0.83 | 4.0 |
 
 Each setting has a default an engine may leave, and each trades one thing for another.
 

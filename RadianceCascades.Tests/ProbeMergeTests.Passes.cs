@@ -26,13 +26,14 @@ public sealed partial class ProbeMergeTests
     // Onward, OnwardSteps and OnwardMost those that took any step past their end, Capped those
     // whose trace stopped at its cap of steps, SkyShare is the first point's share of the sky, and
     // TraceSteps and TraceMost the steps the finest level's texels' traces took on the mean and at
-    // most.
+    // most, and AllTraceSteps those every level's traces took together.
     private readonly record struct Chained(float Reflected, int Marched, int Steps, int Most, float[] Light, int Onward, int OnwardSteps, int OnwardMost,
         int Capped, float[] Taken)
     {
         public float SkyShare { get; init; }
         public float TraceSteps { get; init; }
         public int TraceMost { get; init; }
+        public float AllTraceSteps { get; init; }
 
         public override string ToString() =>
             $"reflects {Reflected:0.00000}, {Marched} of the finest level's texels marching on themselves in {Steps} steps in all and {Most} at most, "
@@ -187,6 +188,7 @@ public sealed partial class ProbeMergeTests
             SkyShare = skyShares[texels],
             TraceSteps = finest.Average(),
             TraceMost = (int)finest.Max(),
+            AllTraceSteps = traceSteps.Sum(),
         };
     }
 

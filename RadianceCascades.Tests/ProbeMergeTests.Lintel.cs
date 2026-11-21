@@ -246,21 +246,28 @@ public sealed partial class ProbeMergeTests
     public void A_Room_Open_Under_A_Lintel_Lit_By_The_Sky_Alone_Reads_Its_Face_Toward_The_Opening_Within_A_Fifth_Of_The_Sky_Traced_There()
     {
         // The room as an engine binds it, every surface a ray meets black, the light a bounce gives
-        // left out, each level read by the level below at 16 texels a side and the finest gathered
-        // at 8, every level traced at twice the texels it is read at, 32, each texel read the mean
-        // of the 2 by 2 traced texels it holds.
+        // left out, each level traced at 16 texels a side and the finest gathered at 8, the finest
+        // two traced at twice the texels the level below reads them at, 32 read at 16, each texel
+        // read the mean of the 2 by 2 traced texels it holds, and every level traced at 16 with the
+        // finest two read at 8 beside it.
         var (cells, _) = LintelScene(lit: false);
-        var levels = LintelLevels.Select(level => level with { Texels = 2 * level.Texels, Read = level.Texels }).ToArray();
+        var levels = LintelLevels.Select((level, l) => l < 2 ? level with { Texels = 2 * level.Texels, Read = level.Texels } : level).ToArray();
         var setting = new Setting { FieldCascades = LintelField, SkyLight = LintelSky, Points = [(UnderLintel, -Vector3.UnitX)] };
-        var merged = Passes(cells, levels, UnderLintel, setting).Taken[0];
-        var traced = TracedAgainstBoxes(UnderLintel, -Vector3.UnitX, lit: false);
-        var said = $"the probe at (0.5, 1.5, 0.5) lit by the sky alone takes {merged:0.0000} toward the opening against {traced:0.0000} traced, {merged / traced:0.000} of it";
+        var (twice, once) = (Passes(cells, levels, UnderLintel, setting), Passes(cells, LintelLevels, UnderLintel, setting));
+        var (merged, traced) = (twice.Taken[0], TracedAgainstBoxes(UnderLintel, -Vector3.UnitX, lit: false));
+        var said = $"the probe at (0.5, 1.5, 0.5) lit by the sky alone takes {merged:0.0000} toward the opening against {traced:0.0000} traced, {merged / traced:0.000} of it, "
+            + $"its traces taking {twice.AllTraceSteps / once.AllTraceSteps:0.00} times the steps of a chain traced at 16, which takes {once.Taken[0]:0.0000}, "
+            + $"{once.Taken[0] / traced:0.000} of it";
         output.WriteLine(said);
-        // 0.0635 against 0.0770, 0.825 of it. Traced at the 16 texels a side each level is read at,
-        // the face read 0.0440, 0.571 of it, the ways a few degrees under the horizon toward the
-        // opening meeting the ground outside along their texels' middle ways, where a third of
-        // their solid angle sees the sky past the ground's end. Each traced texel weighs by its
-        // solid angle in the texel read; an even mean read 0.0725, 0.942 of it.
+        // 0.0635 against 0.0770, 0.825 of it, at 2.21 times the trace's steps, as every level
+        // traced twice reads it at 4.0 times them, where the coarser two traced twice read 0.637 at
+        // 2.8 times. Traced at 16 with the finest two read at 8 the face reads 0.0490, 0.637 of it,
+        // the merge's march past a finer level's ray's end meeting the ground outside along its
+        // texel's middle way short of the ground's end, where a third of the texel's solid angle
+        // sees the sky past it. A texel whose ray ends unlike a neighbor's traced from its quarters
+        // read 0.69 at 1.8 times the steps, since the finer levels' rays end in open space and
+        // agree with their neighbors. Each traced texel weighs by its solid angle in the texel
+        // read; with every level traced twice an even mean read 0.0725, 0.942 of it.
         Assert.True(merged / traced is >= 0.8f and <= 1.2f, said);
     }
 }
