@@ -42,8 +42,9 @@ RWStructuredBuffer<float> cellLight;
 // the float the setup gives at 124 each surface point's share.
 RWStructuredBuffer<float> skyFloats;
 
-// The light held for each cell of the field's cascades one after another, three floats a cell,
-// which pass 7 holds and the merge reads where the setup sets 126.
+// The light held for each cell of the field's cascades one after another, twelve floats a cell,
+// each of its two sides' own light and then its probes' light, which pass 7 holds and the merge
+// reads where the setup sets 126.
 RWStructuredBuffer<float> heldFloats;
 
 // The steps each texel's trace took, one float a texel, the levels one after another.
@@ -99,7 +100,17 @@ struct ProbeCells : IProbeField
     // sun they reflect its light as a diffuse surface at the field's normal does, and a sheet,
     // whose plane the cell keeps, as a leaf sends the light it takes on either side of it. Where
     // the setup asks for it, a hit takes the light cellLight holds for its cell.
+    // A hit's light as the test's binding shades it, its own and, where the setup gives the
+    // probes' light at 90, that light weighed by the share at 89.
     float3 hitLight(float3 place, float3 way, int cascade, int3 at)
+    {
+        return ownLight(place, way, cascade, at) + float3(setup[89] * setup[90]);
+    }
+
+    // A hit's own light, the cell's where the setup gives the cells' light, or the sun's on a
+    // surface of albedo 86, a sheet lit from either side, or where the setup sets 88 on the face
+    // the ray meets alone, by the normal of the sheet's plane on that side.
+    float3 ownLight(float3 place, float3 way, int cascade, int3 at)
     {
         if (setup[87] > 0.5)
             return float3(cellLight[index(cascade, at)]);
@@ -108,7 +119,9 @@ struct ProbeCells : IProbeField
             return float3(0.0);
         float lit = dot(fieldNormalIn(this, cascade, place), sun);
         float3 plane = cellAt(cascade, at).yzw;
-        return float3(setup[86] / 3.14159265 * (dot(plane, plane) >= 0.25 ? abs(lit) : max(lit, 0.0)));
+        if (dot(plane, plane) >= 0.25)
+            lit = setup[88] > 0.5 ? dot(dot(plane, way) < 0.0 ? normalize(plane) : -normalize(plane), sun) : abs(lit);
+        return float3(setup[86] / 3.14159265 * max(lit, 0.0));
     }
 };
 
@@ -207,18 +220,30 @@ struct LevelProbes : IFarSkyProbes
 struct HeldCells : IHeldLight
 {
     ProbeCells field;
-    float3 heldAt(int cascade, int3 cell)
+    float3 read(uint i) { return float3(heldFloats[i], heldFloats[i + 1u], heldFloats[i + 2u]); }
+    float3 heldAt(int cascade, int3 cell, uint side) { return read(uint(field.index(cascade, cell)) * 12u + side * 6u); }
+    float3 heldProbeLightAt(int cascade, int3 cell, uint side) { return read(uint(field.index(cascade, cell)) * 12u + side * 6u + 3u); }
+    // The share of the probes' light a hit takes, as the setup gives it at 89 when the merges run.
+    float probeShare(float3 place, int cascade, int3 cell) { return setup[89]; }
+    void hold(int cascade, int3 cell, uint side, float3 own, float3 probes)
     {
-        uint i = uint(field.index(cascade, cell)) * 3u;
-        return float3(heldFloats[i], heldFloats[i + 1u], heldFloats[i + 2u]);
+        uint i = uint(field.index(cascade, cell)) * 12u + side * 6u;
+        heldFloats[i] = own.x;
+        heldFloats[i + 1u] = own.y;
+        heldFloats[i + 2u] = own.z;
+        heldFloats[i + 3u] = probes.x;
+        heldFloats[i + 4u] = probes.y;
+        heldFloats[i + 5u] = probes.z;
     }
-    void hold(int cascade, int3 cell, float3 light)
-    {
-        uint i = uint(field.index(cascade, cell)) * 3u;
-        heldFloats[i] = light.x;
-        heldFloats[i + 1u] = light.y;
-        heldFloats[i + 2u] = light.z;
-    }
+};
+
+// The test's binding's shading of a held cell, its own light and the probes' light the setup gives
+// at 90 apart.
+struct HeldShading : IHeldShading
+{
+    ProbeCells field;
+    float3 ownLight(float3 place, float3 way, int cascade, int3 cell) { return field.ownLight(place, way, cascade, cell); }
+    float3 probeLight(float3 place, float3 way, int cascade, int3 cell) { return float3(setup[90]); }
 };
 
 struct SurfacePoints : ISurfaceSkyPoints
@@ -360,7 +385,8 @@ void test(uint3 id : SV_DispatchThreadID)
     {
         // The light of every cell of the field held at once, the share 1.
         HeldCells held = { field };
-        holdCellLight(field, held, uint(field.cascades()), 1u, 0u, index);
+        HeldShading shading = { field };
+        holdCellLight(field, shading, held, uint(field.cascades()), 1u, 0u, index);
     }
     else if (pass == 6u)
     {

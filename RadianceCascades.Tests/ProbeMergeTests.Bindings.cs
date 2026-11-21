@@ -169,6 +169,66 @@ public sealed partial class ProbeMergeTests
     }
 
     [CpuKernelFact]
+    public void A_Sheet_Thinner_Than_A_Cell_Lit_On_One_Side_Reads_Each_Side_Through_The_Held_Light_As_Its_Own_Shading_Does()
+    {
+        // A sheet 14 units a side at 2.1, within a cell four tenths of the way up it, lit from
+        // above alone by a sun straight over it under a black sky, read by a probe a unit under it
+        // facing up and one a unit over it facing down, their rays reaching half a unit and the far
+        // probes outside the field, so every ray toward the sheet marches on to it in the merge.
+        var cells = Field(Sheet(2.1f, 7, 1));
+        var sunlit = new Setting { SkyLight = 0, Sun = new Vector3(0, 3, 0), OneSided = true };
+        Level Beyond = new(new(100, 100, 100), FarSpacing, 2, 2, 2, FarTexels, FarEnd);
+        Chained Read(Vector3 at, Vector3 normal, bool held) =>
+            Passes(cells, [new(at, 1, 1, 1, 1, NearTexels, 0.5f), Beyond], at, sunlit with { Normal = normal, Held = held });
+        var (under, over) = (new Vector3(0, 1.1f, 0), new Vector3(0, 3.1f, 0));
+        var (shadedUnder, heldUnder) = (Read(under, Vector3.UnitY, false), Read(under, Vector3.UnitY, true));
+        var (shadedOver, heldOver) = (Read(over, -Vector3.UnitY, false), Read(over, -Vector3.UnitY, true));
+        // The cells the holding pass shades, within a cell and a tenth of a surface, and of them
+        // the sheets', which it shades twice, here and in the box with a sheet for a lid.
+        (int Held, int Sheets) Counted(float[] field)
+        {
+            var (held, sheets) = (0, 0);
+            for (int i = 0; i < Size * Size * Size; i++)
+            {
+                var (d, kept) = (field[i * 5], new Vector3(field[i * 5 + 1], field[i * 5 + 2], field[i * 5 + 3]).Length());
+                if (kept >= 0.5f)
+                    d = MathF.Min(d, MathF.Abs((kept - 2) * Cell) - 0.25f * Cell);
+                if (MathF.Abs(d) < 1.1f * Cell)
+                    (held, sheets) = (held + 1, sheets + (kept >= 0.5f ? 1 : 0));
+            }
+            return (held, sheets);
+        }
+        var (sheet, box) = (Counted(cells), Counted(Field(OpenBox().Concat(Sheet(8, 4 + Wall, 6)))));
+        var said = $"held against shaded, the probe under the sheet {heldUnder.Reflected:0.00000} against {shadedUnder.Reflected:0.00000} and the probe over "
+            + $"it {heldOver.Reflected:0.00000} against {shadedOver.Reflected:0.00000}, its rays marching on {shadedUnder}, the holding pass shading "
+            + $"{sheet.Held} cells of which {sheet.Sheets} twice, and in the box under a sheet {box.Held} of which {box.Sheets} twice";
+        output.WriteLine(said);
+        // 0.00000 against 0.00000 under the sheet and 0.27710 against 0.27710 over it, where one
+        // light held a cell read the sheet's lit side from under it, 0.27710 against 0.00000. The
+        // holding pass shades 9,860 cells, 6,272 of them twice, and in the box 27,856, 2,144 twice.
+        Assert.True(Math.Abs(heldUnder.Reflected - shadedUnder.Reflected) <= 0.02 * shadedOver.Reflected
+            && Math.Abs(heldOver.Reflected - shadedOver.Reflected) <= 0.02 * shadedOver.Reflected && shadedOver.Reflected > 0.05, said);
+    }
+
+    [CpuKernelFact]
+    public void A_Merge_Reading_The_Held_Light_Weighs_The_Probes_Light_A_Hit_Reflects_By_The_Share_The_Binding_Gives()
+    {
+        // The sunlit wall through the march-on, its every surface reflecting a light of 0.2 of the
+        // binding's probes besides the sun's, of which a hit takes a quarter, the share the
+        // binding's gather gives after the cells' light is held, which holds the whole.
+        var wall = Field(Cuboid(new(3, 0, -4), new(3 + Wall, 8, 4), 1));
+        var at = new Vector3(0, 4, 0);
+        var setting = new Setting { Normal = Vector3.UnitX, SkyLight = 0, Sun = new Vector3(-0.8f, 0.6f, 0) * 3, Indirect = 0.2f, IndirectShare = 0.25f };
+        Level[] levels = [new(at, 1, 1, 1, 1, NearTexels, 2), new(new(100, 100, 100), FarSpacing, 2, 2, 2, FarTexels, FarEnd)];
+        var (shaded, held) = (Passes(wall, levels, at, setting), Passes(wall, levels, at, setting with { Held = true }));
+        var said = $"held against shaded, the sunlit wall with a quarter of its probes' light {held.Reflected:0.00000} against {shaded.Reflected:0.00000}";
+        output.WriteLine(said);
+        // 0.17364 against 0.17461, 0.6 percent under, where a held light taking the probes' light
+        // whole read 0.22521, 29 percent over.
+        Assert.True(Math.Abs(held.Reflected / shaded.Reflected - 1) <= 0.02, said);
+    }
+
+    [CpuKernelFact]
     public void Sunlit_Sheets_That_Pass_Half_Their_Light_Add_What_They_Keep_Of_It_To_What_They_Pass_Of_The_Sky()
     {
         // Two sheets 14 units a side over the floor, at 2 and at 3.5, each passing half its light

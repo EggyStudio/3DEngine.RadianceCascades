@@ -905,6 +905,22 @@ sunlit wall through the march and the march-on and reaching 4, the sunlit sheets
 behind the wall that lets light through read every figure and step count as they did. `traceTexel`
 takes an `IMarchSteps` where a binding counts its trace's steps, which the tests' kernel does.
 
+The held light's two misfits, from 3DEngine's binding. A cell keeping a sheet thinner than a cell
+holds a light a side, 0 along its plane's normal and 1 against it (`heldSide`), shaded where a march
+toward the plane from either side stops, and the read takes the side the ray meets: on the CPU a
+sheet at 2.1, four tenths up its cell, lit from above alone reads a probe under it 0.00000 against
+0.00000 shaded and over it 0.27710 against 0.27710, where one light a cell read under it 0.27710,
+which a test holds run failing first. A cell holds its own light apart from the probes' light it
+reflects (`IHeldShading`, `WholeShading` for an engine whose hit weighs no probe's share), and the
+read weighs the probes' light by the share the engine gives at the hit (`IHeldLight.probeShare`):
+the sunlit wall whose hits take a quarter of a probes' light of 0.2 reads 0.17364 held against
+0.17461 shaded, where held whole it read 0.22521, 29 percent over, held by a second test run failing
+first. The holding pass shades a sheet's cells twice, 6,272 of a lone sheet's 9,860 held cells and
+2,144 of the box's 27,856 under a sheet for a lid, 64 and 8 percent more shading; the engines'
+counts of their sheet cells give their cost. The sunlit wall and sheets held read as they did, the
+sheets 0.46498 where they read 0.46501. The GPU lock is taken through Tools' gate, `modules/Tools`
+pinned at c389096.
+
 Handoff, for a fresh session, in place of those above. Where the work stands: the library holds the
 field's plan, the triangles' layout and the glow lights in C#, and in Slang the probes' octahedron,
 the cell code, resolve and pinch, the hit's color read, the splat, the stamp, the field's distance
@@ -942,9 +958,10 @@ the splat's second plane, the lending of thin emitters, the repaint and the clea
 AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md wait for the owner. Read first:
 AGENTS.md, this file's head and Decisions, the Replies from the field's distance on, the README's
 binding section, NORM.md's N 4.8 to 4.11 and N 7.9, `CpuKernel.cs` and the head of
-`rc_probe_passes.slang`. Every build and test goes through N 7.9's lock, restored outside it, built
-with `--no-restore -p:UseSharedCompilation=false`, its output written to a file of which the summary
-line and the failing lines alone are read, and each commit is read by `commitcheck.py . --staged
+`rc_probe_passes.slang`. Every build and test goes through N 7.9's lock by `python3 -I
+modules/Tools/scripts/gpu.py shared -- <part> -- <part>`, built with `--no-restore
+-p:UseSharedCompilation=false`, its output written to a file of which the summary line and the
+failing lines alone are read, and each commit is read by `commitcheck.py . --staged
 --message=<file>` first. At a binding's request, in the commit carrying this line: `build/fetch-
 slang.sh` reads an archive's sha256 with `shasum -a 256`, on macOS, Linux and Git's bash on Windows
 alike, and Python's hashlib where a system has none, in place of `sha256sum`, which N 6.6's check

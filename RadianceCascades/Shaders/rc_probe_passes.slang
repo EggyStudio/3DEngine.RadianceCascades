@@ -116,30 +116,73 @@ struct NoSkyPoints<A : ISurfacePoints> : ISurfaceSkyPoints
 }
 
 // The light an engine holds for each cell of the field that lies within a cell of a surface, the
-// light that surface sends along its normal as the engine shades it (holdCellLight), one light a
-// cell of each of the field's cascades, which a merge reads at the cell a march met a surface in
-// (HeldHitLight) in place of shading the surface there, and the engine implements over its own
-// buffers or textures.
+// light that surface sends from each of its sides as the engine shades it (holdCellLight), its own,
+// its emission and the light of its sun and its lamps, apart from the light of the engine's probes
+// it reflects, which a merge reads at the cell a march met a surface in (HeldHitLight) in place of
+// shading the surface there, and the engine implements over its own buffers or textures. A cell
+// holds one side, 0, where its surface is a solid's, facing the field's normal, and two where it
+// keeps a sheet thinner than a cell (heldSide), 0 facing along its plane's normal and 1 the other
+// way, since a ray from a sheet's dark side reads its lit side's light where one light stands for
+// both, and the foot of a thin room's wall lit by a lamp outside read 2.11 times its light so.
 public interface IHeldLight
 {
-    // The light held for the cell of the cascade of the field.
-    float3 heldAt(int cascade, int3 cell);
+    // The light the side of the surface nearest the cell sends, its own.
+    float3 heldAt(int cascade, int3 cell, uint side);
 
-    // Holds light for the cell of the cascade of the field.
-    void hold(int cascade, int3 cell, float3 light);
+    // The light of the engine's probes the same side reflects, taken whole.
+    float3 heldProbeLightAt(int cascade, int3 cell, uint side);
+
+    // The share of the probes' light a hit at place in the cell takes, as the engine's own hit
+    // weighs each probe's, 1 where it takes it whole, since a held light that takes it whole keeps
+    // a light that went out lingering where the engine's gather lets it go within two frames.
+    float probeShare(float3 place, int cascade, int3 cell);
+
+    // Holds the side's own light and its probes' light for the cell.
+    void hold(int cascade, int3 cell, uint side, float3 own, float3 probes);
+}
+
+// The light an engine shades a held cell's surface with (holdCellLight), its own and its probes'
+// apart, at place toward -way, as IProbeField.hitLight gives their sum where the engine weighs the
+// probes' by their share.
+public interface IHeldShading
+{
+    // The surface's own light, its emission and the light of the engine's sun and lamps.
+    float3 ownLight(float3 place, float3 way, int cascade, int3 cell);
+
+    // The light of the engine's probes the surface reflects, taken whole.
+    float3 probeLight(float3 place, float3 way, int cascade, int3 cell);
+}
+
+// An engine's shading held whole as a surface's own light (IHeldShading), for an engine whose hit
+// weighs no probe's share.
+public struct WholeShading<F : IProbeField> : IHeldShading
+{
+    // The field whose hitLight the engine shades with.
+    public F field;
+    public float3 ownLight(float3 place, float3 way, int cascade, int3 cell) { return field.hitLight(place, way, cascade, cell); }
+    public float3 probeLight(float3 place, float3 way, int cascade, int3 cell) { return float3(0.0); }
+}
+
+// The side of the surface nearest a cell of the field that a ray along way meets (IHeldLight), 1
+// where the cell keeps a sheet whose plane's normal the way runs along, and 0 otherwise.
+public uint heldSide<F : IFieldVolume>(F field, int cascade, int3 cell, float3 way)
+{
+    float3 sheet = field.cellAt(cascade, cell).yzw;
+    return dot(sheet, sheet) >= 0.25 && dot(way, sheet) > 0.0 ? 1u : 0u;
 }
 
 // The field as a merge marches through it where the engine holds the light of the field's cells
-// (IHeldLight): a surface a ray meets sends back the light held for the cell the ray met it in,
-// whatever the ray's way, every other read the field's own. The engine's shading at a hit, its sun
-// map, its lamps and its probes read at the surface, is most of what a merge costs, 89 and 94
-// percent of it in two scenes on one engine, and a merge that takes nothing at a hit reads a
-// room's deep end under a lintel 0.51 of the light traced there against 0.82, and a sunlit wall a
-// little past the near rays' reach 44 percent under. Read so, the merge costs what it costs taking
-// nothing there, and the sunlit wall reads 0.6 percent under what the merge reads shading its hits.
-// A held light gives up the gloss toward the eye a hit's own shading weighs by the ray's way. A
-// binding takes it where its lamps fail under a cheaper hit of its own (mergeTexel), held whole
-// each frame (holdCellLight).
+// (IHeldLight): a surface a ray meets sends back the light held for the side it meets of the cell
+// it met it in (heldSide), its own and the probes' weighed by the share the engine gives at the hit
+// (probeShare), whatever the ray's way, every other read the field's own. The engine's shading at a
+// hit, its sun map, its lamps and its probes read at the surface, is most of what a merge costs,
+// 89 and 94 percent of it in two scenes on one engine, and a merge that takes nothing at a hit
+// reads a room's deep end under a lintel 0.51 of the light traced there against 0.82, and a sunlit
+// wall a little past the near rays' reach 44 percent under. Read so, the merge costs what it costs
+// taking nothing there, and the sunlit wall reads 0.6 percent under what the merge reads shading
+// its hits. A held light gives up the gloss toward the eye a hit's own shading weighs by the ray's
+// way. A binding takes it where its lamps fail under a cheaper hit of its own (mergeTexel), held
+// whole each frame (holdCellLight).
 public struct HeldHitLight<F : IProbeField, H : IHeldLight> : IProbeField
 {
     // The field as the engine gives it.
@@ -152,7 +195,11 @@ public struct HeldHitLight<F : IProbeField, H : IHeldLight> : IProbeField
     public float4 between(int cascade, float3 cells) { return field.between(cascade, cells); }
     public float4 cellAt(int cascade, int3 cell) { return field.cellAt(cascade, cell); }
     public float3 secondAt(int cascade, int3 cell) { return field.secondAt(cascade, cell); }
-    public float3 hitLight(float3 place, float3 way, int cascade, int3 cell) { return held.heldAt(cascade, cell); }
+    public float3 hitLight(float3 place, float3 way, int cascade, int3 cell)
+    {
+        uint side = heldSide(field, cascade, cell, way);
+        return held.heldAt(cascade, cell, side) + held.heldProbeLightAt(cascade, cell, side) * held.probeShare(place, cascade, cell);
+    }
     public float throughAt(int cascade, int3 cell) { return field.throughAt(cascade, cell); }
 }
 
@@ -232,18 +279,21 @@ public void reachTexel<F : IFieldVolume, R : IReachTexels, Q : IProbePlaces>(F f
 }
 
 // Holds for the cell of the field at the thread's place in one share of the field's cells the light
-// the surface nearest it sends along its normal (IHeldLight), shaded by the engine (hitLight) where
-// a march toward that surface along the normal from the cell's middle stops, a tenth of a cell
-// short of it, a thread a cell. The cells of the field's cascades are counted one after another,
-// each x fastest, and the thread at index takes the cell at index times share plus turn modulo
-// share. A share above 1, with turn counting the frames, holds every cell once in share frames and
-// lags a change by as many, so a binding whose lighting is to show a change in the next frame
-// dispatches it each frame over every cell, share 1. A cell whose middle lies farther than a cell
-// and a tenth from a surface holds nothing, since a march stops within a tenth of a cell of a
-// surface, short of it or past it by less than a step, in a cell whose middle lies within a cell
-// and a tenth of the surface, and so does one that lies whole where a march reads a finer cascade
-// (cascadeOf), so that no thread shades a cell no march meets a surface in.
-public void holdCellLight<F : IProbeField, H : IHeldLight>(F field, H held, uint cascades, uint share, uint turn, uint index)
+// the surface nearest it sends from each of its sides (IHeldLight, heldSide), its own and its
+// probes' apart as the engine shades them (IHeldShading, WholeShading where its hit weighs no
+// probe's share), where a march toward that surface stops, a tenth of a cell short of it, a thread
+// a cell, a sheet's two sides shading twice where a solid's one side shades once. The cells of the
+// field's cascades are counted one after another, each x fastest, and the thread at index takes the
+// cell at index times share plus turn modulo share. A share above 1, with turn counting the frames,
+// holds every cell once in share frames and lags a change by as many, so a binding whose lighting
+// is to show a change in the next frame dispatches it each frame over every cell, share 1. A cell
+// whose middle lies farther than a cell and a tenth from a surface holds nothing, since a march
+// stops within a tenth of a cell of a surface, short of it or past it by less than a step, in a
+// cell whose middle lies within a cell and a tenth of the surface, and so does one that lies whole
+// where a march reads a finer cascade (cascadeOf), so that no thread shades a cell no march meets a
+// surface in.
+public void holdCellLight<F : IFieldVolume, G : IHeldShading, H : IHeldLight>(F field, G shading, H held, uint cascades, uint share,
+    uint turn, uint index)
 {
     uint size = uint(field.size());
     uint each = size * size * size;
@@ -266,8 +316,25 @@ public void holdCellLight<F : IProbeField, H : IHeldLight>(F field, H held, uint
     float d = fieldDistanceSheetIn(field, c, middle);
     if (abs(d) >= oc.w * (1.0 + MarchHit))
         return;
-    float3 normal = fieldNormalIn(field, c, middle);
-    held.hold(c, cell, field.hitLight(middle - normal * (d - oc.w * MarchHit), -normal, c, cell));
+    // A sheet's sides are shaded where a march toward its plane along its normal from either side
+    // stops, SheetHalf and a tenth of a cell off the plane, and a solid's where a march toward it
+    // along the field's normal from the cell's middle stops, the two sides one after another at
+    // one place of each shading.
+    float3 sheet = field.cellAt(c, cell).yzw;
+    float kept = length(sheet);
+    uint sides = kept >= 0.5 ? 2u : 1u;
+    [loop]
+    for (uint side = 0u; side < sides; side++)
+    {
+        float3 normal = fieldNormalIn(field, c, middle);
+        float3 place = middle - normal * (d - oc.w * MarchHit);
+        if (kept >= 0.5)
+        {
+            normal = sheet / kept * (side == 0u ? 1.0 : -1.0);
+            place = middle + sheet / kept * ((kept - SheetLength) * oc.w) + normal * ((SheetHalf + MarchHit) * oc.w);
+        }
+        held.hold(c, cell, side, shading.ownLight(place, -normal, c, cell), shading.probeLight(place, -normal, c, cell));
+    }
 }
 
 // Keeps the light of the coarsest level's texel at index as merged, its ray's alone, the light of

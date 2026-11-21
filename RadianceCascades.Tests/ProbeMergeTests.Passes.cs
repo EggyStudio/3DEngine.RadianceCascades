@@ -73,6 +73,12 @@ public sealed partial class ProbeMergeTests
         public bool Traced { get; init; }
         public bool GateFiner { get; init; }
         public bool Held { get; init; }
+        // OneSided lights a sheet from the side the sun stands on alone, Indirect is the light of
+        // the binding's probes each surface reflects, and IndirectShare the share of it a hit
+        // takes, the whole held while the cells' light is held.
+        public bool OneSided { get; init; }
+        public float Indirect { get; init; }
+        public float IndirectShare { get; init; } = 1;
     }
 
     private const float WallAlbedo = 0.6f;
@@ -123,8 +129,9 @@ public sealed partial class ProbeMergeTests
         setup[124] = texels;
         setup[125] = setting.GateFiner ? 1 : 0;
         setup[126] = setting.Held ? 1 : 0;
+        (setup[88], setup[89], setup[90]) = (setting.OneSided ? 1 : 0, setting.IndirectShare, setting.Indirect);
         var fieldCells = Math.Max(setting.FieldCascades?.Length ?? 1, 1) * Size * Size * Size;
-        var held = new float[3 * fieldCells];
+        var held = new float[12 * fieldCells];
         var traceSteps = new float[texels];
         var cellLight = setting.CellLight ?? [0];
         void Pass(int pass, int level, int threads)
@@ -134,7 +141,11 @@ public sealed partial class ProbeMergeTests
                 skyShares, held, traceSteps);
         }
         if (setting.Held)
+        {
+            setup[89] = 1;
             Pass(7, 0, fieldCells);
+            setup[89] = setting.IndirectShare;
+        }
         if (setting.Reference)
         {
             // The finest level's reach map, which the gather reads, and its texels marched on.

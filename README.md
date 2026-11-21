@@ -104,7 +104,8 @@ library's functions, and the engine keeps its bindings, its threads and its atom
 | `IMergedSkyLight` | Keeps, beyond `IMergedLight`, the share of the sky in each texel's merged light, which `IFarSkyProbes` reads back | `settleTexel`, `mergeTexel` |
 | `ISurfacePoints` | Reads a surface point's place and normal and keeps the light it takes | `gatherAt`, `gatherTraced` |
 | `ISurfaceSkyPoints` | Keeps, beyond `ISurfacePoints`, the share of the sky in the light a surface point takes | `gatherAt`, `gatherTraced` |
-| `IHeldLight` | Keeps and reads the light the surface nearest each of the field's cells within a cell and a tenth of a surface sends along its normal, as the engine shades it, which the merge reads at a hit through `HeldHitLight` in place of the engine's shading | `holdCellLight`, `HeldHitLight` |
+| `IHeldLight` | Keeps and reads the light each side of the surface nearest each of the field's cells within a cell and a tenth of a surface sends, its own apart from its probes' light, one side for a solid's cell and two for a sheet's (`heldSide`), and gives the share of the probes' light a hit takes, which the merge reads at a hit through `HeldHitLight` in place of the engine's shading | `holdCellLight`, `HeldHitLight` |
+| `IHeldShading` | Shades a held cell's surface, its own light and its probes' apart, which `WholeShading` gives from `IProbeField.hitLight` as its own alone | `holdCellLight` |
 
 The engine's struct is handed to the library's functions by value, so an array it holds is copied
 into each thread's own memory where it is read, which one macOS device reads wrong where every other
@@ -245,7 +246,18 @@ The conventions the module stands on:
   the sunlit wall reads 0.6 percent under the light it takes shading its hits and the sunlit sheets
   0.04 percent over. A share of the cells a frame, `share` above 1, lags a change in the scene by as
   many frames, so a binding whose lighting is to show a change in the next frame holds the cells
-  whole. A held light gives up the gloss toward the eye a hit's own shading weighs.
+  whole. A cell keeping a sheet thinner than a cell holds a light a side and the read takes the side
+  the ray meets, since one light a cell read a sheet lit on one side by its lit side from the other,
+  the foot of a thin room's wall lit by a lamp outside 2.11 times its light on one engine, and on
+  the CPU a probe under a sheet lit from above alone 0.27710 where it takes nothing; the holding
+  pass shades a sheet's cells twice, 6,272 of a lone sheet's 9,860 held cells and 2,144 of a box's
+  27,856 under a sheet for a lid. A cell holds its own light apart from the light of the engine's
+  probes it reflects (`IHeldShading`), and the read weighs the probes' light by the share the
+  engine's own hit gives it (`IHeldLight.probeShare`), since a held light taking it whole kept a
+  panel's light that went out at 5.67 times its light two frames on where the engine's gather lets
+  it go within two, and on the CPU read a sunlit wall whose hits take a quarter of their probes'
+  light 29 percent over and with the share 0.6 percent under. A held light gives up the gloss toward
+  the eye a hit's own shading weighs.
 - A field's build runs `seamSheet` over its resolved cells, as it runs the pinch, and keeps the
   plane it gives in the cell, whose distance stays its own. A sheet thinner than a cell resting on a
   solid's top passes over the cells in front of the solid's face, which keep the solid's code, and
