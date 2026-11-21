@@ -149,8 +149,9 @@ float openAt(float clearance, float cell)
 // surface, reaches end, leaves every cascade, or stands where the distance read reaches clearance
 // or the field's band, whichever is less (openAt), outside any surface it crosses, where it ends
 // as RayPast at that distance along it, or as RayCapped where it has taken cap steps, cap 0 for no
-// count. A ray that starts in open space ends there with no step taken. Each step on is handed to
-// steps.
+// count. A ray that starts in open space ends there with no step taken. Clearance 0 marches as
+// traceProbeRay does, to end, which mergedLight takes for every leg of its march past a ray's end
+// at one call. Each step on is handed to steps.
 public ProbeRay marchToOpenSpace<F : IProbeField, S : IMarchSteps>(F field, float3 origin, float3 way, float start, float end, float clearance,
     uint cap, inout S steps)
 {
@@ -221,6 +222,9 @@ ProbeRay marchProbeRay<F : IProbeField, S : IMarchSteps>(F field, float3 origin,
         }
         steps.at(t, d);
         taken++;
+        // Whether the step ends on a surface that lets no light through, or enters one that lets
+        // some through, either way taking the light the surface sends at p.
+        bool stops = false, enters = false;
         if (entered >= 0.0)
         {
             if (d < cell * MarchHit)
@@ -228,33 +232,43 @@ ProbeRay marchProbeRay<F : IProbeField, S : IMarchSteps>(F field, float3 origin,
                 // A solid that lets no light through, met within the one the ray crosses, as a
                 // floor under a glass wall, stops it, where marched on it would come out past the
                 // floor's underside.
-                if (field.throughAt(c, cellOf(field, c, p)) <= 0.0)
+                if (field.throughAt(c, cellOf(field, c, p)) > 0.0)
                 {
-                    crossSurface(ray, through, t - entered, sheet, crossed);
-                    ray.ended = RayMet;
-                    ray.t = t;
-                    ray.light += field.hitLight(p, way, c, cellOf(field, c, p)) * ray.carried;
-                    return ray;
+                    t += max(cell * 0.5, -d);
+                    continue;
                 }
-                t += max(cell * 0.5, -d);
-                continue;
+                crossSurface(ray, through, t - entered, sheet, crossed);
+                entered = -1.0;
+                stops = true;
             }
-            crossSurface(ray, through, t - d - entered, sheet, crossed);
-            entered = -1.0;
+            else
+            {
+                crossSurface(ray, through, t - d - entered, sheet, crossed);
+                entered = -1.0;
+            }
         }
         else if (d < cell * MarchHit)
         {
             through = field.throughAt(c, cellOf(field, c, p));
-            if (through <= 0.0)
+            stops = through <= 0.0;
+            enters = !stops;
+        }
+        if (stops || enters)
+        {
+            // hitLight is called at this one place of the march, since a driver inlines an
+            // engine's shading at every call, and with a call at each of the three ways a surface
+            // is met a merge took 2.6 minutes to compile on one engine.
+            float3 light = field.hitLight(p, way, c, cellOf(field, c, p));
+            if (stops)
             {
                 ray.ended = RayMet;
                 ray.t = t;
-                ray.light += field.hitLight(p, way, c, cellOf(field, c, p)) * ray.carried;
+                ray.light += light * ray.carried;
                 return ray;
             }
             entered = t + max(d, 0.0);
             sheet = keepsSheet(field, c, cellOf(field, c, p));
-            crossed = field.hitLight(p, way, c, cellOf(field, c, p));
+            crossed = light;
             t += max(cell * 0.5, -d);
             continue;
         }

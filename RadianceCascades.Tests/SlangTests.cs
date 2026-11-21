@@ -110,11 +110,64 @@ public sealed class SlangTests
         Assert.NotEmpty(ThreadArraysOf(kernel));
     }
 
-    // The variables a kernel's SPIR-V keeps in a thread's own memory, its Function and Private
-    // storage, that hold an array or a struct with one, read from the assembly slangc writes.
-    // SPIR-V is the one target whose assembly names each variable's storage, and slangc lowers
-    // every target from the same code.
-    private static List<string> ThreadArraysOf(string kernel)
+    // An engine's hitLight shades a surface with its lights and shadows, which a driver inlines at
+    // every call, and with a call at each of the three ways the march met a surface and a march at
+    // each of the merge's three legs, one engine's merge took 2.6 minutes and 3.75 GB to compile.
+    // A hitLight that counts its calls atomically leaves one atomic in the SPIR-V for each copy of
+    // it, since slangc inlines every call and an atomic is never merged with another.
+    [SlangTheory]
+    [InlineData("traceProbeRay(field, float3(0.0), float3(1.0, 0.0, 0.0), 0.0, read[9]).light.x")]
+    [InlineData("mergedLight(field, probes, gridPlaces(far), far, read[9], float3(0.0), 4u, uint2(1u), near, sky, none, marched).x")]
+    public void A_Ray_Traced_Or_Merged_Shades_A_Surface_It_Meets_At_One_Place(string light)
+    {
+        var kernel = $$"""
+            import rc_cascade_merge;
+            RWStructuredBuffer<float> read;
+            RWStructuredBuffer<uint> shaded;
+            struct CountedField : IProbeField
+            {
+                int cascadeOf(float3 p, float margin) { return all(abs(p) < 8.0) ? 0 : -1; }
+                float4 cornerAndCell(int cascade) { return float4(-8.0, -8.0, -8.0, 1.0); }
+                int size() { return 16; }
+                float4 between(int cascade, float3 cells) { return float4(read[0], 0.0, 0.0, 0.0); }
+                float4 cellAt(int cascade, int3 cell) { return float4(read[1], 0.0, 0.0, 0.0); }
+                float3 secondAt(int cascade, int3 cell) { return float3(0.0); }
+                float throughAt(int cascade, int3 cell) { return read[2]; }
+                float3 hitLight(float3 place, float3 way, int cascade, int3 cell)
+                {
+                    uint before;
+                    InterlockedAdd(shaded[0], 1u, before);
+                    return float3(float(before));
+                }
+            };
+            struct OneLight : IFarProbes
+            {
+                float3 lightAt(int3 probe, uint2 texel) { return float3(read[3]); }
+                float reachAt(int3 probe, uint2 texel) { return read[4]; }
+            };
+            [numthreads(1, 1, 1)]
+            void test(uint3 id : SV_DispatchThreadID)
+            {
+                CountedField field;
+                OneLight probes;
+                ProbeCascade far = { float3(-8.0), 2.0, int3(8), 4u, 0.0, read[5], 32u };
+                ProbeRay near;
+                near.ended = RayPast;
+                near.t = read[6];
+                near.carried = 1.0;
+                near.light = float3(0.0);
+                UniformSky sky = { float3(read[7]) };
+                NoSteps none;
+                bool marched;
+                read[8] = {{light}};
+            }
+            """;
+        var copies = SpirVOf(kernel).Count(line => line.Contains(" OpAtomicIAdd ", StringComparison.Ordinal));
+        Assert.Equal(1, copies);
+    }
+
+    // The lines of the SPIR-V assembly slangc writes for a kernel.
+    private static string[] SpirVOf(string kernel)
     {
         var folder = Directory.CreateTempSubdirectory("radiancecascades-slang-");
         try
@@ -124,27 +177,36 @@ public sealed class SlangTests
             File.WriteAllText(source, kernel);
             var (code, said) = Slangc.Compile(source, "spirv-asm", output);
             Assert.True(code == 0, $"to SPIR-V assembly exited {code}:\n{said}");
-            var arrays = new HashSet<string>();
-            var pointers = new HashSet<string>();
-            var held = new List<string>();
-            foreach (var line in File.ReadLines(output))
-            {
-                var words = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                if (words.Length < 4 || words[1] != "=")
-                    continue;
-                if (words[2] == "OpTypeArray" || (words[2] == "OpTypeStruct" && words.Skip(3).Any(arrays.Contains)))
-                    arrays.Add(words[0]);
-                else if (words[2] == "OpTypePointer" && words.Length > 4 && (words[3] is "Function" or "Private") && arrays.Contains(words[4]))
-                    pointers.Add(words[0]);
-                else if (words[2] == "OpVariable" && pointers.Contains(words[3]))
-                    held.Add(line.Trim());
-            }
-            return held;
+            return File.ReadAllLines(output);
         }
         finally
         {
             folder.Delete(recursive: true);
         }
+    }
+
+    // The variables a kernel's SPIR-V keeps in a thread's own memory, its Function and Private
+    // storage, that hold an array or a struct with one, read from the assembly slangc writes.
+    // SPIR-V is the one target whose assembly names each variable's storage, and slangc lowers
+    // every target from the same code.
+    private static List<string> ThreadArraysOf(string kernel)
+    {
+        var arrays = new HashSet<string>();
+        var pointers = new HashSet<string>();
+        var held = new List<string>();
+        foreach (var line in SpirVOf(kernel))
+        {
+            var words = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (words.Length < 4 || words[1] != "=")
+                continue;
+            if (words[2] == "OpTypeArray" || (words[2] == "OpTypeStruct" && words.Skip(3).Any(arrays.Contains)))
+                arrays.Add(words[0]);
+            else if (words[2] == "OpTypePointer" && words.Length > 4 && (words[3] is "Function" or "Private") && arrays.Contains(words[4]))
+                pointers.Add(words[0]);
+            else if (words[2] == "OpVariable" && pointers.Contains(words[3]))
+                held.Add(line.Trim());
+        }
+        return held;
     }
 
     [Fact]

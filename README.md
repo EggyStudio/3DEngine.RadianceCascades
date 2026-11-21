@@ -179,6 +179,12 @@ The conventions the module stands on:
   32-bit float keeps it and a 16-bit float holds it as infinity, which reads past it, and an image
   that scales reaches into a fixed range reads its top back as `ReachOpen`, since a reach clamped
   short of it reads as a surface met where none is.
+- The march calls `IProbeField.hitLight` at one place, and `mergedLight` marches at one place for
+  every leg past a ray's end, so a trace kernel holds a binding's shading once where it held three
+  copies and a merge kernel once where it held nine. A driver inlines the shading at every call, and
+  one engine's, which shades with its sun's and lamps' shadows, took 46 s to compile in a trace and
+  2.6 minutes and 3.75 GB in a merge. A binding shades a surface in hitLight itself, with nothing to
+  gather after the march.
 - A field's build runs `seamSheet` over its resolved cells, as it runs the pinch, and keeps the
   plane it gives in the cell, whose distance stays its own. A sheet thinner than a cell resting on a
   solid's top passes over the cells in front of the solid's face, which keep the solid's code, and

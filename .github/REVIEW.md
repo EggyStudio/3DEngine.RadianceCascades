@@ -767,6 +767,15 @@ reads the same within 0.0002, and the steps rise about 1.15 times. Bindings foll
 README states: `mergedLight` takes `marchEnd` after the far cascade, which keeps its own end, and
 `reachAlong` gives `ReachOpen` where it meets nothing, which a reach image keeps at or past it.
 
+One place of shading, at BevyCSharp's finding. A driver inlines a binding's `hitLight` at every
+call, and that binding's shading, with its sun's and lamps' shadows, compiled a trace in 46 seconds
+and a merge in 2.6 minutes at 3.75 GB, with a call at each of the three ways the march meets a
+surface and a march at each of the merge's three legs. The march takes a surface's light at one
+place a step, and `mergedLight` marches its legs in one loop at one call of `marchToOpenSpace`,
+clearance 0 for the legs that run to their end, so a trace holds the shading once where it held
+three copies and a merge once where it held nine, which a test counts by a `hitLight`'s atomics in
+the SPIR-V. No signature changed, and the README tells a binding it shades in `hitLight` itself.
+
 Handoff, for a fresh session, in place of those above. Where the work stands: the library holds the
 field's plan, the triangles' layout and the glow lights in C#, and in Slang the probes' octahedron,
 the cell code, resolve and pinch, the hit's color read, the splat, the stamp, the field's distance
@@ -786,16 +795,17 @@ the module's own kernels by their SPIR-V. A hand-off near an opening's edge read
 about 1.4 times the fine trace, and the split rule, a ray marching on where its far probes disagree
 (`HitSpread`), takes it within a quarter at about 1.15 times the steps, reading a four-cascade open
 box's floor 8 percent under, its figures in its Reply. A field's build runs `seamSheet` after the
-pinch. Next in order: the engines' further findings as they take the passes, then the split sum at a
-hit, the screen probes, the light on the picture and the contact shadow's march. Left behind each
-part's Reply: the field's normal, the cascades' table, the march held within a cascade, the splat's
-second plane, the lending of thin emitters, the repaint and the clearing of codes. Open: AGENTS.md's
-documents rows for DEVLOG.md and CHEATSHEET.md wait for the owner. Read first: AGENTS.md, this
-file's head and Decisions, the Replies from the field's distance on, the README's binding section,
-NORM.md's N 4.8 to 4.11 and N 7.9, `CpuKernel.cs` and the head of `rc_probe_passes.slang`. Every
-build and test goes through N 7.9's lock, restored outside it, built with `--no-restore
--p:UseSharedCompilation=false`, its output written to a file of which the summary line and the
-failing lines alone are read, and each commit is read by `commitcheck.py . --staged
+pinch. The march calls `hitLight` at one place and the merge marches at one place, which a test
+holds by the SPIR-V. Next in order: the engines' further findings as they take the passes, then the
+split sum at a hit, the screen probes, the light on the picture and the contact shadow's march. Left
+behind each part's Reply: the field's normal, the cascades' table, the march held within a cascade,
+the splat's second plane, the lending of thin emitters, the repaint and the clearing of codes. Open:
+AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md wait for the owner. Read first:
+AGENTS.md, this file's head and Decisions, the Replies from the field's distance on, the README's
+binding section, NORM.md's N 4.8 to 4.11 and N 7.9, `CpuKernel.cs` and the head of
+`rc_probe_passes.slang`. Every build and test goes through N 7.9's lock, restored outside it, built
+with `--no-restore -p:UseSharedCompilation=false`, its output written to a file of which the summary
+line and the failing lines alone are read, and each commit is read by `commitcheck.py . --staged
 --message=<file>` first. At a binding's request, in the commit carrying this line:
 `build/fetch-slang.sh` reads an archive's sha256 with `shasum -a 256`, on macOS, Linux and Git's
 bash on Windows alike, and Python's hashlib where a system has none, in place of `sha256sum`, which

@@ -185,36 +185,43 @@ public float3 mergedLight<F : IProbeField, P : IFarProbes, Q : IProbePlaces, K :
     if (near.ended != RayPast && near.ended != RayCapped)
         return lastCascadeLight(near, way, sky);
     // The light each march took on its way is added as it goes, each weighed by the share carried
-    // to it.
-    ProbeRay open = marchToOpenSpace(field, origin, way, near.t, marchEnd, far.spacing, far.stepCap, steps);
-    if (open.ended == RayMet || open.ended == RayLeft || (open.ended == RayPast && open.t >= marchEnd))
-        return near.light + lastCascadeLight(open, way, sky) * near.carried;
-    float carried = near.carried * open.carried;
-    float3 taken = near.light + open.light * near.carried;
-    float handed = open.t;
-    // Where the far probes about E disagree on where a surface lies along the way, the ray takes
-    // none of them there and marches on itself across the far interval, the far cascade's own end
-    // past E, and hands off where it ends, taking the surface it meets or the sky where it leaves.
-    if (farProbesSplit(field, probes, places, far, origin, origin + way * open.t, texels, texel))
+    // to it. The marches past the ray's end are legs of one loop with one call of the march, since
+    // a driver inlines an engine's shading (hitLight) at every call of the march, and with a call
+    // a leg a merge took 2.6 minutes to compile on one engine: leg 0 to open space, leg 1 across
+    // the far interval where the far probes about E disagree, and leg 2 on to marchEnd where no
+    // far probe counts.
+    float3 taken = near.light;
+    float carried = near.carried;
+    float from = near.t;
+    uint leg = 0u;
+    [loop]
+    while (true)
     {
-        ProbeRay across = traceProbeRay(field, origin, way, open.t, min(open.t + far.end, marchEnd), far.stepCap, steps);
-        if (across.ended == RayMet || across.ended == RayLeft || (across.ended == RayPast && across.t >= marchEnd))
-            return taken + lastCascadeLight(across, way, sky) * carried;
-        taken += across.light * carried;
-        carried *= across.carried;
-        handed = across.t;
+        float end = leg == 1u ? min(from + far.end, marchEnd) : marchEnd;
+        ProbeRay ray = marchToOpenSpace(field, origin, way, from, end, leg == 0u ? far.spacing : 0.0, far.stepCap, steps);
+        if (ray.ended == RayMet || ray.ended == RayLeft || (ray.ended == RayPast && ray.t >= marchEnd))
+            return taken + lastCascadeLight(ray, way, sky) * carried;
+        taken += ray.light * carried;
+        carried *= ray.carried;
+        from = ray.t;
+        // Where the far probes about E disagree on where a surface lies along the way, the ray
+        // takes none of them there and marches on itself across the far interval, the far
+        // cascade's own end past E, and hands off where it ends, taking the surface it meets or
+        // the sky where it leaves.
+        if (leg == 0u && farProbesSplit(field, probes, places, far, origin, origin + way * from, texels, texel))
+        {
+            leg = 1u;
+            continue;
+        }
+        float weights;
+        float3 sum = farLightAbout(field, probes, places, far, origin + way * from, texels, texel, weights);
+        if (weights > 0.0)
+            return taken + sum / weights * carried;
+        // A march on capped short of marchEnd takes nothing past where it stopped where none of
+        // the far probes about it counts.
+        if (leg == 2u)
+            return taken;
+        marched = true;
+        leg = 2u;
     }
-    float weights;
-    float3 sum = farLightAbout(field, probes, places, far, origin + way * handed, texels, texel, weights);
-    if (weights > 0.0)
-        return taken + sum / weights * carried;
-    marched = true;
-    ProbeRay on = traceProbeRay(field, origin, way, handed, marchEnd, far.stepCap, steps);
-    taken += on.light * carried;
-    if (on.ended != RayCapped)
-        return taken + (lastCascadeLight(on, way, sky) - on.light) * carried;
-    // A march-on capped short of the far cascade's end is handed to the far probes about where it
-    // stopped, and takes nothing past it where none of them counts.
-    sum = farLightAbout(field, probes, places, far, origin + way * on.t, texels, texel, weights);
-    return weights > 0.0 ? taken + sum / weights * (carried * on.carried) : taken;
 }
