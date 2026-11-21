@@ -892,6 +892,19 @@ second bounce read 11.1 percent of its light under its own code and 12.1 under t
 percent is asked of it split, its views 2, 4 and 7 read under the cheap hit it binds with the
 probes' light at the hit and without it.
 
+A crossing's light where it has stopped half the light it carried in. The march takes no light where
+it meets a surface that lets light through, and takes it at the step within where the share the
+crossing has passed falls to half or under, or, where the crossing passes more, at its last point
+within, the light taken a step later where the crossing leaves the surface, meets a solid or ends
+with the march, the solid's step taken again without its count. The shading stays at its one call.
+On the CPU the crown lit from before it by a sun whose share its depth passes, each cell sending
+that share, reads a probe 2 units before it 0.10949 against 0.11402 traced, 0.960 of it, where taken
+where the ray met it it read 0.18061, 1.584 of it, which a test holds run failing first. Its trace
+takes 15.8 steps a ray on the mean and 64 at most before and after, and the crown under the sky, the
+sunlit wall through the march and the march-on and reaching 4, the sunlit sheets and the floor
+behind the wall that lets light through read every figure and step count as they did. `traceTexel`
+takes an `IMarchSteps` where a binding counts its trace's steps, which the tests' kernel does.
+
 Handoff, for a fresh session, in place of those above. Where the work stands: the library holds the
 field's plan, the triangles' layout and the glow lights in C#, and in Slang the probes' octahedron,
 the cell code, resolve and pinch, the hit's color read, the splat, the stamp, the field's distance
@@ -919,15 +932,16 @@ in one pass (`IFarSkyProbes`, `IMergedSkyLight`). A probe inside a mesh keeps `R
 reach map, and the far probes about a hand-off are tested once. The shading at a merge's hits is
 most of its cost, and each binding passes the merge a cheap hit of its own, the sun's reach read at
 the surface and the probes' light half a spacing off it, or the held light of the field's cells
-(`HeldHitLight`, `holdCellLight`) held whole each frame. A crossing passes each step's own share.
-The closed rooms' 5 percent over waits on BevyCSharp's views read with the bounce at a hit and
-without it. Next in order: the lintel's mixed texels, then the engines' further findings as they
-take the passes, then the split sum at a hit, the screen probes, the light on the picture and the
-contact shadow's march. Left behind each part's Reply: the field's normal, the cascades' table, the
-march held within a cascade, the splat's second plane, the lending of thin emitters, the repaint and
-the clearing of codes. Open: AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md wait for the
-owner. Read first: AGENTS.md, this file's head and Decisions, the Replies from the field's distance
-on, the README's binding section, NORM.md's N 4.8 to 4.11 and N 7.9, `CpuKernel.cs` and the head of
+(`HeldHitLight`, `holdCellLight`) held whole each frame. A crossing passes each step's own share and
+takes its light where it has stopped half the light it carried in. The closed rooms' 5 percent over
+waits on BevyCSharp's views read with the bounce at a hit and without it. Next in order: the
+lintel's mixed texels, then the engines' further findings as they take the passes, then the split
+sum at a hit, the screen probes, the light on the picture and the contact shadow's march. Left
+behind each part's Reply: the field's normal, the cascades' table, the march held within a cascade,
+the splat's second plane, the lending of thin emitters, the repaint and the clearing of codes. Open:
+AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md wait for the owner. Read first:
+AGENTS.md, this file's head and Decisions, the Replies from the field's distance on, the README's
+binding section, NORM.md's N 4.8 to 4.11 and N 7.9, `CpuKernel.cs` and the head of
 `rc_probe_passes.slang`. Every build and test goes through N 7.9's lock, restored outside it, built
 with `--no-restore -p:UseSharedCompilation=false`, its output written to a file of which the summary
 line and the failing lines alone are read, and each commit is read by `commitcheck.py . --staged

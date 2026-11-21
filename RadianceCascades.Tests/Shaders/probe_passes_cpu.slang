@@ -46,6 +46,9 @@ RWStructuredBuffer<float> skyFloats;
 // which pass 7 holds and the merge reads where the setup sets 126.
 RWStructuredBuffer<float> heldFloats;
 
+// The steps each texel's trace took, one float a texel, the levels one after another.
+RWStructuredBuffer<float> traceStepFloats;
+
 static const int Levels = 16;
 static const int Field = 96;
 static const int Points = 128;
@@ -302,7 +305,12 @@ void test(uint3 id : SV_DispatchThreadID)
     LevelRays rays = { firstOf(level, 10) };
     LevelMerged merged = { firstOf(level, 12) };
     if (pass == 0u)
-        traceTexel(field, rays, placesOf(level), cascade, index);
+    {
+        CountedSteps traced = { 0u };
+        traceTexel(field, rays, placesOf(level), cascade, traced, index);
+        if (index < cascadeTexels(cascade))
+            traceStepFloats[firstOf(level, 10) + index] = float(traced.taken);
+    }
     else if (pass == 1u)
     {
         LevelReach reach = { firstOf(level, 11) };

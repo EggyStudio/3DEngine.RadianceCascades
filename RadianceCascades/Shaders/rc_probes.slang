@@ -116,12 +116,13 @@ int3 cellOf<F : IFieldVolume>(F field, int i, float3 p)
 // depth it crossed, from where the march met the surface, the distance read on, to where it came
 // out, the distance read back, by the share of the cell each step within began in to the power of
 // that step's depth, and a sheet thinner than a cell, which has no depth to cross, passes its share
-// once, as a unit of depth would. The ray takes the light the surface sends where it met it
-// (hitLight) weighed by what the surface keeps, one less what it passes, and the share carried to
-// it, so a lit canopy of leaves reads lit from below as well as dimming what lies past it. A cell
-// met within it whose surface lets no light through stops the ray there. The march takes no count
-// of steps at most, since each goes on by a quarter of a cell at least and the field ends, so a ray
-// of an interval that runs to the field's edge takes every step to its end.
+// once, as a unit of depth would. The ray takes the light the surface sends (hitLight) where the
+// crossing has stopped half the light carried into it, or at its last point within where it passes
+// more, weighed by what the surface keeps, one less what it passes, and the share carried to it, so
+// a lit canopy of leaves reads lit from below as well as dimming what lies past it. A cell met
+// within it whose surface lets no light through stops the ray there. The march takes no count of
+// steps at most, since each goes on by a quarter of a cell at least and the field ends, so a ray of
+// an interval that runs to the field's edge takes every step to its end.
 public ProbeRay traceProbeRay<F : IProbeField, S : IMarchSteps>(F field, float3 origin, float3 way, float start, float end, inout S steps)
 {
     return marchProbeRay(field, origin, way, start, end, 0.0, 0u, steps);
@@ -184,6 +185,17 @@ float crossedShare(float passed, float through, float depth, bool sheet)
     return sheet ? passed : passed * pow(through, max(depth, 0.0));
 }
 
+// What the march takes the light of a surface for (marchProbeRay): none, a stop at a surface that
+// lets no light through, a crossing where it has stopped half the light it carried in, and a
+// crossing at its last point where it ends past a step, at a solid met within it or where the
+// march ends, each of which passes more.
+static const uint ShadeNone = 0u;
+static const uint ShadeStop = 1u;
+static const uint ShadeHalf = 2u;
+static const uint ShadeLeft = 3u;
+static const uint ShadeBeforeSolid = 4u;
+static const uint ShadeEnded = 5u;
+
 // The march traceProbeRay and marchToOpenSpace share, which ends in open space as well where
 // clearance is above zero (openAt), and as RayCapped where cap is above zero and it has taken cap
 // steps.
@@ -198,102 +210,192 @@ ProbeRay marchProbeRay<F : IProbeField, S : IMarchSteps>(F field, float3 origin,
     float t = start;
     // Where the ray met the surface it is crossing, or below zero where it crosses none, the share
     // it passed over the steps it took within it, where its last step began and the share of the
-    // cell it began in, whether it is a sheet and the light it sends where the ray met it.
+    // cell it began in, whether it is a sheet, whether its light is taken and that light, and the
+    // last point within it and that point's cascade.
     float entered = -1.0, passed = 1.0, from = 0.0, through = 0.0;
-    bool sheet = false;
-    float3 crossed = float3(0.0);
+    bool sheet = false, lit = false;
+    float3 crossed = float3(0.0), last = origin;
+    int lastCascade = 0;
+    // Whether the step at t is taken again, its count kept, once a crossing that met a solid within
+    // it has taken its light at its last point.
+    bool again = false;
     uint taken = 0u;
     [loop]
-    while (t < end)
+    while (true)
     {
-        if (cap > 0u && taken >= cap)
+        // Whether the march ends here, at its end, at its cap or where it leaves every cascade.
+        bool ending = false;
+        float3 p = origin + way * t;
+        int c = -1;
+        if (t >= end)
         {
+            ending = true;
+            ray.ended = RayPast;
+            ray.t = end;
+        }
+        else if (cap > 0u && taken >= cap)
+        {
+            ending = true;
             ray.ended = RayCapped;
             ray.t = t;
-            break;
         }
-        float3 p = origin + way * t;
-        int c = field.cascadeOf(p, 1.0);
-        if (c < 0)
+        else
         {
-            ray.ended = RayLeft;
-            ray.t = t;
-            break;
-        }
-        float cell = field.cornerAndCell(c).w;
-        float d = fieldDistanceSheetIn(field, c, p);
-        if (clearance > 0.0 && entered < 0.0 && d >= openAt(clearance, cell))
-        {
-            ray.t = t;
-            return ray;
-        }
-        steps.at(t, d);
-        taken++;
-        // Whether the step ends on a surface that lets no light through, or enters one that lets
-        // some through, either way taking the light the surface sends at p.
-        bool stops = false, enters = false;
-        if (entered >= 0.0)
-        {
-            if (d < cell * MarchHit)
+            c = field.cascadeOf(p, 1.0);
+            if (c < 0)
             {
-                // A solid that lets no light through, met within the one the ray crosses, as a
-                // floor under a glass wall, stops it, where marched on it would come out past the
-                // floor's underside. Each step within passes the share of the cell it began in, as
-                // a crown's leaves pass more at its edge than at its core, and a crown 6 units deep
-                // passing 0.9 a unit within a unit of its faces and 0.3 within read the sky a probe
-                // before it takes through it 0.99 of its trace, where with the share it was met at
-                // taken for its whole depth it read 1.23 times it.
-                float share = field.throughAt(c, cellOf(field, c, p));
-                if (share > 0.0)
+                ending = true;
+                ray.ended = RayLeft;
+                ray.t = t;
+            }
+        }
+        // What the light at q in cascade qc is taken for, where any is (Shading).
+        uint shading = ShadeNone;
+        float3 q = p;
+        int qc = c;
+        float cell = 0.0, d = 0.0;
+        if (ending)
+        {
+            // A crossing whose light is still to take takes it at its last point.
+            if (entered < 0.0 || lit)
+                break;
+            shading = ShadeEnded;
+            q = last;
+            qc = lastCascade;
+        }
+        else
+        {
+            cell = field.cornerAndCell(c).w;
+            d = fieldDistanceSheetIn(field, c, p);
+            if (clearance > 0.0 && entered < 0.0 && d >= openAt(clearance, cell))
+            {
+                ray.t = t;
+                return ray;
+            }
+            if (!again)
+            {
+                steps.at(t, d);
+                taken++;
+            }
+            again = false;
+            if (entered >= 0.0)
+            {
+                if (d < cell * MarchHit)
                 {
-                    passed = crossedShare(passed, through, t - from, sheet);
-                    from = t;
-                    through = sheet ? through : share;
-                    t += max(cell * 0.5, -d);
-                    continue;
+                    // A solid that lets no light through, met within the one the ray crosses, as a
+                    // floor under a glass wall, stops it, where marched on it would come out past
+                    // the floor's underside. Each step within passes the share of the cell it began
+                    // in, as a crown's leaves pass more at its edge than at its core, and a crown 6
+                    // units deep passing 0.9 a unit within a unit of its faces and 0.3 within read
+                    // the sky a probe before it takes through it 0.99 of its trace, where with the
+                    // share it was met at taken for its whole depth it read 1.23 times it.
+                    float share = field.throughAt(c, cellOf(field, c, p));
+                    if (share > 0.0)
+                    {
+                        passed = crossedShare(passed, through, t - from, sheet);
+                        from = t;
+                        through = sheet ? through : share;
+                        if (lit || passed > 0.5)
+                        {
+                            last = p;
+                            lastCascade = c;
+                            t += max(cell * 0.5, -d);
+                            continue;
+                        }
+                        shading = ShadeHalf;
+                    }
+                    else if (!lit)
+                    {
+                        shading = ShadeBeforeSolid;
+                        q = last;
+                        qc = lastCascade;
+                    }
+                    else
+                    {
+                        crossSurface(ray, crossedShare(passed, through, t - from, sheet), crossed);
+                        entered = -1.0;
+                        shading = ShadeStop;
+                    }
                 }
-                crossSurface(ray, crossedShare(passed, through, t - from, sheet), crossed);
-                entered = -1.0;
-                stops = true;
+                else if (!lit)
+                {
+                    shading = ShadeLeft;
+                    q = last;
+                    qc = lastCascade;
+                }
+                else
+                {
+                    crossSurface(ray, crossedShare(passed, through, t - d - from, sheet), crossed);
+                    entered = -1.0;
+                }
             }
-            else
+            else if (d < cell * MarchHit)
             {
-                crossSurface(ray, crossedShare(passed, through, t - d - from, sheet), crossed);
-                entered = -1.0;
+                through = field.throughAt(c, cellOf(field, c, p));
+                if (through <= 0.0)
+                    shading = ShadeStop;
+                else
+                {
+                    entered = t + max(d, 0.0);
+                    from = entered;
+                    sheet = keepsSheet(field, c, cellOf(field, c, p));
+                    passed = sheet ? through : 1.0;
+                    lit = false;
+                    last = p;
+                    lastCascade = c;
+                    if (passed > 0.5)
+                    {
+                        t += max(cell * 0.5, -d);
+                        continue;
+                    }
+                    shading = ShadeHalf;
+                }
             }
         }
-        else if (d < cell * MarchHit)
-        {
-            through = field.throughAt(c, cellOf(field, c, p));
-            stops = through <= 0.0;
-            enters = !stops;
-        }
-        if (stops || enters)
+        if (shading != ShadeNone)
         {
             // hitLight is called at this one place of the march, since a driver inlines an
             // engine's shading at every call, and with a call at each of the three ways a surface
-            // is met a merge took 2.6 minutes to compile on one engine.
-            float3 light = field.hitLight(p, way, c, cellOf(field, c, p));
-            if (stops)
+            // is met a merge took 2.6 minutes to compile on one engine. A crossing takes its light
+            // where it has stopped half the light it carried in, or at its last point within where
+            // it passes more, its light deferred a step past that point, since the light of the
+            // place a crown is met at, taken for all the crossing stops, reads its sunlit front for
+            // the shaded inside behind it: a crown lit from before it read a probe there 1.58
+            // times its trace so.
+            float3 light = field.hitLight(q, way, qc, cellOf(field, qc, q));
+            if (shading == ShadeStop)
             {
                 ray.ended = RayMet;
                 ray.t = t;
                 ray.light += light * ray.carried;
                 return ray;
             }
-            entered = t + max(d, 0.0);
-            from = entered;
-            sheet = keepsSheet(field, c, cellOf(field, c, p));
-            passed = sheet ? through : 1.0;
             crossed = light;
-            t += max(cell * 0.5, -d);
-            continue;
+            lit = true;
+            if (shading == ShadeEnded)
+                break;
+            if (shading == ShadeBeforeSolid)
+            {
+                crossSurface(ray, crossedShare(passed, through, t - from, sheet), crossed);
+                entered = -1.0;
+                again = true;
+                continue;
+            }
+            if (shading == ShadeHalf)
+            {
+                last = p;
+                lastCascade = c;
+                t += max(cell * 0.5, -d);
+                continue;
+            }
+            crossSurface(ray, crossedShare(passed, through, t - d - from, sheet), crossed);
+            entered = -1.0;
         }
         t += max(d, cell * MarchStep);
     }
     // A ray that ends within a surface it crosses passes the depth it crossed of it.
     if (entered >= 0.0)
-        crossSurface(ray, crossedShare(passed, through, min(t, end) - from, sheet), crossed);
+        crossSurface(ray, crossedShare(passed, through, ray.t - from, sheet), crossed);
     return ray;
 }
 

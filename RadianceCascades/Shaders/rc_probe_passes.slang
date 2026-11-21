@@ -200,13 +200,21 @@ public uint reachTexelIndex(ProbeCascade cascade, int3 probe, uint2 texel)
 // past the cascade's last texel.
 public void traceTexel<F : IProbeField, R : IProbeRays, Q : IProbePlaces>(F field, R rays, Q places, ProbeCascade cascade, uint index)
 {
+    NoSteps none;
+    traceTexel(field, rays, places, cascade, none, index);
+}
+
+// traceTexel with each step of the trace handed to steps, as a binding counts what its trace
+// costs.
+public void traceTexel<F : IProbeField, R : IProbeRays, Q : IProbePlaces, S : IMarchSteps>(F field, R rays, Q places, ProbeCascade cascade,
+    inout S steps, uint index)
+{
     if (index >= cascadeTexels(cascade))
         return;
     uint texels = cascade.texels * cascade.texels;
     uint2 texel = uint2((index % texels) % cascade.texels, (index % texels) / cascade.texels);
     float3 place = places.placeOf(probeAt(cascade, index / texels));
-    NoSteps none;
-    rays.keepRay(index, traceProbeRay(field, place, texelWay(cascade.texels, texel), cascade.start, cascade.end, cascade.stepCap, none));
+    rays.keepRay(index, traceProbeRay(field, place, texelWay(cascade.texels, texel), cascade.start, cascade.end, cascade.stepCap, steps));
 }
 
 // Traces how far the ray of the cascade's reach texel at index goes from its probe's place before

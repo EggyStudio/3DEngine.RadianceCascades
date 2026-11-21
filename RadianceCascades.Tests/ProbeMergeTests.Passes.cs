@@ -24,11 +24,15 @@ public sealed partial class ProbeMergeTests
 
     // Marched, Steps and Most count the finest level's texels no probe above saw the end of,
     // Onward, OnwardSteps and OnwardMost those that took any step past their end, Capped those
-    // whose trace stopped at its cap of steps, and SkyShare is the first point's share of the sky.
+    // whose trace stopped at its cap of steps, SkyShare is the first point's share of the sky, and
+    // TraceSteps and TraceMost the steps the finest level's texels' traces took on the mean and at
+    // most.
     private readonly record struct Chained(float Reflected, int Marched, int Steps, int Most, float[] Light, int Onward, int OnwardSteps, int OnwardMost,
         int Capped, float[] Taken)
     {
         public float SkyShare { get; init; }
+        public float TraceSteps { get; init; }
+        public int TraceMost { get; init; }
 
         public override string ToString() =>
             $"reflects {Reflected:0.00000}, {Marched} of the finest level's texels marching on themselves in {Steps} steps in all and {Most} at most, "
@@ -121,12 +125,13 @@ public sealed partial class ProbeMergeTests
         setup[126] = setting.Held ? 1 : 0;
         var fieldCells = Math.Max(setting.FieldCascades?.Length ?? 1, 1) * Size * Size * Size;
         var held = new float[3 * fieldCells];
+        var traceSteps = new float[texels];
         var cellLight = setting.CellLight ?? [0];
         void Pass(int pass, int level, int threads)
         {
             (setup[6], setup[7]) = (pass, level);
             CpuKernel.Run("probe_passes_cpu.slang", ((uint)(threads + 63) / 64, 1, 1), cells, setup, rays, reach, merged, marches, surfaces, cellLight,
-                skyShares, held);
+                skyShares, held, traceSteps);
         }
         if (setting.Held)
             Pass(7, 0, fieldCells);
@@ -165,7 +170,13 @@ public sealed partial class ProbeMergeTests
         for (int k = 0; k < light.Length; k++)
             light[k] = merged[k * 3];
         var takenAt = Enumerable.Range(0, points.Length).Select(k => surfaces[k * 6]).ToArray();
-        return new(surfaces[3], marched, steps, most, light, onward, onwardSteps, onwardMost, capped, takenAt) { SkyShare = skyShares[texels] };
+        var finest = traceSteps[..levels[0].TexelCount];
+        return new(surfaces[3], marched, steps, most, light, onward, onwardSteps, onwardMost, capped, takenAt)
+        {
+            SkyShare = skyShares[texels],
+            TraceSteps = finest.Average(),
+            TraceMost = (int)finest.Max(),
+        };
     }
 
     [CpuKernelFact]
