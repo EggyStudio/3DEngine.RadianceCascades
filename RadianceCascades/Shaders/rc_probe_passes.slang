@@ -175,7 +175,9 @@ public void reachTexel<F : IFieldVolume, R : IReachTexels, Q : IProbePlaces>(F f
     uint texels = ReachTexels * ReachTexels;
     uint2 texel = uint2((index % texels) % ReachTexels, (index % texels) / ReachTexels);
     float3 place = places.placeOf(probeAt(cascade, index / texels));
-    reach.keepReach(index, reachAlong(field, place, texelWay(ReachTexels, texel), cascade.end));
+    int c = field.cascadeOf(place, 1.0);
+    reach.keepReach(index, c >= 0 && fieldDistanceIn(field, c, place) < 0.0 ? ReachInside
+        : reachAlong(field, place, texelWay(ReachTexels, texel), cascade.end));
 }
 
 // Keeps the light of the coarsest level's texel at index as merged, its ray's alone, the light of
@@ -304,8 +306,7 @@ public void gatherAt<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces, A : I
         float3 lerps = lerp(1.0 - f, f, float3(offset));
         float weight = lerps.x * lerps.y * lerps.z;
         float3 place = places.placeOf(probe);
-        int c = field.cascadeOf(place, 1.0);
-        if (weight <= 0.0 || (c >= 0 && fieldDistanceIn(field, c, place) < 0.0) || !farProbeSees(probes, probe, place, p, SeeingSlack * cascade.spacing))
+        if (weight <= 0.0 || !farProbeSees(probes, probe, place, p, SeeingSlack * cascade.spacing))
             continue;
         ProbeTexels<P> texels;
         texels.probes = probes;

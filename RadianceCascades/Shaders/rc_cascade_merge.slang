@@ -48,12 +48,13 @@ public struct NoSkyShares<P : IFarProbes> : IFarSkyProbes
 public static const float SeeingSlack = 0.125;
 
 // Whether the far probe at place sees e, where the distance to e lies within its reach toward e
-// (reachAlong), and slack more.
+// (reachAlong), and slack more, and none where it stands inside a mesh (ReachInside).
 public bool farProbeSees<P : IFarProbes>(P probes, int3 probe, float3 place, float3 e, float slack)
 {
     float3 toward = e - place;
     float distance = length(toward);
-    return distance <= slack || distance <= probes.reachAt(probe, texelOfWay(ReachTexels, toward / distance)) + slack;
+    float reach = probes.reachAt(probe, texelOfWay(ReachTexels, distance > 0.0 ? toward / distance : float3(0.0, 1.0, 0.0)));
+    return reach >= 0.0 && (distance <= slack || distance <= reach + slack);
 }
 
 // The far probes about e, the least of the eight in base and where e lies between them in f, from 0
@@ -186,11 +187,11 @@ public ProbeCascade readCascade(ProbeCascade cascade, uint perRead)
 }
 
 // The far cascade's light over a near texel from the far probes about e, each at its trilinear
-// weight on the far grid, a probe inside a mesh or not seeing e weighing nothing, in skyShares
-// the sum of their shares of the sky at the same weights, and in weights the sum of the weights
-// taken, which divides both.
-float3 farLightAbout<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces>(F field, P probes, Q places, ProbeCascade far, float3 e, uint texels,
-    uint2 texel, out float skyShares, out float weights)
+// weight on the far grid, a probe inside a mesh or not seeing e weighing nothing (farProbeSees),
+// in skyShares the sum of their shares of the sky at the same weights, and in weights the sum of
+// the weights taken, which divides both.
+float3 farLightAbout<P : IFarSkyProbes, Q : IProbePlaces>(P probes, Q places, ProbeCascade far, float3 e, uint texels, uint2 texel,
+    out float skyShares, out float weights)
 {
     int3 base;
     float3 f;
@@ -204,14 +205,40 @@ float3 farLightAbout<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces>(F fie
         int3 probe = base + offset;
         if (any(probe < 0) || any(probe >= far.count))
             continue;
-        float3 place = places.placeOf(probe);
-        int c = field.cascadeOf(place, 1.0);
-        if ((c >= 0 && fieldDistanceIn(field, c, place) < 0.0) || !farProbeSees(probes, probe, place, e, SeeingSlack * far.spacing))
+        if (!farProbeSees(probes, probe, places.placeOf(probe), e, SeeingSlack * far.spacing))
             continue;
         float3 lerps = lerp(1.0 - f, f, float3(offset));
         float weight = lerps.x * lerps.y * lerps.z;
         float skyShare;
         sum += farTexelsLight(probes, far, probe, texels, texel, skyShare) * weight;
+        skyShares += skyShare * weight;
+        weights += weight;
+    }
+    return sum;
+}
+
+// farLightAbout over the corners counted marks (farProbesSplit), which it does not test again, so
+// a hand-off where the split was tested reads each far probe's reach toward e once. Tested again,
+// each ray read 16 reach texels where it handed off past its end, and read with the test of each
+// probe's place, as many reads of the field.
+float3 farCountedLight<P : IFarSkyProbes>(P probes, ProbeCascade far, float3 e, uint texels, uint2 texel, uint counted, out float skyShares,
+    out float weights)
+{
+    int3 base;
+    float3 f;
+    farProbesAbout(far, e, base, f);
+    float3 sum = float3(0.0);
+    skyShares = 0.0;
+    weights = 0.0;
+    for (int corner = 0; corner < 8; corner++)
+    {
+        if ((counted & (1u << uint(corner))) == 0u)
+            continue;
+        int3 offset = int3(corner & 1, (corner >> 1) & 1, corner >> 2);
+        float3 lerps = lerp(1.0 - f, f, float3(offset));
+        float weight = lerps.x * lerps.y * lerps.z;
+        float skyShare;
+        sum += farTexelsLight(probes, far, base + offset, texels, texel, skyShare) * weight;
         skyShares += skyShare * weight;
         weights += weight;
     }
@@ -225,12 +252,13 @@ float3 farLightAbout<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces>(F fie
 // agreeing and reads it 1.080 and 0.993.
 public static const float HitSpread = 0.25;
 
-// Whether the far probes about e that count, those not inside a mesh that see e, disagree on where
-// a surface lies along the near ray from origin, some meeting one along the way within their
-// reach (reachAt) and some meeting none, or every one meeting one at points of the near ray past e
-// that lie farther apart than HitSpread of the farther and two of the field's cells at e.
+// Whether the far probes about e that count, those not inside a mesh that see e (farProbeSees),
+// disagree on where a surface lies along the near ray from origin, some meeting one along the way
+// within their reach (reachAt) and some meeting none, or every one meeting one at points of the
+// near ray past e that lie farther apart than HitSpread of the farther and two of the field's
+// cells at e, and in counted a bit for each corner that counts (farCountedLight).
 bool farProbesSplit<F : IProbeField, P : IFarProbes, Q : IProbePlaces>(F field, P probes, Q places, ProbeCascade far, float3 origin, float3 e,
-    uint texels, uint2 texel)
+    uint texels, uint2 texel, out uint counted)
 {
     float3 way = texelWay(texels, texel);
     int3 base;
@@ -238,15 +266,16 @@ bool farProbesSplit<F : IProbeField, P : IFarProbes, Q : IProbePlaces>(F field, 
     farProbesAbout(far, e, base, f);
     float handed = dot(e - origin, way), nearest = ReachOpen, farthest = 0.0;
     int open = 0, met = 0;
+    counted = 0u;
     for (int corner = 0; corner < 8; corner++)
     {
         int3 probe = base + int3(corner & 1, (corner >> 1) & 1, corner >> 2);
         if (any(probe < 0) || any(probe >= far.count))
             continue;
         float3 place = places.placeOf(probe);
-        int c = field.cascadeOf(place, 1.0);
-        if ((c >= 0 && fieldDistanceIn(field, c, place) < 0.0) || !farProbeSees(probes, probe, place, e, SeeingSlack * far.spacing))
+        if (!farProbeSees(probes, probe, place, e, SeeingSlack * far.spacing))
             continue;
+        counted |= 1u << uint(corner);
         float reach = probes.reachAt(probe, texelOfWay(ReachTexels, way));
         if (reach >= ReachOpen)
         {
@@ -352,13 +381,17 @@ public float3 mergedLight<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces, 
         // takes none of them there and marches on itself across the far interval, the far
         // cascade's own end past E, and hands off where it ends, taking the surface it meets or
         // the sky where it leaves.
-        if (leg == 0u && farProbesSplit(field, probes, places, far, origin, origin + way * from, texels, texel))
+        uint counted = 0u;
+        if (leg == 0u && farProbesSplit(field, probes, places, far, origin, origin + way * from, texels, texel, counted))
         {
             leg = 1u;
             continue;
         }
+        // The hand-off where the split was tested takes the corners it counted, and one past a
+        // later leg tests them where that leg ended.
         float skyShares, weights;
-        float3 sum = farLightAbout(field, probes, places, far, origin + way * from, texels, texel, skyShares, weights);
+        float3 sum = leg == 0u ? farCountedLight(probes, far, origin + way * from, texels, texel, counted, skyShares, weights)
+            : farLightAbout(probes, places, far, origin + way * from, texels, texel, skyShares, weights);
         if (weights > 0.0)
         {
             skyShare = skyShares / weights * carried;

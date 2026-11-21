@@ -157,9 +157,13 @@ void test(uint3 id : SV_DispatchThreadID)
             {
                 int3 probe = int3(x, y, z);
                 float3 p = probePlace(far, probe);
+                // A probe inside a mesh keeps ReachInside, as reachTexel keeps it.
                 uint reachBase = probes.index(probe) * ReachTexels * ReachTexels;
+                int c = field.cascadeOf(p, 1.0);
+                bool inside = c >= 0 && fieldDistanceIn(field, c, p) < 0.0;
                 for (uint k = 0u; k < ReachTexels * ReachTexels; k++)
-                    farReach[reachBase + k] = reachAlong(field, p, texelWay(ReachTexels, uint2(k % ReachTexels, k / ReachTexels)), far.end);
+                    farReach[reachBase + k] = inside ? ReachInside
+                        : reachAlong(field, p, texelWay(ReachTexels, uint2(k % ReachTexels, k / ReachTexels)), far.end);
                 uint lightBase = probes.index(probe) * far.texels * far.texels;
                 for (uint k = 0u; k < far.texels * far.texels; k++)
                 {

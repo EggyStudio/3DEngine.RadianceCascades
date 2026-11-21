@@ -830,6 +830,22 @@ merge has mixed; a sky read through `ISky` alone lends its share whole (`WholeSh
 box's floor with its finer cascade's sky gated off takes a share of 0.06367, its light over the
 sky's to 1e-5.
 
+The merge's cost, counted. Two bindings timed one cascade's merge alone, a pass, under an exclusive
+hold, 131,072 rays a dispatch: 3DEngine's finest 2.24 ms on Sponza and BevyCSharp's 6.72, against
+their own merges' 0.36 and 0.37 ms a frame for every cascade, with 62 to 89 percent of a finer
+cascade's rays past their end and a cascade that merges nothing from above 0.034 to 0.039. On the
+CPU a ray past its end takes 1.4 to 7.6 steps, about what a traced ray takes, but reads the field 14
+to 40 times and the reach maps 14 to 23, most of them the eight far probes' tests of standing inside
+a mesh and of seeing the hand-off, twice where the split was tested, and shades a surface on 0.07 to
+0.57 of its legs. A probe inside a mesh keeps `ReachInside` along every way of its reach map, which
+`farProbeSees` passes over, and the far probes about a hand-off are tested once for the split and
+the light alike: the field's reads a ray fall by a half to two thirds and the reach's by a quarter,
+and every figure the tests print stands as it was. What the marches buy, measured by leaving them
+out or ending them sooner: the lintel's row 11 to 41 percent over where it reads within 9, the four
+cascades' worst 16 percent off where it reads 7, the traced floors 29 over and 43 under where they
+read 3.6 and 7.8, so they stay. Neither binding's own merge shades a surface its march meets, and
+the shading the CPU cannot time is the next to place.
+
 Handoff, for a fresh session, in place of those above. Where the work stands: the library holds the
 field's plan, the triangles' layout and the glow lights in C#, and in Slang the probes' octahedron,
 the cell code, resolve and pinch, the hit's color read, the splat, the stamp, the field's distance
@@ -853,19 +869,20 @@ pinch. The march calls `hitLight` at one place and the merge marches at one plac
 holds by the SPIR-V. A cascade is traced at `TracedMeans.perRead` texels a side of each it is read
 at, 2 at four times the rays, which the lintel's sampling asks, or 1. A surface whose probes stand
 off it gathers along its own rays (`gatherTraced`). The merge keeps the sky's share beside the light
-in one pass (`IFarSkyProbes`, `IMergedSkyLight`). Next in order: the merge's cost, counted by leg
-and brought to a few steps a ray, then the crossing of a crown by each step's own share and the
-lintel's mixed texels, then the engines' further findings as they take the passes, then the split
-sum at a hit, the screen probes, the light on the picture and the contact shadow's march. Left
-behind each part's Reply: the field's normal, the cascades' table, the march held within a cascade,
-the splat's second plane, the lending of thin emitters, the repaint and the clearing of codes. Open:
-AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md wait for the owner. Read first:
-AGENTS.md, this file's head and Decisions, the Replies from the field's distance on, the README's
-binding section, NORM.md's N 4.8 to 4.11 and N 7.9, `CpuKernel.cs` and the head of
-`rc_probe_passes.slang`. Every build and test goes through N 7.9's lock, restored outside it, built
-with `--no-restore -p:UseSharedCompilation=false`, its output written to a file of which the summary
-line and the failing lines alone are read, and each commit is read by `commitcheck.py . --staged
---message=<file>` first. At a binding's request, in the commit carrying this line:
+in one pass (`IFarSkyProbes`, `IMergedSkyLight`). A probe inside a mesh keeps `ReachInside` in its
+reach map, and the far probes about a hand-off are tested once. Next in order: the merge's cost,
+where the shading of what a merge march meets is to be timed in the bindings, then the crossing of a
+crown by each step's own share and the lintel's mixed texels, then the engines' further findings as
+they take the passes, then the split sum at a hit, the screen probes, the light on the picture and
+the contact shadow's march. Left behind each part's Reply: the field's normal, the cascades' table,
+the march held within a cascade, the splat's second plane, the lending of thin emitters, the repaint
+and the clearing of codes. Open: AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md wait for
+the owner. Read first: AGENTS.md, this file's head and Decisions, the Replies from the field's
+distance on, the README's binding section, NORM.md's N 4.8 to 4.11 and N 7.9, `CpuKernel.cs` and the
+head of `rc_probe_passes.slang`. Every build and test goes through N 7.9's lock, restored outside
+it, built with `--no-restore -p:UseSharedCompilation=false`, its output written to a file of which
+the summary line and the failing lines alone are read, and each commit is read by `commitcheck.py .
+--staged --message=<file>` first. At a binding's request, in the commit carrying this line:
 `build/fetch-slang.sh` reads an archive's sha256 with `shasum -a 256`, on macOS, Linux and Git's
 bash on Windows alike, and Python's hashlib where a system has none, in place of `sha256sum`, which
 N 6.6's check refuses. This repository's own tests do not run that check on its scripts; the

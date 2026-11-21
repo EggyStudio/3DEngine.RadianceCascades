@@ -380,6 +380,13 @@ public static const uint ReachTexels = 16u;
 // surface was met.
 public static const float ReachOpen = 1e30;
 
+// The reach a far probe keeps along every way of its reach map where it stands inside a mesh, the
+// field's distance at its place below zero (reachTexel), so the merge and the gather pass it over
+// by its reach alone (farProbeSees). Read for every ray at each of the eight far probes' places,
+// twice where the merge tests for a split, the field's distance came to two in three of the
+// merge's reads of the field.
+public static const float ReachInside = -1.0;
+
 // How far a ray from a probe's own place along way goes before it meets a surface, whether or not
 // the surface lets light through, or ReachOpen where it meets none before end or before it leaves
 // every cascade, the reach a far probe's map keeps for a texel's middle way.

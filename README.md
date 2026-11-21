@@ -99,7 +99,7 @@ library's functions, and the engine keeps its bindings, its threads and its atom
 | `ISkyShare` | Reads, beyond `ISky`, the share of a sky of 1 a ray leaving the field along a way takes, 1 for a sky lent whole, which `WholeShare` and `UniformSky` give | `lastCascadeSkyShare`, `mergedLight`, `settleTexel`, `mergeTexel`, `gatherTraced` |
 | `IProbeLight` | Reads a probe's merged light at each of its texels | `lightTaken` |
 | `IProbeRays` | Keeps the ray each texel of a cascade traced, how it ended, where, the share of light it carries and the light it met, and reads it back | `traceTexel`, `settleTexel`, `mergeTexel` |
-| `IReachTexels` | Keeps how far each ray of a cascade's reach maps went, `ReachOpen` where it met no surface, which `IFarProbes` reads back | `reachTexel` |
+| `IReachTexels` | Keeps how far each ray of a cascade's reach maps went, `ReachOpen` where it met no surface and `ReachInside` along every way of a probe inside a mesh, which `IFarProbes` reads back | `reachTexel` |
 | `IMergedLight` | Keeps each texel's light merged from every distance past its probe, which `IFarProbes` reads back for the level below and the gather | `settleTexel`, `mergeTexel` |
 | `IMergedSkyLight` | Keeps, beyond `IMergedLight`, the share of the sky in each texel's merged light, which `IFarSkyProbes` reads back | `settleTexel`, `mergeTexel` |
 | `ISurfacePoints` | Reads a surface point's place and normal and keeps the light it takes | `gatherAt`, `gatherTraced` |
@@ -188,6 +188,14 @@ The conventions the module stands on:
   traced texel weighs by its solid angle, as `farTexelsLight` weighs the far texels a near texel
   covers: an even mean read the face 0.94, counting the texels by the octahedron's corner toward the
   opening, which see the sky and span the least solid angle, as whole ones.
+- A probe whose place lies inside a mesh keeps `ReachInside` along every way of its reach map, which
+  `reachTexel` writes, and the merge and the gather pass a far probe over by its reach alone
+  (`farProbeSees`), reading the field at no far probe's place. A binding that writes its own reach
+  maps keeps it the same way. The merge tests the far probes about a hand-off once, for the split
+  and the light alike. Read for every ray at each of the eight far probes' places, twice where the
+  split was tested, the field's distance came to two in three of the merge's reads of the field, and
+  the reach toward the hand-off a third of its reads of the reach maps; with neither, every reading
+  of the tests stands as it was.
 - `mergedLight` takes the far cascade as it stands, its own end the one its probes' rays and reach
   maps run to, and after it `marchEnd`, the coarsest cascade's end, to which a march past every far
   interval runs. A binding that calls it itself, and not through `mergeTexel`, which takes both,
