@@ -298,6 +298,19 @@ void test(uint3 id : SV_DispatchThreadID)
         ProbeRay ray = traceProbeRay(field, placesOf(level).placeOf(probeAt(cascade, index / texels)), way, 0.0, setup[8]);
         merged.keepMerged(index, lastCascadeLight(ray, way, sky));
     }
+    else if (pass == 6u)
+    {
+        // The surface points' own rays handed to the finest level, read at the texels the setup
+        // asks for where it gives them, as the merge reads a level, and otherwise at those it
+        // keeps.
+        if (index >= uint(setup[Points]))
+            return;
+        SurfacePoints surfaces;
+        uint read = firstOf(0, 15) > 0u ? firstOf(0, 15) : firstOf(0, 14);
+        TracedMeans<LevelProbes> finest = meansOf(0, read);
+        NoSteps none;
+        gatherTraced(field, finest, placesOf(0), readCascade(levelCascade(0), finest.perRead), setup[8], sky, surfaces, none, index);
+    }
     else if (index < uint(setup[Points]))
     {
         SurfacePoints surfaces;

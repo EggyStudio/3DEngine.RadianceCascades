@@ -187,4 +187,117 @@ public sealed partial class ProbeMergeTests
         }
         output.WriteLine(said);
     }
+
+    // The light a point facing normal takes from a sky of light along every way the boxes leave
+    // open, black boxes meeting every other way, over 256 by 256 ways spread by their cosine.
+    private static float SkyTraced((Vector3 Low, Vector3 High)[] boxes, Vector3 point, Vector3 normal, float light)
+    {
+        var (u, v) = Basis(normal);
+        const int side = 256;
+        var open = new int[side];
+        Parallel.For(0, side, i =>
+        {
+            for (int j = 0; j < side; j++)
+            {
+                var way = CosineWay(normal, u, v, (i + 0.5f) / side, (j + 0.5f) / side);
+                if (!boxes.Any(box => Enters(box.Low, box.High, point, way)))
+                    open[i]++;
+            }
+        });
+        return MathF.PI * light * open.Sum() / (side * side);
+    }
+
+    // Whether a ray from origin along way enters the box from low to high.
+    private static bool Enters(Vector3 low, Vector3 high, Vector3 origin, Vector3 way)
+    {
+        var (near, far) = (0f, float.MaxValue);
+        for (int axis = 0; axis < 3; axis++)
+        {
+            if (MathF.Abs(way[axis]) < 1e-9f)
+            {
+                if (origin[axis] < low[axis] || origin[axis] > high[axis])
+                    return false;
+                continue;
+            }
+            var (a, b) = ((low[axis] - origin[axis]) / way[axis], (high[axis] - origin[axis]) / way[axis]);
+            (near, far) = (MathF.Max(near, MathF.Min(a, b)), MathF.Min(far, MathF.Max(a, b)));
+        }
+        return near <= far;
+    }
+
+    [CpuKernelFact]
+    public void A_Floor_Under_Probes_Standing_Two_Units_Over_It_Takes_Its_Own_Light_Along_Its_Own_Rays()
+    {
+        // An open box as an engine lays it: black walls a unit thick to 8 about an opening 8 a
+        // side, the field's four cascades of 64 cells from a quarter about an eye 12 units up,
+        // whose finest holds no floor, and the floor's middle under the second's probes, 4 apart
+        // at 2 over it and 2 under its slab, read at the 16 texels a side they are traced at.
+        (Vector3 Low, Vector3 High)[] box =
+        [
+            (new(-5, -1, -5), new(5, 0, 5)), (new(4, 0, -5), new(5, 8, 5)), (new(-5, 0, -5), new(-4, 8, 5)),
+            (new(-4, 0, 4), new(4, 8, 5)), (new(-4, 0, -5), new(4, 8, -4)),
+        ];
+        Vector4[] field = [new(-8, 4, -8, 0.25f), new(-16, -4, -16, 0.5f), new(-32, -16, -32, 1), new(-64, -48, -64, 2)];
+        Level[] levels =
+        [
+            new(new(-14, -2, -14), 4, 8, 8, 8, 16, 8, 8, 16), new(new(-28, -16, -28), 8, 8, 8, 8, 16, 16, 0, 16),
+            new(new(-56, -44, -56), 16, 8, 8, 8, 16, 221.7f, 0, 16),
+        ];
+        var cells = Cells(box, field);
+        var setting = new Setting { FieldCascades = field };
+        var probes = Passes(cells, levels, Vector3.Zero, setting);
+        var traced = Passes(cells, levels, Vector3.Zero, setting with { Traced = true });
+        var expected = SkyTraced(box, new Vector3(0, 1e-3f, 0), Vector3.UnitY, Sky) * Albedo / MathF.PI;
+        var said = $"the floor under probes 2 over it reflects {probes.Reflected:0.00000} from the probes and {traced.Reflected:0.00000} along its own rays, where the sky traced at it gives {expected:0.00000}";
+        output.WriteLine(said);
+        // 0.29552 from the probes against 0.23950, 1.234 of the trace, what the sky gives a point
+        // 2 over the floor, and 0.24697 along its own rays, 1.031 of it, 128 rays and about 1,000
+        // steps.
+        Assert.True(probes.Reflected > 1.2f * expected && Math.Abs(traced.Reflected - expected) <= 0.1f * expected, said);
+    }
+
+    [CpuKernelFact]
+    public void A_Floor_Under_A_Solid_Slab_Takes_The_Sky_Its_Own_Rays_See_Under_The_Slabs_Edges()
+    {
+        // A floor 30 a side under a solid slab 20 a side whose underside stands 2 over it, as an
+        // engine lays it: the field's two cascades of 64 cells from 0.15 about an eye at (0, 1.2,
+        // 7), the floor read at (0, 0, 3.5) under the finest probes, 1.2 apart at 0.6 over it,
+        // read at the 16 texels a side they are traced at.
+        (Vector3 Low, Vector3 High)[] scene = [(new(-15, -1, -15), new(15, 0, 15)), (new(-10, 2, -10), new(10, 3, 10))];
+        Vector4[] field = [new(-4.8f, -3.6f, 2.4f, 0.15f), new(-9.6f, -7.2f, -2.4f, 0.3f)];
+        Level[] levels =
+        [
+            new(new(-4.2f, -3, 3), 1.2f, 8, 8, 8, 16, 2.4f, 8, 16), new(new(-8.4f, -6, -1.2f), 2.4f, 8, 8, 8, 16, 33.255f, 8, 16),
+        ];
+        var place = new Vector3(0, 0, 3.5f);
+        var cells = Cells(scene, field);
+        var setting = new Setting { FieldCascades = field };
+        var probes = Passes(cells, levels, place, setting);
+        var traced = Passes(cells, levels, place, setting with { Traced = true });
+        // The slab past the field's coarsest cascade, which ends 5.9 units before the floor's
+        // point toward -z, is not in the field, and a ray leaving the field takes the sky, so the
+        // trace is of the scene as the field holds it, the slab cut to the cascade.
+        var (low, high) = (new Vector3(-9.6f, -7.2f, -2.4f), new Vector3(9.6f, 12, 16.8f));
+        var held = scene.Select(box => (Vector3.Max(box.Low, low), Vector3.Min(box.High, high))).ToArray();
+        var expected = SkyTraced(held, place + new Vector3(0, 1e-3f, 0), Vector3.UnitY, Sky) * Albedo / MathF.PI;
+        var whole = SkyTraced(scene, place + new Vector3(0, 1e-3f, 0), Vector3.UnitY, Sky) * Albedo / MathF.PI;
+        var said = $"the floor under the slab reflects {probes.Reflected:0.00000} from the probes and {traced.Reflected:0.00000} along its own rays, where the sky traced at it gives {expected:0.00000} as the field holds the slab and {whole:0.00000} whole";
+        output.WriteLine(said);
+        // 0.06592 from the probes against 0.05841, 1.129 of the trace as the field holds the slab,
+        // what the sky gives the probes 0.6 over the floor, and 0.05448 along its own rays, 0.933
+        // of it, 128 rays and about 1,600 steps. Against the whole slab's trace, 0.03918, they read
+        // 1.682 and 1.390 of it.
+        Assert.True(probes.Reflected > 1.1f * expected && Math.Abs(traced.Reflected - expected) <= 0.1f * expected, said);
+    }
+
+    // The field's cascades of the boxes, each cascade's cells one after another.
+    private static float[] Cells((Vector3 Low, Vector3 High)[] boxes, Vector4[] field)
+    {
+        var triangles = boxes.SelectMany((box, i) => Cuboid(box.Low, box.High, i + 1)).ToList();
+        const int each = Size * Size * Size;
+        var cells = new float[5 * each * field.Length];
+        for (int c = 0; c < field.Length; c++)
+            FieldCascade(triangles, new(field[c].X, field[c].Y, field[c].Z), field[c].W).CopyTo(cells, 5 * each * c);
+        return cells;
+    }
 }

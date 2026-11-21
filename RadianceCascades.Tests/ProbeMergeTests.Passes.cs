@@ -48,7 +48,7 @@ public sealed partial class ProbeMergeTests
     // for none. FieldCascades gives the field's cascades, each its least corner and its cell, the
     // finest first, the cells built for each one after another, CellLight the light a hit takes
     // from each of their cells, and Points the surface points read and their normals, in place of
-    // the one at place.
+    // the one at place, and Traced gathers each point along its own rays (gatherTraced).
     private sealed record Setting
     {
         public Vector4[]? FieldCascades { get; init; }
@@ -61,6 +61,7 @@ public sealed partial class ProbeMergeTests
         public bool Moved { get; init; }
         public bool Reference { get; init; }
         public int[]? Caps { get; init; }
+        public bool Traced { get; init; }
     }
 
     private const float WallAlbedo = 0.6f;
@@ -129,7 +130,7 @@ public sealed partial class ProbeMergeTests
             for (int l = levels.Length - 2; l >= 0; l--)
                 Pass(3, l, levels[l].TexelCount);
         }
-        Pass(4, 0, points.Length);
+        Pass(setting.Traced ? 6 : 4, 0, points.Length);
         var (marched, steps, most) = (0, 0, 0);
         var (onward, onwardSteps, onwardMost, capped) = (0, 0, 0, 0);
         for (int k = 0; k < levels[0].TexelCount; k++)

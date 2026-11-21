@@ -90,16 +90,16 @@ library's functions, and the engine keeps its bindings, its threads and its atom
 | `IStampShapes` | Reads the shapes of a brick's run, each as `FieldShape.WriteStamp` writes it | `stampCell` |
 | `IFieldCells` | Reads a cascade's cells' paint, faces and distances | `paintFacing`, `paintAt` |
 | `IFieldVolume` | Reads the finest cascade holding a point, a cascade's corner and cell, its field between cells and a cell as it is | `seamSheet`, `fieldDistanceIn`, `fieldDistanceSheetIn`, `fieldNormalIn`, `traceField`, `traceFieldSheets`, `reachAlong`, `reachTexel` |
-| `IMarchSteps` | Takes each step a march makes, which `NoSteps` passes over | `traceField`, `traceFieldSheets`, `traceProbeRay`, `marchToOpenSpace`, `reachAlong`, `mergedLight`, `mergeTexel` |
-| `IProbeField` | Reads, beyond `IFieldVolume`, the light a surface a ray meets or crosses sends back along the ray as the engine shades it, from the hit's place, the ray's way, the cascade and the cell, and the share of light that passes a unit of a surface's depth | `traceProbeRay`, `marchToOpenSpace`, `mergedLight`, `traceTexel`, `mergeTexel`, `gatherAt` |
-| `IFarProbes` | Reads a far probe's light at a texel and how far its ray toward each way of its reach map went, the merged light and reach maps of the level above a merge's or of the finest level a gather's, which `TracedMeans` reads at fewer texels than traced | `mergedLight`, `farTexelsLight`, `farProbeSees`, `mergeTexel`, `gatherAt` |
-| `IProbePlaces` | Reads where a cascade's probe stands, by the engine's own rule where it moves a probe off a surface, which `GridPlaces` gives as the grid's place | `traceTexel`, `reachTexel`, `mergedLight`, `mergeTexel`, `gatherAt` |
-| `ISky` | Reads the sky's light along a way, for a ray that leaves the field, which `UniformSky` gives as one light | `lastCascadeLight`, `mergedLight`, `settleTexel`, `mergeTexel` |
+| `IMarchSteps` | Takes each step a march makes, which `NoSteps` passes over | `traceField`, `traceFieldSheets`, `traceProbeRay`, `marchToOpenSpace`, `reachAlong`, `mergedLight`, `mergeTexel`, `gatherTraced` |
+| `IProbeField` | Reads, beyond `IFieldVolume`, the light a surface a ray meets or crosses sends back along the ray as the engine shades it, from the hit's place, the ray's way, the cascade and the cell, and the share of light that passes a unit of a surface's depth | `traceProbeRay`, `marchToOpenSpace`, `mergedLight`, `traceTexel`, `mergeTexel`, `gatherAt`, `gatherTraced` |
+| `IFarProbes` | Reads a far probe's light at a texel and how far its ray toward each way of its reach map went, the merged light and reach maps of the level above a merge's or of the finest level a gather's, which `TracedMeans` reads at fewer texels than traced | `mergedLight`, `farTexelsLight`, `farProbeSees`, `mergeTexel`, `gatherAt`, `gatherTraced` |
+| `IProbePlaces` | Reads where a cascade's probe stands, by the engine's own rule where it moves a probe off a surface, which `GridPlaces` gives as the grid's place | `traceTexel`, `reachTexel`, `mergedLight`, `mergeTexel`, `gatherAt`, `gatherTraced` |
+| `ISky` | Reads the sky's light along a way, for a ray that leaves the field, which `UniformSky` gives as one light | `lastCascadeLight`, `mergedLight`, `settleTexel`, `mergeTexel`, `gatherTraced` |
 | `IProbeLight` | Reads a probe's merged light at each of its texels | `lightTaken` |
 | `IProbeRays` | Keeps the ray each texel of a cascade traced, how it ended, where, the share of light it carries and the light it met, and reads it back | `traceTexel`, `settleTexel`, `mergeTexel` |
 | `IReachTexels` | Keeps how far each ray of a cascade's reach maps went, `ReachOpen` where it met no surface, which `IFarProbes` reads back | `reachTexel` |
 | `IMergedLight` | Keeps each texel's light merged from every distance past its probe, which `IFarProbes` reads back for the level below and the gather | `settleTexel`, `mergeTexel` |
-| `ISurfacePoints` | Reads a surface point's place and normal and keeps the light it takes | `gatherAt` |
+| `ISurfacePoints` | Reads a surface point's place and normal and keeps the light it takes | `gatherAt`, `gatherTraced` |
 
 The engine's struct is handed to the library's functions by value, so an array it holds is copied
 into each thread's own memory where it is read, which one macOS device reads wrong where every other
@@ -210,8 +210,16 @@ The conventions the module stands on:
   their own places, weighed as the merge weighs the probes about a ray's end, and nothing corrects
   it for a probe that stands off the surface. A probe a spacing above a floor sees what that height
   sees, more of the sky in a box open above it than the floor sees. A surface that wants its own
-  light traces its own short rays from the point and hands them on through `mergedLight`, as a
-  cascade finer than the finest would.
+  light takes it from `gatherTraced`, which sends a ray from the point along each way of the
+  cascade's octahedron that faces its normal, a cell off the surface, and hands each on through
+  `mergedLight` to the cascade's probes as a ray of a cascade finer than it that ended where it
+  began, so it marches to open space and meets what lies between the surface and the probes. In
+  a box open to the sky whose floor's probes stand 2 units over it, `gatherAt` reads the floor
+  1.23 times the light traced at it and `gatherTraced` 1.03, and under a solid slab with probes
+  0.6 over the floor 1.13 and 0.93 of the light traced as the field holds the slab, for 128 rays
+  a point at 16 texels a side and 1,000 to 1,600 steps. A ray that leaves the field takes the sky,
+  so a slab reaching past the coarsest cascade reads open past its edge, and against the whole
+  slab the floor reads 1.68 and 1.39 times its light.
 
 Each setting has a default an engine may leave, and each trades one thing for another.
 
