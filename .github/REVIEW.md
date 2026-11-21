@@ -846,6 +846,25 @@ cascades' worst 16 percent off where it reads 7, the traced floors 29 over and 4
 read 3.6 and 7.8, so they stay. Neither binding's own merge shades a surface its march meets, and
 the shading the CPU cannot time is the next to place.
 
+The merge's hits. At 16af1c8 3DEngine timed three cascades' merge at 4.89 ms on Sponza and 9.23 to
+13.05 on the Bistro as bound, 4.00 and 4.08 with a hit lit by its probes alone, 0.54 and 0.57 with a
+hit taking nothing, and 0.55 and 0.56 with a hit one read of a texture at its cell, against its own
+whole merge's 0.36 and 0.25, so the shading at a hit is 89 to 94 percent of the merge's cost. On the
+CPU a merge taking nothing at a hit reads the lintel's deep end 0.507 of its trace against 0.819, 4
+of 64 probes within a quarter against 62, a sunlit wall a little past the near rays' reach 44
+percent under, the sunlit sheets 34 percent under and a wall past every far probe 0, and one taking
+in its place the far probes' light about the hit reads the open box's floor 1.49 times its share and
+the lintel's deep end 1.73 times its trace, so the hits stay shaded. An engine that holds the light
+of its field's cells (`IHeldLight`) passes the merge `HeldHitLight`, which reads at a hit the light
+held for its cell, and runs `holdCellLight` each frame over a share of the cells, each within a cell
+and a tenth of a surface shaded once by its own `hitLight`. On the CPU the sunlit wall so reads 0.6
+percent under the shaded merge and the sheets 0.04 percent over. Shading every cell within a cell of
+a surface once took 3DEngine 1.91 ms on Sponza and 3.07 on the Bistro, so held over eight frames a
+frame pays 0.24 and 0.38 beside the merge's 0.55. 3DEngine's own cheaper hit, its probes' kept light
+read half a spacing off the surface and its sun map at the hit with no lamps, took the whole merge
+of five cascades to 1.03 and 1.07 ms and passes its sunlit passage test. The comment of the lintel's
+deep-end test held figures from before the merge's reads changed, and gives the ones it prints.
+
 Handoff, for a fresh session, in place of those above. Where the work stands: the library holds the
 field's plan, the triangles' layout and the glow lights in C#, and in Slang the probes' octahedron,
 the cell code, resolve and pinch, the hit's color read, the splat, the stamp, the field's distance
@@ -870,20 +889,22 @@ holds by the SPIR-V. A cascade is traced at `TracedMeans.perRead` texels a side 
 at, 2 at four times the rays, which the lintel's sampling asks, or 1. A surface whose probes stand
 off it gathers along its own rays (`gatherTraced`). The merge keeps the sky's share beside the light
 in one pass (`IFarSkyProbes`, `IMergedSkyLight`). A probe inside a mesh keeps `ReachInside` in its
-reach map, and the far probes about a hand-off are tested once. Next in order: the merge's cost,
-where the shading of what a merge march meets is to be timed in the bindings, then the crossing of a
-crown by each step's own share and the lintel's mixed texels, then the engines' further findings as
-they take the passes, then the split sum at a hit, the screen probes, the light on the picture and
-the contact shadow's march. Left behind each part's Reply: the field's normal, the cascades' table,
-the march held within a cascade, the splat's second plane, the lending of thin emitters, the repaint
-and the clearing of codes. Open: AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md wait for
-the owner. Read first: AGENTS.md, this file's head and Decisions, the Replies from the field's
-distance on, the README's binding section, NORM.md's N 4.8 to 4.11 and N 7.9, `CpuKernel.cs` and the
-head of `rc_probe_passes.slang`. Every build and test goes through N 7.9's lock, restored outside
-it, built with `--no-restore -p:UseSharedCompilation=false`, its output written to a file of which
-the summary line and the failing lines alone are read, and each commit is read by `commitcheck.py .
---staged --message=<file>` first. At a binding's request, in the commit carrying this line:
-`build/fetch-slang.sh` reads an archive's sha256 with `shasum -a 256`, on macOS, Linux and Git's
-bash on Windows alike, and Python's hashlib where a system has none, in place of `sha256sum`, which
-N 6.6's check refuses. This repository's own tests do not run that check on its scripts; the
-binding's suite found it.
+reach map, and the far probes about a hand-off are tested once. The shading at a merge's hits is
+most of its cost, and a merge reads at a hit the light an engine holds for the field's cells
+(`HeldHitLight`, `holdCellLight`) where it holds one. Next in order: the bindings' choice between a
+held light and a cheaper hit of their own, with BevyCSharp's timings, then the crossing of a crown
+by each step's own share and the lintel's mixed texels, then the engines' further findings as they
+take the passes, then the split sum at a hit, the screen probes, the light on the picture and the
+contact shadow's march. Left behind each part's Reply: the field's normal, the cascades' table, the
+march held within a cascade, the splat's second plane, the lending of thin emitters, the repaint and
+the clearing of codes. Open: AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md wait for the
+owner. Read first: AGENTS.md, this file's head and Decisions, the Replies from the field's distance
+on, the README's binding section, NORM.md's N 4.8 to 4.11 and N 7.9, `CpuKernel.cs` and the head of
+`rc_probe_passes.slang`. Every build and test goes through N 7.9's lock, restored outside it, built
+with `--no-restore -p:UseSharedCompilation=false`, its output written to a file of which the summary
+line and the failing lines alone are read, and each commit is read by `commitcheck.py . --staged
+--message=<file>` first. At a binding's request, in the commit carrying this line: `build/fetch-
+slang.sh` reads an archive's sha256 with `shasum -a 256`, on macOS, Linux and Git's bash on Windows
+alike, and Python's hashlib where a system has none, in place of `sha256sum`, which N 6.6's check
+refuses. This repository's own tests do not run that check on its scripts; the binding's suite found
+it.

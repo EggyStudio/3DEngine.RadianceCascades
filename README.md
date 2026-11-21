@@ -104,6 +104,7 @@ library's functions, and the engine keeps its bindings, its threads and its atom
 | `IMergedSkyLight` | Keeps, beyond `IMergedLight`, the share of the sky in each texel's merged light, which `IFarSkyProbes` reads back | `settleTexel`, `mergeTexel` |
 | `ISurfacePoints` | Reads a surface point's place and normal and keeps the light it takes | `gatherAt`, `gatherTraced` |
 | `ISurfaceSkyPoints` | Keeps, beyond `ISurfacePoints`, the share of the sky in the light a surface point takes | `gatherAt`, `gatherTraced` |
+| `IHeldLight` | Keeps and reads the light the surface nearest each of the field's cells within a cell and a tenth of a surface sends along its normal, as the engine shades it, which the merge reads at a hit through `HeldHitLight` in place of the engine's shading | `holdCellLight`, `HeldHitLight` |
 
 The engine's struct is handed to the library's functions by value, so an array it holds is copied
 into each thread's own memory where it is read, which one macOS device reads wrong where every other
@@ -212,6 +213,21 @@ The conventions the module stands on:
   one engine's, which shades with its sun's and lamps' shadows, took 46 s to compile in a trace and
   2.6 minutes and 3.75 GB in a merge. A binding shades a surface in hitLight itself, with nothing to
   gather after the march.
+- The engine's shading at the surfaces a merge's marches meet is most of what the merge costs: of
+  a merge of three cascades that took 4.9 ms on Sponza and 9.2 on the Bistro on one engine, its
+  marches and reads took 0.54 and 0.57. A merge that takes nothing at a hit reads the room's deep
+  end under the lintel 0.51 of the light traced there against 0.82, 4 of its 64 probes within a
+  quarter against 62, and a sunlit wall a little past the near rays' reach 44 percent under, and
+  one that takes in its place the far probes' light about the hit reads an open box's floor 1.49
+  times its share. An engine that holds the light of the field's cells (`IHeldLight`) passes the
+  merge `HeldHitLight`, which reads at a hit the light held for the cell it lies in, and
+  dispatches `holdCellLight` each frame over a share of the cells, each within a cell and a tenth
+  of a surface shaded once where a march toward it along its normal stops. The merge so took 0.55
+  and 0.56 ms, the sunlit wall reads 0.6 percent under the light it takes shading its hits and the
+  sunlit sheets 0.04 percent over, and shading every cell within a cell of a surface once took 1.91
+  ms on Sponza and 3.07 on the Bistro, 170,000 and 125,000 cells of 1.3 million, a frame's share
+  of it a part of that. A held light gives up the gloss toward the eye a hit's own shading weighs,
+  and lags a change in the scene by the frames it takes to hold every cell.
 - A field's build runs `seamSheet` over its resolved cells, as it runs the pinch, and keeps the
   plane it gives in the cell, whose distance stays its own. A sheet thinner than a cell resting on a
   solid's top passes over the cells in front of the solid's face, which keep the solid's code, and

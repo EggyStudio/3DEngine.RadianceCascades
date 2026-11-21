@@ -198,6 +198,35 @@ public sealed partial class ProbeMergeTests
     }
 
     [CpuKernelFact]
+    public void A_Merge_Reading_The_Light_Held_For_The_Cells_Its_Hits_Lie_In_Reads_The_Sunlit_Wall_And_Sheets_As_Its_Own_Shading_Does()
+    {
+        // The sunlit wall and the sunlit sheets above, each read with the merge shading the
+        // surfaces its marches meet and with it reading the light held for the cells they meet
+        // them in (holdCellLight, HeldHitLight): the wall through the march-on and from the probe
+        // reaching 4 whose rays march on to open space, the sheets through the march-on.
+        var wall = Field(Cuboid(new(3, 0, -4), new(3 + Wall, 8, 4), 1));
+        var at = new Vector3(0, 4, 0);
+        var sunlit = new Setting { Normal = Vector3.UnitX, SkyLight = 0, Sun = new Vector3(-0.8f, 0.6f, 0) * 3 };
+        Chained[] Both(float[] cells, Level[] levels, Vector3 place, Setting setting) =>
+            [Passes(cells, levels, place, setting), Passes(cells, levels, place, setting with { Held = true })];
+        Level Beyond = new(new(100, 100, 100), FarSpacing, 2, 2, 2, FarTexels, FarEnd);
+        var marchedOn = Both(wall, [new(at, 1, 1, 1, 1, NearTexels, 2), Beyond], at, sunlit);
+        var past = Both(wall, Pair(at), at, sunlit);
+        var sheets = Field(Cuboid(new(-7.5f, -1.5f, -7.5f), new(7.5f, 0, 7.5f), 1).Concat(Sheet(2, 7, 2, 0.5f)).Concat(Sheet(3.5f, 7, 3, 0.5f)));
+        var sheetsOn = Both(sheets, [new(Floor, 1, 1, 1, 1, NearTexels, 1), Beyond], Floor, new Setting { Sun = new Vector3(0.6f, 0.8f, 0) * 3 });
+        var read = new[] { marchedOn, past, sheetsOn }.Select(r => r[1].Reflected / r[0].Reflected).ToArray();
+        var said = $"held against shaded, the sunlit wall through the march-on {marchedOn[1].Reflected:0.00000} against {marchedOn[0].Reflected:0.00000}, "
+            + $"reaching 4 {past[1].Reflected:0.00000} against {past[0].Reflected:0.00000}, and the sheets through the march-on "
+            + $"{sheetsOn[1].Reflected:0.00000} against {sheetsOn[0].Reflected:0.00000}";
+        output.WriteLine(said);
+        // 0.15645 against 0.15742 for the wall both ways, 0.6 percent under, and 0.46501 against
+        // 0.46484 for the sheets, 0.04 percent over, where a merge that takes nothing at a hit
+        // reads the wall 0.00000 through the march-on and 0.08753 reaching 4, and the sheets
+        // 0.30607.
+        Assert.True(read.All(q => Math.Abs(q - 1) <= 0.02), said);
+    }
+
+    [CpuKernelFact]
     public void A_Capped_Ray_Hands_On_Where_It_Stopped_And_A_Closed_Room_Stays_Dark_Under_A_Tight_Cap()
     {
         const float o = 4 + Wall;

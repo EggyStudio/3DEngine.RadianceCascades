@@ -42,6 +42,10 @@ RWStructuredBuffer<float> cellLight;
 // the float the setup gives at 124 each surface point's share.
 RWStructuredBuffer<float> skyFloats;
 
+// The light held for each cell of the field's cascades one after another, three floats a cell,
+// which pass 7 holds and the merge reads where the setup sets 126.
+RWStructuredBuffer<float> heldFloats;
+
 static const int Levels = 16;
 static const int Field = 96;
 static const int Points = 128;
@@ -196,6 +200,24 @@ struct LevelProbes : IFarSkyProbes
     float skyShareAt(int3 probe, uint2 texel) { return skyFloats[merged + cascadeTexelIndex(cascade, probe, texel)]; }
 };
 
+// The light held for the field's cells, as a binding holds it in a texture of its own.
+struct HeldCells : IHeldLight
+{
+    ProbeCells field;
+    float3 heldAt(int cascade, int3 cell)
+    {
+        uint i = uint(field.index(cascade, cell)) * 3u;
+        return float3(heldFloats[i], heldFloats[i + 1u], heldFloats[i + 2u]);
+    }
+    void hold(int cascade, int3 cell, float3 light)
+    {
+        uint i = uint(field.index(cascade, cell)) * 3u;
+        heldFloats[i] = light.x;
+        heldFloats[i + 1u] = light.y;
+        heldFloats[i + 2u] = light.z;
+    }
+};
+
 struct SurfacePoints : ISurfaceSkyPoints
 {
     void keepSkyShare(uint index, float share) { skyFloats[uint(setup[124]) + index] = share; }
@@ -296,8 +318,19 @@ void test(uint3 id : SV_DispatchThreadID)
         // otherwise at those it keeps.
         uint read = firstOf(level + 1, 15) > 0u ? firstOf(level + 1, 15) : firstOf(level + 1, 14);
         TracedSkyMeans<LevelProbes> above = meansOf(level + 1, read);
-        bool marched = mergeTexel(field, rays, placesOf(level), above, placesOf(level + 1), merged, cascade,
-            readCascade(levelCascade(level + 1), above.means.perRead), setup[8], sky, counted, index);
+        // Where the setup sets 126, the merge reads at each hit the light held for the cell it lies
+        // in (HeldHitLight), as a binding passes it to the merge in place of its own shading.
+        ProbeCascade aboveCascade = readCascade(levelCascade(level + 1), above.means.perRead);
+        bool marched;
+        if (setup[126] > 0.5)
+        {
+            HeldHitLight<ProbeCells, HeldCells> heldField = { field, { field } };
+            marched = mergeTexel(heldField, rays, placesOf(level), above, placesOf(level + 1), merged, cascade, aboveCascade, setup[8], sky,
+                counted, index);
+        }
+        else
+            marched = mergeTexel(field, rays, placesOf(level), above, placesOf(level + 1), merged, cascade, aboveCascade, setup[8], sky,
+                counted, index);
         if (index < cascadeTexels(cascade))
         {
             marches[(firstOf(level, 10) + index) * 2u] = marched ? 1.0 : 0.0;
@@ -314,6 +347,12 @@ void test(uint3 id : SV_DispatchThreadID)
         float3 way = texelWay(cascade.texels, uint2((index % texels) % cascade.texels, (index % texels) / cascade.texels));
         ProbeRay ray = traceProbeRay(field, placesOf(level).placeOf(probeAt(cascade, index / texels)), way, 0.0, setup[8]);
         merged.keepMerged(index, lastCascadeLight(ray, way, sky));
+    }
+    else if (pass == 7u)
+    {
+        // The light of every cell of the field held at once, the share 1.
+        HeldCells held = { field };
+        holdCellLight(field, held, uint(field.cascades()), 1u, 0u, index);
     }
     else if (pass == 6u)
     {

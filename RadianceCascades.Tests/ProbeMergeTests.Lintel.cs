@@ -233,10 +233,10 @@ public sealed partial class ProbeMergeTests
         output.WriteLine(said);
         // A ray ending short of the lintel whose far probes disagree on where a surface lies along
         // its way, some meeting the lintel's inner face and some passing under it, marches across
-        // the far interval itself (mergedLight), so the deep end takes 0.878 of the traced light
-        // at the probe and 0.990 and 0.957 on the means at x 0.5 and 1.5, 62 of the 64 probes
+        // the far interval itself (mergedLight), so the deep end takes 0.819 of the traced light
+        // at the probe and 0.932 and 0.895 on the means at x 0.5 and 1.5, 62 of the 64 probes
         // within a quarter, where far probes standing a spacing off the ray read it 1.402, 1.472
-        // and 1.405, 38 of 64. Each probe's own texels marched on take 0.609 and 0.475 on the
+        // and 1.405, 38 of 64. Each probe's own texels marched on take 0.548 and 0.446 on the
         // means, one ray a texel missing the opening's narrow strip. The probe and the two means
         // may lie neither a quarter under the trace nor a quarter over it.
         Assert.True(probe is >= 0.75f and <= 1.25f && nearer is >= 0.75 and <= 1.25 && deepest is >= 0.75 and <= 1.25 && within >= 60, said);

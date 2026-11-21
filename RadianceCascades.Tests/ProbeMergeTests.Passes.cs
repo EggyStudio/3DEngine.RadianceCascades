@@ -52,7 +52,8 @@ public sealed partial class ProbeMergeTests
     // from each of their cells, and Points the surface points read and their normals, in place of
     // the one at place, Traced gathers each point along its own rays (gatherTraced), and
     // GateFiner lends the finer levels' merges no sky, as a binding does before its field holds
-    // every mesh in reach.
+    // every mesh in reach, and Held has the merges read at each hit the light held for the cell
+    // it lies in (holdCellLight, HeldHitLight) in place of shading it.
     private sealed record Setting
     {
         public Vector4[]? FieldCascades { get; init; }
@@ -67,6 +68,7 @@ public sealed partial class ProbeMergeTests
         public int[]? Caps { get; init; }
         public bool Traced { get; init; }
         public bool GateFiner { get; init; }
+        public bool Held { get; init; }
     }
 
     private const float WallAlbedo = 0.6f;
@@ -116,13 +118,18 @@ public sealed partial class ProbeMergeTests
         var skyShares = new float[texels + points.Length];
         setup[124] = texels;
         setup[125] = setting.GateFiner ? 1 : 0;
+        setup[126] = setting.Held ? 1 : 0;
+        var fieldCells = Math.Max(setting.FieldCascades?.Length ?? 1, 1) * Size * Size * Size;
+        var held = new float[3 * fieldCells];
         var cellLight = setting.CellLight ?? [0];
         void Pass(int pass, int level, int threads)
         {
             (setup[6], setup[7]) = (pass, level);
             CpuKernel.Run("probe_passes_cpu.slang", ((uint)(threads + 63) / 64, 1, 1), cells, setup, rays, reach, merged, marches, surfaces, cellLight,
-                skyShares);
+                skyShares, held);
         }
+        if (setting.Held)
+            Pass(7, 0, fieldCells);
         if (setting.Reference)
         {
             // The finest level's reach map, which the gather reads, and its texels marched on.
