@@ -951,6 +951,18 @@ took 0.56 and 0.63, from the field's normal `heldSide` read at the cell's middle
 `heldSide` reads a solid's side as the field's distance growing along the ray's way across half a
 cell either side of the middle, two reads, and every held figure stands.
 
+The closed rooms' 5 percent over, placed. BevyCSharp's views 2, 4 and 7 at 6e16181 read 1.050, 1.047
+and 1.086 of their traces bound, and with no probe light at the hit, its sun, lamps, glow and
+emission alone, 0.570, 0.382 and 0.550, so the bounce at a hit carries 43 to 62 percent of each
+view's light, and the 5 percent is 8 to 13 percent of that bounce. On one bounce the passes add
+none: the closed box lit by its -x wall alone reads, summed over 49 points for each of five facings,
+0.978 to 1.010 of the light traced against its faces, and its texels each marched on alone 0.975 to
+1.011, the merge adding 1.4 percent at most to its texels' own rays, which a test holds within 3
+percent beside the box every face of which sends the same light. The 5 percent so lies in the bounce
+a binding's hit reads of its probes at the surface, which is the binding's, with the read half a
+spacing off the surface toward the ray the README asks of a cheap hit. The held cells read the views
+3.568, 1.069 and 1.027 at 6e16181, view 2's thin walls mended since.
+
 Handoff, for a fresh session, in place of those above. Where the work stands: the library holds the
 field's plan, the triangles' layout and the glow lights in C#, and in Slang the probes' octahedron,
 the cell code, resolve and pinch, the hit's color read, the splat, the stamp, the field's distance
@@ -981,12 +993,12 @@ the surface and the probes' light half a spacing off it, or the held light of th
 (`HeldHitLight`, `holdCellLight`) held whole each frame. A crossing passes each step's own share and
 takes its light where it has stopped half the light it carried in. A cascade's traced texels a side
 of each read one are a binding's setting for each cascade, the finest two at 2 reading the lintel's
-face 0.825 at 2.2 times the trace's steps. The closed rooms' 5 percent over waits on BevyCSharp's
-views read with the bounce at a hit and without it. Next in order, as the bindings land the passes:
-the closed rooms, then the engines' further findings as they take the passes, then the split sum at
-a hit, the screen probes, the light on the picture and the contact shadow's march. Left behind each
-part's Reply: the field's normal, the cascades' table, the march held within a cascade, the splat's
-second plane, the lending of thin emitters, the repaint and the clearing of codes. Open: AGENTS.md's
+face 0.825 at 2.2 times the trace's steps. The closed rooms' 5 percent over lies in the bounce a
+binding's hit reads of its probes, the passes adding none on one bounce. Next, as the bindings land
+the passes: the engines' further findings as they take the passes, then the split sum at a hit, the
+screen probes, the light on the picture and the contact shadow's march. Left behind each part's
+Reply: the field's normal, the cascades' table, the march held within a cascade, the splat's second
+plane, the lending of thin emitters, the repaint and the clearing of codes. Open: AGENTS.md's
 documents rows for DEVLOG.md and CHEATSHEET.md wait for the owner. Read first: AGENTS.md, this
 file's head and Decisions, the Replies from the field's distance on, the README's binding section,
 NORM.md's N 4.8 to 4.11 and N 7.9, `CpuKernel.cs` and the head of `rc_probe_passes.slang`. Every

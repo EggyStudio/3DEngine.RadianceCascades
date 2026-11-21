@@ -4,9 +4,9 @@ using Xunit;
 namespace RadianceCascades.Tests;
 
 /// <summary>
-/// A closed room every face of which sends the same light, read by a chain of four cascades on
-/// the CPU, where every point inside takes that light along every way, so the passes neither add
-/// light nor lose it.
+/// A closed room read by a chain of four cascades on the CPU, every face of it sending the same
+/// light, where every point inside takes that light along every way, so the passes neither add
+/// light nor lose it, or one wall alone sending it, against the light traced against its faces.
 /// </summary>
 public sealed partial class ProbeMergeTests
 {
@@ -41,5 +41,80 @@ public sealed partial class ProbeMergeTests
         // points up to a quarter either way in both and more where they take little, the sampling
         // of 16 by 16 texels.
         Assert.True(read.All(q => Math.Abs(q - 1) <= 0.005), said);
+    }
+
+    // The cell of the field a point lies in, x fastest.
+    private static int ClosedCellOf(Vector3 p)
+    {
+        var q = (p - Corner) / Cell;
+        return ((int)MathF.Floor(q.Z) * Size + (int)MathF.Floor(q.Y)) * Size + (int)MathF.Floor(q.X);
+    }
+
+    // What a point facing normal inside the closed box takes, over 96 by 96 ways spread by their
+    // cosine, each meeting the box's inner faces and taking the light of the cell it meets them in.
+    private static float TracedInClosedBox(Vector3 point, Vector3 normal, float[] light)
+    {
+        var (u, v) = Basis(normal);
+        const int side = 96;
+        var rows = new double[side];
+        Parallel.For(0, side, i =>
+        {
+            for (int j = 0; j < side; j++)
+            {
+                var way = CosineWay(normal, u, v, (i + 0.5f) / side, (j + 0.5f) / side);
+                var t = float.MaxValue;
+                for (int axis = 0; axis < 3; axis++)
+                {
+                    var (low, high) = axis == 1 ? (0f, 8f) : (-4f, 4f);
+                    if (way[axis] > 1e-9f)
+                        t = MathF.Min(t, (high - point[axis]) / way[axis]);
+                    else if (way[axis] < -1e-9f)
+                        t = MathF.Min(t, (low - point[axis]) / way[axis]);
+                }
+                rows[i] += light[ClosedCellOf(point + way * (t - 0.01f))];
+            }
+        });
+        return (float)(MathF.PI * rows.Sum() / (side * side));
+    }
+
+    [CpuKernelFact]
+    public void A_Closed_Room_Lit_By_One_Wall_Reads_The_Light_Traced_There_Within_Three_Percent_Over_Each_Facings_Points()
+    {
+        // The closed box, its -x wall alone sending a light of 1 under a black sky, read at 49
+        // points for each of five facings, a 7 by 7 grid on the floor facing up, under the lid
+        // facing down, before the +z and -z walls facing them and up the middle facing the lit
+        // wall, against the light traced against the room's faces, summed over each facing's
+        // points.
+        const float o = 4 + Wall;
+        var cells = Field(OpenBox().Concat(Cuboid(new(-o, 8, -o), new(o, 8 + Wall, o), 6)));
+        Level[] chain =
+        [
+            new(new(-3.5f, 0.25f, -3.5f), 1, 8, 8, 8, NearTexels, 2),
+            new(FarCorner, FarSpacing, FarCount, FarCount, FarCount, FarTexels, 4),
+            new(new(-14, -10, -14), 4, 8, 8, 8, 16, 8),
+            new(new(-28, -28, -28), 8, 8, 8, 8, 16, FarEnd),
+        ];
+        var light = new float[Size * Size * Size];
+        for (int i = 0; i < light.Length; i++)
+            light[i] = (Corner + (new Vector3(i % Size, i / Size % Size, i / (Size * Size)) + new Vector3(0.5f)) * Cell).X < -3.75f ? 1 : 0;
+        var read = new List<string>();
+        var faults = 0;
+        foreach (var normal in new[] { Vector3.UnitY, -Vector3.UnitY, Vector3.UnitZ, -Vector3.UnitZ, -Vector3.UnitX })
+        {
+            var points = (from a in Enumerable.Range(0, 7)
+                          from b in Enumerable.Range(0, 7)
+                          select (normal.Y != 0 ? new Vector3(-3 + a, normal.Y > 0 ? 0.25f : 7.75f, -3 + b)
+                              : new Vector3(-3 + a, 1 + b, normal.Z != 0 ? -normal.Z * 3.5f : 0.5f), normal)).ToArray();
+            var reading = Passes(cells, chain, Floor, new Setting { Points = points, CellLight = light, SkyLight = 0 });
+            var share = reading.Taken.Sum() / points.Sum(p => TracedInClosedBox(p.Item1, p.Item2, light));
+            read.Add($"{share:0.000} facing {normal}");
+            faults += Math.Abs(share - 1) <= 0.03 ? 0 : 1;
+        }
+        var said = $"the closed room lit by its -x wall reads {string.Join(", ", read)} of the light traced there";
+        output.WriteLine(said);
+        // 1.010 on the floor, 0.978 under the lid, 1.004 before either side wall and 0.997 facing
+        // the lit wall, where each texel marched on to the coarsest level's end alone reads 1.011,
+        // 0.975, 0.998 and 0.983, the merge adding 1.4 percent at most to its texels' own rays.
+        Assert.True(faults == 0, said);
     }
 }
