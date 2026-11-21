@@ -14,13 +14,17 @@
 // their own parallel rays do, so the nearer the point lies to an edge the more the edge is smeared
 // over the ways about it. The ends are kept short against the spacings above. The tests' middle
 // level of probes a unit apart reaches 2, twice its spacing, and hands a ray from the floor to
-// the far probes, 2 apart, 4 units out, where reaching 4 it hands it on 6 out or past, within 2 of
-// an open box's rim, and the floor reads 12.4 percent under its share of the sky. A ray that
-// reaches its end near a surface marches on to open space before it is handed on (mergedLight,
-// marchToOpenSpace), which mends an edge within the field's band past the end and not one
-// farther. A level's reach map runs to its
-// end too, so that end lies past the diagonal of the cell between its probes, the spacing times
-// the root of 3, for the seeing of a point among them to be read within the map. A texel's index
+// the far probes, 2 apart, 4 units out. A ray that reaches its end near a surface marches on to
+// open space before it is handed on (mergedLight, marchToOpenSpace), which mends an edge within
+// the field's band past the end and not one farther, and one whose far probes disagree on where a
+// surface lies along its way marches across the far interval itself (HitSpread), which mends an
+// opening's edge the far probes beside the ray see past. An open box's floor reads 0.3 percent
+// under its share of the sky with the middle level reaching 2 or 4 alike, where with the far
+// probes taken as they stand, reaching 4 handed the ray on within 2 of the rim and read the floor
+// 12.4 percent under. A level's reach map runs to its end too, so that end lies past the diagonal
+// of the cell between its probes, the spacing times the root of 3, for the seeing of a point among
+// them to be read within the map, and keeps ReachOpen for a way that meets no surface within it
+// (reachAlong). A texel's index
 // is its probe's, x fastest, times the texels of a probe, and its texel's along a row of the
 // octahedron, x fastest (cascadeTexelIndex), and a reach texel's the same over ReachTexels a side.
 //
@@ -153,10 +157,12 @@ public void settleTexel<R : IProbeRays, M : IMergedLight, K : ISky>(R rays, M me
 // Merges the texel at index of a level finer than the coarsest with the merged light of the level
 // above, above's probes read through IFarProbes and their places through abovePlaces, by the
 // agreed rule (mergedLight), and keeps it, the ray beginning at its own probe's place (places).
-// Where no probe above sees the end of its ray the ray marches on itself to marchEnd, the coarsest
-// level's end, each step handed to steps, since past the end of the level above no merged light
-// along it is taken from where the ray stands, and in a pair marchEnd is the far cascade's end the
-// rule names. It says whether the texel marched on itself.
+// Where the probes above disagree on where a surface lies along the ray it marches across
+// aboveCascade's own interval before it is handed on. Where no probe above sees the end of its
+// ray the ray marches on itself to marchEnd, the coarsest level's end, each step handed to steps,
+// since past the end of the level above no merged light along it is taken from where the ray
+// stands, and in a pair marchEnd is the far cascade's end. It says whether the texel marched on
+// itself.
 public bool mergeTexel<F : IProbeField, R : IProbeRays, Q : IProbePlaces, P : IFarProbes, U : IProbePlaces, M : IMergedLight, K : ISky,
     S : IMarchSteps>(F field, R rays, Q places, P above, U abovePlaces, M merged, ProbeCascade cascade, ProbeCascade aboveCascade,
     float marchEnd, K sky, inout S steps, uint index)
@@ -166,10 +172,9 @@ public bool mergeTexel<F : IProbeField, R : IProbeRays, Q : IProbePlaces, P : IF
     uint texels = cascade.texels * cascade.texels;
     uint2 texel = uint2((index % texels) % cascade.texels, (index % texels) / cascade.texels);
     float3 place = places.placeOf(probeAt(cascade, index / texels));
-    ProbeCascade marchedTo = aboveCascade;
-    marchedTo.end = marchEnd;
     bool marched;
-    float3 light = mergedLight(field, above, abovePlaces, marchedTo, place, cascade.texels, texel, rays.rayAt(index), sky, steps, marched);
+    float3 light = mergedLight(field, above, abovePlaces, aboveCascade, marchEnd, place, cascade.texels, texel, rays.rayAt(index), sky, steps,
+        marched);
     merged.keepMerged(index, light);
     return marched;
 }

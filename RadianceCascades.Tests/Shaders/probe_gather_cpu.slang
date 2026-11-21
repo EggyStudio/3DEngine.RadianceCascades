@@ -183,7 +183,7 @@ void test(uint3 id : SV_DispatchThreadID)
         ProbeRay ray = traceProbeRay(field, place, way, near.start, near.end);
         CountedSteps counted = { 0u };
         bool itself;
-        float3 merged = mergedLight(field, probes, gridPlaces(far), far, place, near.texels, texel, ray, skyLight, counted, itself);
+        float3 merged = mergedLight(field, probes, gridPlaces(far), far, far.end, place, near.texels, texel, ray, skyLight, counted, itself);
         float3 trilinear = ray.light + (ray.ended == RayPast ? trilinearLight(probes, place + way * ray.t, way) * ray.carried
             : ray.ended == RayMet ? float3(0.0) : sky * ray.carried);
         if (itself)

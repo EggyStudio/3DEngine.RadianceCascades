@@ -22,7 +22,7 @@ public sealed partial class ProbeMergeTests
         var expected = Albedo * 4 * CornerShare(4 / high, 4 / high) * Sky;
         var said = $"the open box's floor under probes moved off it {moved}, where the sky's share gives {expected:0.00000}";
         output.WriteLine(said);
-        // 0.25396 against 0.25111, 1.1 percent over, as a probe set there reads it. At their grid
+        // 0.24696 against 0.25111, 1.7 percent under, as a probe set there reads it. At their grid
         // places, their rays beginning on the floor, the floor reads 0.00000.
         Assert.True(Math.Abs(moved.Reflected - expected) <= 0.05 * expected, said);
     }
@@ -73,8 +73,8 @@ public sealed partial class ProbeMergeTests
         var expected = Albedo / Math.PI * sum;
         var said = $"the open box's floor under the varying sky {varying}, where the sky over the opening gives {expected:0.00000}";
         output.WriteLine(said);
-        // 0.47793 against 0.47889, 0.2 percent under, where the uniform sky of the same scale reads
-        // 0.25396.
+        // 0.47130 against 0.47889, 1.6 percent under, where the uniform sky of the same scale reads
+        // 0.24696.
         Assert.True(Math.Abs(varying.Reflected - expected) <= 0.02 * expected, said);
     }
 
@@ -171,8 +171,8 @@ public sealed partial class ProbeMergeTests
         {
             var reading = Passes(open, Pair(Floor), Floor, new Setting { Caps = [cap, 0] });
             said += $"the open box's floor with the near rays capped at {cap} {reading}, where the sky's share gives {expected:0.00000}\n";
-            // 0.25396 at 16 and at 8, of 256 texels 30 and 66 capped, 0.26572 at 4, 198 capped, and
-            // 0.23094 at 2, 238 capped, against 0.25111, 8.0 percent under at most.
+            // 0.24696 at every cap, of 256 texels 30, 66, 198 and 238 capped at 16, 8, 4 and 2,
+            // against 0.25111, 1.7 percent under.
             Assert.True(Math.Abs(reading.Reflected - expected) <= 0.10 * expected, said);
             if (cap <= 4)
                 Assert.True(reading.Capped > 0, said);
@@ -181,9 +181,9 @@ public sealed partial class ProbeMergeTests
         {
             var reading = Passes(lidded, Pair(Floor), Floor, new Setting { Caps = [cap, cap] });
             said += $"the lidded box's floor with every level capped at {cap} {reading}\n";
-            // 0.00000 at 4 and at 2, 198 and 238 texels capped, the coarsest level's capped rays
+            // Nothing at 4 and at 2, 198 and 238 texels capped, the coarsest level's capped rays
             // taking no light past their stop.
-            Assert.True(reading.Reflected < 0.01 * expected && reading.Capped > 0, said);
+            Assert.True(reading.Reflected == 0 && reading.Capped > 0, said);
         }
         output.WriteLine(said);
     }

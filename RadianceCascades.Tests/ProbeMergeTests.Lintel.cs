@@ -207,34 +207,37 @@ public sealed partial class ProbeMergeTests
     }
 
     [CpuKernelFact]
-    public void A_Room_Open_Under_A_Lintel_Reads_Its_Deep_End_Within_Half_Again_The_Light_Traced_There()
+    public void A_Room_Open_Under_A_Lintel_Reads_Its_Deep_End_Within_A_Quarter_Of_The_Light_Traced_There()
     {
         var (cells, light) = LintelScene();
-        // The finest level's probes at 1.5 m in the room's two deepest columns, x 0.5 and 1.5, at
-        // every z, their faces toward the opening at -x, the first eight at x 0.5.
-        var points = (from x in new[] { 0.5f, 1.5f }
-                      from z in Enumerable.Range(0, 8)
-                      select (new Vector3(x, 1.5f, -3.5f + z), -Vector3.UnitX)).ToArray();
+        // The finest level's 64 probes at 1.5 m, x from -5.5 at the opening to 1.5 at the room's
+        // depth fastest, then z, their faces toward the opening at -x. Each is traced finely, 64 by
+        // 64 ways and 16 by 16 at each hit, about a quarter of a second a probe on 32 cores, half
+        // of the test's half minute.
+        var points = (from z in Enumerable.Range(0, 8)
+                      from x in Enumerable.Range(0, 8)
+                      select (new Vector3(-5.5f + x, 1.5f, -3.5f + z), -Vector3.UnitX)).ToArray();
         var setting = new Setting { FieldCascades = LintelField, CellLight = light, SkyLight = LintelSky, Moved = true, Points = points };
         var merged = Passes(cells, LintelLevels, UnderLintel, setting);
         var marched = Passes(cells, LintelLevels, UnderLintel, setting with { Reference = true });
         var traced = points.Select(p => TracedAgainstBoxes(MovedOff(p.Item1), -Vector3.UnitX)).ToArray();
         var over = merged.Taken.Select((taken, i) => taken / traced[i]).ToArray();
-        var (nearer, deepest, probe) = (over[..8].Average(), over[8..].Average(), over[4]);
-        var said = $"under the lintel the probe at (0.5, 1.5, 0.5) takes {merged.Taken[4]:0.0000} merged against {traced[4]:0.0000} traced, {probe:0.000} of it, "
-            + $"the columns at x 0.5 and 1.5 {nearer:0.000} and {deepest:0.000} of it on the mean, and with each probe's own texels marched on "
-            + $"{marched.Taken[4]:0.0000} at the probe, {marched.Taken[..8].Select((m, i) => m / traced[i]).Average():0.000} and "
-            + $"{marched.Taken[8..].Select((m, i) => m / traced[i + 8]).Average():0.000} on the mean";
+        double Column(float[] read, int x) => Enumerable.Range(0, 8).Average(z => read[z * 8 + x] / traced[z * 8 + x]);
+        var (nearer, deepest, probe) = (Column(merged.Taken, 6), Column(merged.Taken, 7), over[4 * 8 + 6]);
+        var within = over.Count(q => Math.Abs(q - 1) <= 0.25);
+        var said = $"under the lintel the probe at (0.5, 1.5, 0.5) takes {merged.Taken[4 * 8 + 6]:0.0000} merged against {traced[4 * 8 + 6]:0.0000} traced, "
+            + $"{probe:0.000} of it, the columns at x 0.5 and 1.5 {nearer:0.000} and {deepest:0.000} of it on the mean, {within} of 64 probes within a "
+            + $"quarter of it, and with each probe's own texels marched on {marched.Taken[4 * 8 + 6]:0.0000} at the probe, "
+            + $"{Column(marched.Taken, 6):0.000} and {Column(marched.Taken, 7):0.000} on the mean";
         output.WriteLine(said);
-        // The merge hands a ray ending short of the lintel to far probes standing a spacing off it,
-        // whose own rays pass under the lintel and see the sky where the ray would meet the
-        // lintel's inner face, and the finest two cascades' 2 by 2 means mix ways across the
-        // opening's narrow strip, so the deep end takes more than its light, 1.402 of it at the
-        // probe and 1.472 and 1.405 on the means at x 0.5 and 1.5, against 0.1202 traced at the
-        // probe. Each probe's own texels marched on take 0.609 and 0.475 of it on the means, one
-        // ray a texel missing the strip. The bounds sit a little over the merge's figures, so a
-        // rule that lessens the smear passes and one that adds to it fails, and no reading may
-        // fall a quarter under the trace.
-        Assert.True(probe is >= 0.75f and <= 1.45f && nearer is >= 0.75f and <= 1.52f && deepest is >= 0.75f and <= 1.46f, said);
+        // A ray ending short of the lintel whose far probes disagree on where a surface lies along
+        // its way, some meeting the lintel's inner face and some passing under it, marches across
+        // the far interval itself (mergedLight), so the deep end takes 0.878 of the traced light
+        // at the probe and 0.990 and 0.957 on the means at x 0.5 and 1.5, 62 of the 64 probes
+        // within a quarter, where far probes standing a spacing off the ray read it 1.402, 1.472
+        // and 1.405, 38 of 64. Each probe's own texels marched on take 0.609 and 0.475 on the
+        // means, one ray a texel missing the opening's narrow strip. The probe and the two means
+        // may lie neither a quarter under the trace nor a quarter over it.
+        Assert.True(probe is >= 0.75f and <= 1.25f && nearer is >= 0.75 and <= 1.25 && deepest is >= 0.75 and <= 1.25 && within >= 60, said);
     }
 }

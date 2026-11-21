@@ -755,6 +755,18 @@ against 0.990 and 0.957, with 38 of 64 probes within a quarter against 62; the b
 alike under both; the steps 1.15 times. By the condition the open box reads worse under the split
 rule, 8.0 percent under against 4.0 over, so it does not land, and its patch applies over the mend.
 
+The split rule, landed at a share of 0.25 (`HitSpread`). Where the far probes about a hand-off that
+count disagree on where a surface lies along the ray, the ray takes none of them and marches across
+the far interval to the far cascade's own end. The lintel room's test holds its probe at 0.878 of
+the fine trace, its deep end at 0.990 and 0.957, and 62 of 64 probes within a quarter, bounded at
+0.75 to 1.25 and at least 60, in 31 seconds. A four-cascade open box at the ends rule is a test of
+its own, its floor row 0.929 to 1.010 of its share and its middle by `gatherAt` 0.920, bounded
+within a tenth. Every lid reads nothing and is held at nothing. A middle cascade reaching 4 reads
+the open floor 0.3 percent under, as reaching 2 does, where it read 12.4 under. The binding's box
+reads the same within 0.0002, and the steps rise about 1.15 times. Bindings follow two shapes the
+README states: `mergedLight` takes `marchEnd` after the far cascade, which keeps its own end, and
+`reachAlong` gives `ReachOpen` where it meets nothing, which a reach image keeps at or past it.
+
 Handoff, for a fresh session, in place of those above. Where the work stands: the library holds the
 field's plan, the triangles' layout and the glow lights in C#, and in Slang the probes' octahedron,
 the cell code, resolve and pinch, the hit's color read, the splat, the stamp, the field's distance
@@ -770,21 +782,22 @@ surface a ray crosses adds its own light weighed by what it keeps, and a binding
 steps (`ProbeCascade.stepCap`). A binding gives the passes its probes' places (`IProbePlaces`), a
 hit's light (`IProbeField.hitLight`) and the sky along a way (`ISky`), and a near texel takes the
 far texels it covers (`farTexelsLight`). A binding's struct holds no array, which the tests check on
-the module's own kernels by their SPIR-V. A hand-off near an opening's edge reads the room behind it
-about 1.4 times the fine trace, which the README states and a test holds, and a rule marching on
-where far probes disagree mends it but reads a four-cascade open box's floor 8 percent under, its
-figures in its Reply. A field's build runs `seamSheet` after the pinch. Next in order: the engines'
-further findings as they take the passes, then the split sum at a hit, the screen probes, the light
-on the picture and the contact shadow's march. Left behind each part's Reply: the field's normal,
-the cascades' table, the march held within a cascade, the splat's second plane, the lending of thin
-emitters, the repaint and the clearing of codes. Open: AGENTS.md's documents rows for DEVLOG.md and
-CHEATSHEET.md wait for the owner. Read first: AGENTS.md, this file's head and Decisions, the Replies
-from the field's distance on, the README's binding section, NORM.md's N 4.8 to 4.11 and N 7.9,
-`CpuKernel.cs` and the head of `rc_probe_passes.slang`. Every build and test goes through N 7.9's
-lock, restored outside it, built with `--no-restore -p:UseSharedCompilation=false`, its output
-written to a file of which the summary line and the failing lines alone are read, and each commit is
-read by `commitcheck.py . --staged --message=<file>` first. At a binding's request, in the commit
-carrying this line: `build/fetch-slang.sh` reads an archive's sha256 with `shasum -a 256`, on macOS,
-Linux and Git's bash on Windows alike, and Python's hashlib where a system has none, in place of
-`sha256sum`, which N 6.6's check refuses. This repository's own tests do not run that check on its
-scripts; the binding's suite found it.
+the module's own kernels by their SPIR-V. A hand-off near an opening's edge read the room behind it
+about 1.4 times the fine trace, and the split rule, a ray marching on where its far probes disagree
+(`HitSpread`), takes it within a quarter at about 1.15 times the steps, reading a four-cascade open
+box's floor 8 percent under, its figures in its Reply. A field's build runs `seamSheet` after the
+pinch. Next in order: the engines' further findings as they take the passes, then the split sum at a
+hit, the screen probes, the light on the picture and the contact shadow's march. Left behind each
+part's Reply: the field's normal, the cascades' table, the march held within a cascade, the splat's
+second plane, the lending of thin emitters, the repaint and the clearing of codes. Open: AGENTS.md's
+documents rows for DEVLOG.md and CHEATSHEET.md wait for the owner. Read first: AGENTS.md, this
+file's head and Decisions, the Replies from the field's distance on, the README's binding section,
+NORM.md's N 4.8 to 4.11 and N 7.9, `CpuKernel.cs` and the head of `rc_probe_passes.slang`. Every
+build and test goes through N 7.9's lock, restored outside it, built with `--no-restore
+-p:UseSharedCompilation=false`, its output written to a file of which the summary line and the
+failing lines alone are read, and each commit is read by `commitcheck.py . --staged
+--message=<file>` first. At a binding's request, in the commit carrying this line:
+`build/fetch-slang.sh` reads an archive's sha256 with `shasum -a 256`, on macOS, Linux and Git's
+bash on Windows alike, and Python's hashlib where a system has none, in place of `sha256sum`, which
+N 6.6's check refuses. This repository's own tests do not run that check on its scripts; the
+binding's suite found it.

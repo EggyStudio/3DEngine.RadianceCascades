@@ -162,7 +162,7 @@ public sealed partial class ProbeMergeTests(ITestOutputHelper output)
         var expected = Albedo * share * Sky;
         var said = $"the open box's floor {open}, where the sky's share of {share:0.0000} gives {expected:0.00000}";
         output.WriteLine(said);
-        // 0.25396 against 0.25111, 1.1 percent over.
+        // 0.24696 against 0.25111, 1.7 percent under.
         Assert.True(Math.Abs(open.Reflected - expected) <= 0.15 * expected, said);
         // Every far probe at its trilinear weight, those outside the walls lending the sky along
         // ways that meet the walls, reads 0.31194, 24 percent over.
@@ -173,14 +173,14 @@ public sealed partial class ProbeMergeTests(ITestOutputHelper output)
     }
 
     [CpuKernelFact]
-    public void A_Floor_In_The_Box_Under_A_Solid_Lid_Reflects_Under_A_Hundredth_Of_The_Open_Boxs()
+    public void A_Floor_In_The_Box_Under_A_Solid_Lid_Reflects_No_Light()
     {
         const float o = 4 + Wall;
         var lidded = Gather(Field(OpenBox().Concat(Cuboid(new(-o, 8, -o), new(o, 8 + Wall, o), 6))), Floor);
         var said = $"the lidded box's floor {lidded}, the open box's reflecting {Open.Value.Reflected:0.00000}";
         output.WriteLine(said);
-        // 0.00000 against the open box's 0.25396.
-        Assert.True(lidded.Reflected < 0.01f * Open.Value.Reflected, said);
+        // Nothing, against the open box's 0.24696, every ray up meeting the lid.
+        Assert.True(lidded.Reflected == 0, said);
         // By trilinear weights alone 0.05798, 23 percent of the open box's.
         Assert.True(lidded.Trilinear > 0.2f * Open.Value.Reflected, said);
         // 0 of the 256 texels marched on themselves.
@@ -188,14 +188,14 @@ public sealed partial class ProbeMergeTests(ITestOutputHelper output)
     }
 
     [CpuKernelFact]
-    public void A_Floor_In_The_Box_Under_A_Sheet_Thinner_Than_A_Cell_Reflects_Under_A_Hundredth_Of_The_Open_Boxs()
+    public void A_Floor_In_The_Box_Under_A_Sheet_Thinner_Than_A_Cell_Reflects_No_Light()
     {
         var sheeted = Gather(Field(OpenBox().Concat(Sheet(8, 4 + Wall, 6))), Floor);
         var said = $"the sheeted box's floor {sheeted}, the open box's reflecting {Open.Value.Reflected:0.00000}";
         output.WriteLine(said);
-        // 0.00000, no ray passing the sheet where it rests on the walls' tops, which the field's
+        // Nothing, no ray passing the sheet where it rests on the walls' tops, which the field's
         // seam closes (seamSheet).
-        Assert.True(sheeted.Reflected < 0.01f * Open.Value.Reflected, said);
+        Assert.True(sheeted.Reflected == 0, said);
         // By trilinear weights alone 0.05798, 23 percent of the open box's.
         Assert.True(sheeted.Trilinear > 0.2f * Open.Value.Reflected, said);
         // 0 of the 256 texels marched on themselves.
@@ -214,7 +214,7 @@ public sealed partial class ProbeMergeTests(ITestOutputHelper output)
         var passes = MathF.Pow(WallThrough, WallDepth);
         var said = $"the dark room's floor {parted}, and with the wall taken away {whole}, the wall passing {passes:0.0000} straight through";
         output.WriteLine(said);
-        // 0.02351 against 0.03548 without the wall, a share of 0.663, 6.3 percent under 0.707,
+        // 0.02308 against 0.03423 without the wall, a share of 0.674, 4.6 percent under 0.707,
         // since a ray that crosses the wall aslant crosses more of its depth.
         Assert.True(parted.Reflected > 0 && MathF.Abs(parted.Reflected - passes * whole.Reflected) <= 0.15f * passes * whole.Reflected, said);
         // 0 of the 256 texels marched on themselves either way.

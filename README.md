@@ -90,14 +90,14 @@ library's functions, and the engine keeps its bindings, its threads and its atom
 | `IStampShapes` | Reads the shapes of a brick's run, each as `FieldShape.WriteStamp` writes it | `stampCell` |
 | `IFieldCells` | Reads a cascade's cells' paint, faces and distances | `paintFacing`, `paintAt` |
 | `IFieldVolume` | Reads the finest cascade holding a point, a cascade's corner and cell, its field between cells and a cell as it is | `seamSheet`, `fieldDistanceIn`, `fieldDistanceSheetIn`, `fieldNormalIn`, `traceField`, `traceFieldSheets`, `reachAlong`, `reachTexel` |
-| `IMarchSteps` | Takes each step a march makes, which `NoSteps` passes over | `traceField`, `traceFieldSheets`, `traceProbeRay`, `marchToOpenSpace`, `mergedLight`, `mergeTexel` |
+| `IMarchSteps` | Takes each step a march makes, which `NoSteps` passes over | `traceField`, `traceFieldSheets`, `traceProbeRay`, `marchToOpenSpace`, `reachAlong`, `mergedLight`, `mergeTexel` |
 | `IProbeField` | Reads, beyond `IFieldVolume`, the light a surface a ray meets or crosses sends back along the ray as the engine shades it, from the hit's place, the ray's way, the cascade and the cell, and the share of light that passes a unit of a surface's depth | `traceProbeRay`, `marchToOpenSpace`, `mergedLight`, `traceTexel`, `mergeTexel`, `gatherAt` |
 | `IFarProbes` | Reads a far probe's light at a texel and how far its ray toward each way of its reach map went, the merged light and reach maps of the level above a merge's or of the finest level a gather's | `mergedLight`, `farTexelsLight`, `farProbeSees`, `mergeTexel`, `gatherAt` |
 | `IProbePlaces` | Reads where a cascade's probe stands, by the engine's own rule where it moves a probe off a surface, which `GridPlaces` gives as the grid's place | `traceTexel`, `reachTexel`, `mergedLight`, `mergeTexel`, `gatherAt` |
 | `ISky` | Reads the sky's light along a way, for a ray that leaves the field, which `UniformSky` gives as one light | `lastCascadeLight`, `mergedLight`, `settleTexel`, `mergeTexel` |
 | `IProbeLight` | Reads a probe's merged light at each of its texels | `lightTaken` |
 | `IProbeRays` | Keeps the ray each texel of a cascade traced, how it ended, where, the share of light it carries and the light it met, and reads it back | `traceTexel`, `settleTexel`, `mergeTexel` |
-| `IReachTexels` | Keeps how far each ray of a cascade's reach maps went, which `IFarProbes` reads back | `reachTexel` |
+| `IReachTexels` | Keeps how far each ray of a cascade's reach maps went, `ReachOpen` where it met no surface, which `IFarProbes` reads back | `reachTexel` |
 | `IMergedLight` | Keeps each texel's light merged from every distance past its probe, which `IFarProbes` reads back for the level below and the gather | `settleTexel`, `mergeTexel` |
 | `ISurfacePoints` | Reads a surface point's place and normal and keeps the light it takes | `gatherAt` |
 
@@ -147,17 +147,38 @@ The conventions the module stands on:
   space and is handed on there (`marchToOpenSpace`), which holds a sunlit wall 0.4 units past a
   probe's reach at its share of the light, where handed on at its end it read 37 percent under. The
   band is 4 cells, a unit at a first cell of a quarter, so an edge farther than that past a hand-off
-  is still smeared. In a box open to the sky, a middle cascade of probes a unit apart reaching 4
-  hands the floor's rays on within 2 of the rim and reads the floor 12.4 percent under its share of
-  the sky, and reaching 2 it reads 1.5 percent over. The lower bound keeps a cascade's reach map
-  covering the cell about any point handed to it. The rules lessen the smear and do not end it, in
-  any chain, and the tests hold the two boxes, the lids, the wall and a room under a lintel alone. A
-  hand-off within a far spacing of an opening's edge reads the room behind it about 1.4 times the
-  light traced finely against its surfaces at its deep end. In a room open to the sky under a
-  lintel, at 8, 8, 16 and 16 texels a side, the probes 6.5 and 7.5 units in from the opening read
-  their faces toward it 1.47 and 1.41 times the trace on the mean, and doubling the texels every
-  cascade up to 128 leaves 1.33 and 1.28, so the limit is the hand-off's and not the texels'. The
-  tests hold these figures as a bound a later rule is to better.
+  is still smeared. The lower bound keeps a cascade's reach map covering the cell about any point
+  handed to it.
+- Where the far probes about a hand-off that count disagree on where a surface lies along the ray,
+  some meeting one within their reach and some none, or all meeting one at points of the ray
+  farther apart than a quarter of the farther (`HitSpread`) and two cells, the ray takes none of
+  them and marches on itself across the far interval, to the far cascade's own end past the
+  hand-off, and is handed on where that march ends, or takes the surface it meets or the sky where
+  it leaves (`mergedLight`). Far probes standing a spacing off a ray that ends short of an
+  opening's edge see past the edge where the ray meets it, and the march meets the edge where they
+  would smear it. In a room open to the sky under a lintel, at 8, 8, 16 and 16 texels a side, the
+  probes 6.5 and 7.5 units in from the opening read their faces toward it 0.99 and 0.96 times the
+  light traced finely against its surfaces on the mean, and 62 of the finest cascade's 64 probes
+  read within a quarter of it, where with the far probes taken as they stand they read 1.47 and
+  1.41 and 38 of 64. In a box open to the sky, four cascades 1, 2, 4 and 8 apart at the ends rule
+  read the floor's middle by `gatherAt` 8 percent under its share of the sky, where with the far
+  probes taken it read 4 percent over, and a middle cascade a unit apart reads the floor 0.3
+  percent under reaching 2 and 4 alike, where it read 1.5 percent over and 12.4 percent under. A
+  box open to the sky with a floor of albedo 1 under probes 2, 4, 8 and 16 apart, as an engine's
+  binding lays them, reads the same with the rule and without it, within 0.0002. The merge takes
+  about 1.15 times the steps under the lintel and in the four cascades' box. The rules lessen the
+  smear and do not end it, in any chain, and the tests hold the boxes, the lids, the wall and the
+  room under the lintel alone.
+- `mergedLight` takes the far cascade as it stands, its own end the one its probes' rays and reach
+  maps run to, and after it `marchEnd`, the coarsest cascade's end, to which a march past every far
+  interval runs. A binding that calls it itself, and not through `mergeTexel`, which takes both,
+  passes the two apart, since a far cascade whose end is set to the coarsest's marches across to
+  the coarsest's end wherever its probes disagree. `reachAlong` gives `ReachOpen`, 1e30, where its
+  ray meets no surface before its end or leaves the field, and the merge reads a reach at or past
+  it as no surface met. An engine's reach image keeps it so it reads back at or past `ReachOpen`. A
+  32-bit float keeps it and a 16-bit float holds it as infinity, which reads past it, and an image
+  that scales reaches into a fixed range reads its top back as `ReachOpen`, since a reach clamped
+  short of it reads as a surface met where none is.
 - A field's build runs `seamSheet` over its resolved cells, as it runs the pinch, and keeps the
   plane it gives in the cell, whose distance stays its own. A sheet thinner than a cell resting on a
   solid's top passes over the cells in front of the solid's face, which keep the solid's code, and

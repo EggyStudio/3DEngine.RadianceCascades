@@ -175,7 +175,7 @@ public sealed partial class ProbeMergeTests
     }
 
     [CpuKernelFact]
-    public void A_Chain_Of_Three_Cascades_Reads_The_Open_Boxs_Floor_By_Its_Share_And_The_Lidded_Boxes_Under_A_Hundredth()
+    public void A_Chain_Of_Three_Cascades_Reads_The_Open_Boxs_Floor_By_Its_Share_And_The_Lidded_Boxes_Dark()
     {
         // A near probe reaching 2 units, a middle cascade of probes a unit apart over the floor's
         // middle reaching 2, twice its spacing, and the far cascade past the field's edge, so a ray
@@ -194,11 +194,45 @@ public sealed partial class ProbeMergeTests
         var expected = Albedo * 4 * CornerShare(4 / high, 4 / high) * Sky;
         var said = $"by three cascades the open box's floor {open}, where the sky's share gives {expected:0.00000}, the lidded box's {lidded} and the sheeted box's {sheeted}";
         output.WriteLine(said);
-        // 0.25480 against 0.25111, 1.5 percent over. With the middle reaching 4 it read 0.23165,
-        // 7.7 percent under.
+        // 0.25037 against 0.25111, 0.3 percent under.
         Assert.True(Math.Abs(open.Reflected - expected) <= 0.05 * expected, said);
-        // 0.00000 for both lids, the sheet's seam with the walls' tops closed in the field
+        // Nothing under either lid, the sheet's seam with the walls' tops closed in the field
         // (seamSheet).
-        Assert.True(lidded.Reflected < 0.01f * open.Reflected && sheeted.Reflected < 0.01f * open.Reflected, said);
+        Assert.True(lidded.Reflected == 0 && sheeted.Reflected == 0, said);
+    }
+
+    [CpuKernelFact]
+    public void A_Chain_Of_Four_Cascades_At_The_Ends_Rule_Reads_The_Open_Boxs_Floor_Within_A_Tenth_Of_Its_Share()
+    {
+        // Probes 8 along each axis 1, 2, 4 and 8 apart, reaching 2, 4, 8 and past the field's edge,
+        // each end twice its spacing, the finest level's lowest row a quarter of a meter over the
+        // floor.
+        Level[] chain =
+        [
+            new(new(-3.5f, 0.25f, -3.5f), 1, 8, 8, 8, NearTexels, 2),
+            new(FarCorner, FarSpacing, FarCount, FarCount, FarCount, FarTexels, 4),
+            new(new(-14, -10, -14), 4, 8, 8, 8, 16, 8),
+            new(new(-28, -28, -28), 8, 8, 8, 8, 16, FarEnd),
+        ];
+        // The finest level's row across the floor at z 0.5 and the floor's middle as gatherAt reads
+        // it from the four probes about it, each against the light the sky sends its point through
+        // the opening, the sky times pi times the share of the dome the opening covers there, four
+        // corner rectangles over it, which a trace against the box's black walls and floor gives.
+        var points = Enumerable.Range(0, 8).Select(i => (new Vector3(-3.5f + i, 0.25f, 0.5f), Vector3.UnitY)).Append((Floor, Vector3.UnitY)).ToArray();
+        var reading = Passes(Field(OpenBox()), chain, Floor, new Setting { Points = points });
+        double Share(Vector3 p)
+        {
+            var high = 8 - p.Y;
+            return CornerShare((4 - p.X) / high, (4 - p.Z) / high) + CornerShare((4 + p.X) / high, (4 - p.Z) / high)
+                + CornerShare((4 - p.X) / high, (4 + p.Z) / high) + CornerShare((4 + p.X) / high, (4 + p.Z) / high);
+        }
+        var over = points.Select((p, i) => reading.Taken[i] / (Sky * Math.PI * Share(p.Item1))).ToArray();
+        var said = $"by four cascades at the ends rule the open box's floor row reads {string.Join(", ", over[..8].Select(q => q.ToString("0.000")))} of its share, "
+            + $"and the floor's middle by gatherAt {over[8]:0.000} of it, {reading}";
+        output.WriteLine(said);
+        // The row reads 0.929 to 1.010 of its share, 0.953 on the mean, and the floor's middle
+        // 0.920, where with every far probe about a ray's end taken as it stands the row read 1.042
+        // on the mean and the middle 1.040. Each lies within a tenth of its share.
+        Assert.True(over.All(q => q is >= 0.9 and <= 1.1), said);
     }
 }

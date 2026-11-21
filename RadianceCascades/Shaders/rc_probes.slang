@@ -329,10 +329,22 @@ public GridPlaces gridPlaces(ProbeCascade cascade)
 // The texels along each side of a far probe's reach map, how far its rays went in each way.
 public static const uint ReachTexels = 16u;
 
+// The reach of a ray that meets no surface within its end or leaves the field first, past any
+// distance a ray goes, so a point at any distance lies within it and a reach short of it says a
+// surface was met.
+public static const float ReachOpen = 1e30;
+
 // How far a ray from a probe's own place along way goes before it meets a surface, whether or not
-// the surface lets light through, up to end or where it leaves every cascade, the reach a far
-// probe's map keeps for a texel's middle way.
+// the surface lets light through, or ReachOpen where it meets none before end or before it leaves
+// every cascade, the reach a far probe's map keeps for a texel's middle way.
 public float reachAlong<F : IFieldVolume>(F field, float3 place, float3 way, float end)
+{
+    NoSteps none;
+    return reachAlong(field, place, way, end, none);
+}
+
+// The same, each step handed to steps.
+public float reachAlong<F : IFieldVolume, S : IMarchSteps>(F field, float3 place, float3 way, float end, inout S steps)
 {
     float t = 0.0;
     [loop]
@@ -341,14 +353,15 @@ public float reachAlong<F : IFieldVolume>(F field, float3 place, float3 way, flo
         float3 p = place + way * t;
         int c = field.cascadeOf(p, 1.0);
         if (c < 0)
-            return t;
+            return ReachOpen;
         float cell = field.cornerAndCell(c).w;
         float d = fieldDistanceSheetIn(field, c, p);
+        steps.at(t, d);
         if (d < cell * MarchHit)
             return t;
         t += max(d, cell * MarchStep);
     }
-    return end;
+    return ReachOpen;
 }
 
 // A probe's texels as the gather reads them, each one's light merged from every distance.

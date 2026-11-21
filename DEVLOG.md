@@ -25,6 +25,11 @@ against 4.0 over, run on the CPU from the library's Slang.
 
 Commits that day
 
+- `109b457` A stamped cell carries the share of diffuse light its surface sends through, the winning
+  box's held to one or the still cell's as it came, at a binding's request.
+- `217b0ac` A cell in front of a solid's face takes the plane of a sheet resting on the solid that a
+  neighbor keeps, so a march no longer slips past a lid laid on a box's walls, which let 0.81
+  percent of the light through in three cascades.
 - `c465a21` A test holds a room open under a lintel at the light its probes read today against a
   fine trace, and the README states that a hand-off near an opening's edge reads the room behind it
   about 1.4 times that trace.
