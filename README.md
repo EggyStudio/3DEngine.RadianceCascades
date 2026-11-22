@@ -2,6 +2,10 @@
 
 # RadianceCascades
 
+![A closed room lit by one of its walls, through the cascades beside its trace](.github/assets/readings/2026-11-22-readme-room.webp)
+
+A closed room whose left wall gives the light, its other walls, floor and ceiling lit through the cascades on the CPU, beside the light traced to each point.
+
 RadianceCascades is a library for any engine that binds it, taken as a git submodule, for the CPU
 side of radiance cascades, their layout, the placement of their probes, the build of the scene field
 and the rules of the merge, and their Slang shaders. It references no engine, window or graphics

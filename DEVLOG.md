@@ -6,6 +6,25 @@ kept under `.github/assets/readings` as WebP files named by their day, each on t
 says, and the notes written beside them as Markdown files named the same way. A line under Done
 names the item of .github/REVIEW.md or .github/REVIEW-ARCHIVE.md and the commit that closed it.
 
+## 2026-11-22
+
+![](.github/assets/readings/2026-11-22-readme-room.webp)
+A closed room whose left wall gives the light, its other walls, floor and ceiling lit through the
+cascades on the CPU at 0.98 of the light traced to each point in all, beside that trace.
+
+Commits that day
+
+- `1bad0f8` A grazing way handed off over a floor, which takes what the far probes over it see past
+  a step it meets beyond its end, is a test of that over-read, since the march on that mended it on
+  the CPU left one engine's door view as it was.
+- `d33cfda` The held list's comment asks for its count set to 0 among the frame's commands before
+  the listing and for the hold dispatched after it over every cell or sized on the GPU from the
+  count, where a 0 from the host or a count read back leaves the count of the frame before.
+- `84c4225` The march shades a surface once outside the loop its steps take, where inlined in that
+  loop a binding's shading cost every step.
+- `7a2f5de` A binding may list the cells whose light it holds and hold them a thread a listed cell,
+  which took one binding's hold on Sponza from 2.72 to 1.60 ms.
+
 ## 2026-11-21
 
 ![](.github/assets/readings/2026-11-21-item-3-lintel-texels.webp)
@@ -25,6 +44,54 @@ against 4.0 over, run on the CPU from the library's Slang.
 
 Commits that day
 
+- `2f0dc8e` The tests build their kernels for the CPU at -O2, since at slangc's own level Visual
+  Studio's compiler built them unoptimized and the Windows job ran past its 30 minutes.
+- `d446283` A closed room lit by one wall alone reads within three percent of the light traced
+  against its faces, so the passes add no light to a closed room on one bounce.
+- `0f0ff99` The held light reads a solid cell's side from the field's distance along the ray in two
+  reads in place of the field's normal in six.
+- `41f0e09` The held light keeps the far face of a solid thinner than a cell as a second side, and
+  the read takes the side by the field's normal at the cell's middle, so a thin wall lit from one
+  side reads dark from the other.
+- `28eecdd` The lintel test traces its finest two cascades at twice the texels they are read at, and
+  the README gives the face under the lintel by how many cascades are traced so as the stated limit
+  of one ray a texel.
+- `389f951` The held light keeps a light for each side of a sheet thinner than a cell and its own
+  light apart from its probes', which a read weighs by the share the binding gives, and the GPU lock
+  is taken through the Tools gate pinned at c389096.
+- `c6bfb2a` A ray crossing a surface that lets light through takes the surface's light where it has
+  stopped half the light it carried in, or at its last point within where it passes more, so a crown
+  lit from before it reads its shaded inside for what it stops there.
+- `88edf10` A closed room every face of which sends the same light reads that light at every point
+  through four cascades, so the passes add no light to a closed room on one bounce.
+- `23fec0e` A ray crossing a surface that lets light through passes each step's own cell's share
+  over that step's depth, so a crown that passes more at its edge than at its core dims what lies
+  past it as its depth does.
+- `7e4a24c` The README says what a binding's own cheap hit at a merge keeps, the sun's reach read at
+  the surface and the probes' light half a spacing off it, with the held light offered beside it and
+  held whole each frame.
+- `6e16181` The merge reads at a hit the light an engine holds for the field's cells through
+  HeldHitLight, which holdCellLight holds a share of the cells a frame, in place of the engine's
+  shading there, most of what a merge costs.
+- `16af1c8` A probe inside a mesh keeps ReachInside in its reach map and the far probes about a
+  hand-off are tested once, so the merge reads the field at no far probe's place.
+- `c3b6671` The share of the sky a ray takes past the field is weighed by the sky beside its light,
+  so a binding that lends a cascade no sky lends it no share.
+- `8c103b1` The merge keeps the share of the sky in each texel beside its light in the same pass, so
+  a binding that weighs its sky by that share merges once.
+- `e660713` A surface point whose probes stand off it gathers its light along its own rays handed on
+  through mergedLight, which gatherTraced gives beside gatherAt.
+- `9613683` A binding passes the traced texels along a side of each read texel as
+  TracedMeans.perRead, which reads a cascade at the mean of the traced texels each read texel holds.
+- `a243f3d` A test holds the room under the lintel lit by the sky alone with every cascade traced at
+  twice the texels a side it is read at, which the README states as the rule a binding traces by.
+- `d373352` The merge's loop of marches is bounded at three with a return after it, since naga
+  refuses WGSL whose function may end with no return.
+- `3c843ea` The march calls an engine's hitLight at one place and the merge marches at one place, so
+  a merge kernel holds the engine's shading once where it held nine copies.
+- `9d19d77` A ray whose far probes disagree on where a surface lies along it marches across the far
+  interval itself, so a room open under a lintel reads its deep end within a quarter of a fine trace
+  where it read 1.4 times it.
 - `109b457` A stamped cell carries the share of diffuse light its surface sends through, the winning
   box's held to one or the still cell's as it came, at a binding's request.
 - `217b0ac` A cell in front of a solid's face takes the plane of a sheet resting on the solid that a
