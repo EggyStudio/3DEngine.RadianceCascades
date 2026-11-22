@@ -316,7 +316,13 @@ public void holdCellLight<F : IFieldVolume, G : IHeldShading, H : IHeldLight>(F 
 
 // The list of the field's cells whose light an engine holds (holdListedCell), which listHeldCell
 // fills a cell a thread, each cell counted as holdCellLight counts them, and which the engine keeps
-// over its own buffer, with a count it adds to atomically and sets to 0 before the listing.
+// over its own buffer, with a count it adds to atomically. The count is set to 0 among the frame's
+// commands before the listing, by a clear of the buffer or a dispatch of one thread, since a 0
+// written from the host that reaches the GPU after the listing's submit leaves the count going on
+// from the frame before. The hold is dispatched after the listing among the same commands, over
+// every cell with its threads past the count returning, or by a dispatch the GPU sizes from the
+// count's buffer, and not over a count read back to the host, which either waits on the listing or
+// is the count of the frame before.
 public interface IHeldList
 {
     // Adds the cell at to the list.

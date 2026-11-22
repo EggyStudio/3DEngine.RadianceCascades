@@ -1032,6 +1032,17 @@ of each cascade above the finest beginning at the finer one's end, which took th
 from 4.02 to 3.27 ms and from 5.50 to 5.14 alone, beside the floor of a box open to the sky that it
 read 3.6 times its light.
 
+The held list's count each frame. BevyCSharp recorded its count every frame under a moving field,
+1,267 frames on Sponza and 1,280 on the Bistro with the finest field cascade moving 20 times, and
+found no gap and no frame's count more than 5 percent from the one before, the largest at a move of
+the field, its 0 a buffer write queued before the frame's commands and its hold dispatched over
+every cell. `IHeldList`'s comment asks for the 0 among the frame's commands before the listing, a
+clear of the buffer or a dispatch of one thread, since a 0 from the host that reaches the GPU after
+the listing's submit leaves the count going on from the frame before, and for the hold dispatched
+after the listing among the same commands, over every cell or by a dispatch the GPU sizes from the
+count's buffer, and not over a count read back to the host, which waits on the listing or is a frame
+old.
+
 Handoff, for a fresh session, in place of those above. Where the work stands: the library holds the
 field's plan, the triangles' layout and the glow lights in C#, and in Slang the probes' octahedron,
 the cell code, resolve and pinch, the hit's color read, the splat, the stamp, the field's distance
@@ -1061,21 +1072,23 @@ shading at a merge's hits is most of its cost, and each binding passes the merge
 own, the sun's reach read at the surface and the probes' light half a spacing off it, or the held
 light of the field's cells (`HeldHitLight`, `holdCellLight`) held whole each frame. A binding may
 list the cells to hold first (`listHeldCell`, `IHeldList`) and hold them a thread a listed cell
-(`holdListedCell`). A crossing passes each step's own share and takes its light where it has stopped
-half the light it carried in. A cascade's traced texels a side of each read one are a binding's
-setting for each cascade, the finest two at 2 reading the lintel's face 0.825 at 2.2 times the
-trace's steps. The closed rooms' 5 percent over lies in the bounce a binding's hit reads of its
-probes, the passes adding none on one bounce. A vestibule beside a sunlit court reads over its trace
-in the light its texels' own rays bring from their probes' places and their hits, the chain adding 5
-percent. The tests build their kernels for the CPU at -O2, at which Visual Studio's cl optimizes
-them as gcc and clang do. Next, as the bindings land the passes: the engines' further findings as
-they take the passes, then the split sum at a hit, the screen probes, the light on the picture and
-the contact shadow's march. Left behind each part's Reply: the field's normal, the cascades' table,
-the march held within a cascade, the splat's second plane, the lending of thin emitters, the repaint
-and the clearing of codes. Open: AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md wait for
-the owner. Read first: AGENTS.md, this file's head and Decisions, the Replies from the field's
-distance on, the README's binding section, NORM.md's N 4.8 to 4.11 and N 7.9, `CpuKernel.cs` and the
-head of `rc_probe_passes.slang`. Every build and test goes through N 7.9's lock by `python3 -I
+(`holdListedCell`), the count set to 0 among the frame's commands before the listing and the hold
+dispatched over every cell or sized on the GPU from the count's buffer. A crossing passes each
+step's own share and takes its light where it has stopped half the light it carried in. A cascade's
+traced texels a side of each read one are a binding's setting for each cascade, the finest two at 2
+reading the lintel's face 0.825 at 2.2 times the trace's steps. The closed rooms' 5 percent over
+lies in the bounce a binding's hit reads of its probes, the passes adding none on one bounce. A
+vestibule beside a sunlit court reads over its trace in the light its texels' own rays bring from
+their probes' places and their hits, the chain adding 5 percent. The tests build their kernels for
+the CPU at -O2, at which Visual Studio's cl optimizes them as gcc and clang do. Next, as the
+bindings land the passes: the engines' further findings as they take the passes, then the split sum
+at a hit, the screen probes, the light on the picture and the contact shadow's march. Left behind
+each part's Reply: the field's normal, the cascades' table, the march held within a cascade, the
+splat's second plane, the lending of thin emitters, the repaint and the clearing of codes. Open:
+AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md wait for the owner. Read first:
+AGENTS.md, this file's head and Decisions, the Replies from the field's distance on, the README's
+binding section, NORM.md's N 4.8 to 4.11 and N 7.9, `CpuKernel.cs` and the head of
+`rc_probe_passes.slang`. Every build and test goes through N 7.9's lock by `python3 -I
 modules/Tools/scripts/gpu.py shared -- <part> -- <part>`, built with `--no-restore
 -p:UseSharedCompilation=false`, its output written to a file of which the summary line and the
 failing lines alone are read, and each commit is read by `commitcheck.py . --staged
