@@ -139,3 +139,19 @@ internal sealed class CpuKernelFactAttribute : FactAttribute
             Skip = missing;
     }
 }
+
+/// <summary>
+/// A test over cases that runs a kernel on the CPU, skipped with its reason where
+/// <see cref="CpuKernel"/> cannot build one.
+/// </summary>
+internal sealed class CpuKernelTheoryAttribute : TheoryAttribute
+{
+    /// <summary>
+    /// Marks the test skipped where <see cref="CpuKernel.Missing"/> says why it cannot run.
+    /// </summary>
+    public CpuKernelTheoryAttribute()
+    {
+        if (CpuKernel.Missing is { } missing)
+            Skip = missing;
+    }
+}

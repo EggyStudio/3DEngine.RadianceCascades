@@ -406,3 +406,32 @@ public float3 mergedLight<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces, 
     }
     return taken;
 }
+
+// The shape every merge takes, one kernel behind one name, which a binding selects by naming the
+// merge's struct where it calls the passes (mergeTexel, gatherTraced), so that a merge is added as
+// a struct of its own and no pass or other merge changes. A merge brings the light a near texel of
+// an octahedron of `texels` along each side brings along its way from origin, its ray traced as
+// near, with what lies past the ray's end taken from far's probes read through probes at their
+// places, in skyShare the share of the sky in that light, and in marched whether the ray marched on
+// itself to marchEnd, as mergedLight takes them. The merges stand on a ladder the module's tests
+// keep, each read against every other over a set of scenes, and the one on top is the default the
+// passes take where a binding names none.
+public interface IMerge
+{
+    float3 light<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces, K : ISkyShare, S : IMarchSteps>(F field, P probes, Q places,
+        ProbeCascade far, float marchEnd, float3 origin, uint texels, uint2 texel, ProbeRay near, K sky, inout S steps, out bool marched,
+        out float skyShare);
+}
+
+// The merge at the ray's end (mergedLight), the ladder's first rung. The ray marches on to open
+// space and hands off to the far probes about where it stopped, marching across the far interval
+// where they disagree on where a surface lies along the way.
+public struct MergeAtRayEnd : IMerge
+{
+    public float3 light<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces, K : ISkyShare, S : IMarchSteps>(F field, P probes, Q places,
+        ProbeCascade far, float marchEnd, float3 origin, uint texels, uint2 texel, ProbeRay near, K sky, inout S steps, out bool marched,
+        out float skyShare)
+    {
+        return mergedLight(field, probes, places, far, marchEnd, origin, texels, texel, near, sky, steps, marched, skyShare);
+    }
+}

@@ -14,6 +14,8 @@ cascades on the CPU at 0.98 of the light traced to each point in all, beside tha
 
 Commits that day
 
+- `c0beccc` The README shows under its title a closed room lit through the cascades on the CPU
+  beside its trace, and the norm asks each module's README to open with its own output.
 - `1bad0f8` A grazing way handed off over a floor, which takes what the far probes over it see past
   a step it meets beyond its end, is a test of that over-read, since the march on that mended it on
   the CPU left one engine's door view as it was.

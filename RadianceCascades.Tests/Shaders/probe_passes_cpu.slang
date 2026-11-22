@@ -4,6 +4,7 @@
 // above, and the light the finest level gives each surface point gathered. One kernel holds the
 // passes, picked by a value of the setup, so each target compiles every function.
 import rc_probe_passes;
+import rc_reach_sight_merge;
 
 // Each cell's distance, the plane it keeps and its share of light through, five floats a cell, as
 // probe_field_cpu.slang builds them, the field's cascades one after another, finest first.
@@ -19,8 +20,9 @@ RWStructuredBuffer<float> cells;
 // albedo of the surfaces it lights and whether a hit takes its light from cellLight. From the float
 // at 96 come the count of the field's cascades, none for the one above, and each one's least corner
 // and cell, four floats each, at 124 where the surface points' shares of the sky begin in
-// skyFloats, at 125 whether the finer levels' merges lend no sky, and from the float at 128 the
-// count of surface points and each point's place, normal and albedo, seven floats each.
+// skyFloats, at 125 whether the finer levels' merges lend no sky, at 127 the merge the passes take,
+// 0 the merge at the ray's end and 1 by reach sight, and from the float at 128 the count of surface
+// points and each point's place, normal and albedo, seven floats each.
 RWStructuredBuffer<float> setup;
 
 // Each texel's ray as its trace ended, how, where, its carried share and its light, six floats a
@@ -53,6 +55,11 @@ RWStructuredBuffer<float> traceStepFloats;
 // The cells whose light pass 8 lists for pass 9 to hold, their count first and then each cell as
 // holdCellLight counts them.
 RWStructuredBuffer<uint> heldList;
+
+// The reads of a level's probes, of a texel's light, its share of the sky or a reach texel, each
+// texel's merge made, one float a texel, the levels one after another, then from the float the
+// setup gives at 124 each surface point's gather, the cost of a merge beside its steps.
+RWStructuredBuffer<float> readFloats;
 
 static const int Levels = 16;
 static const int Field = 96;
@@ -206,18 +213,29 @@ struct LevelMerged : IMergedSkyLight
 
 // A level's merged light, its share of the sky and its reach map as traced, which the level below
 // it and the gather read through TracedSkyMeans.
+// Each read is counted in readFloats at slot, the thread's own.
 struct LevelProbes : IFarSkyProbes
 {
     ProbeCascade cascade;
     uint merged;
     uint reach;
+    uint slot;
     float3 lightAt(int3 probe, uint2 texel)
     {
+        readFloats[slot] += 1.0;
         uint i = (merged + cascadeTexelIndex(cascade, probe, texel)) * 3u;
         return float3(mergedFloats[i], mergedFloats[i + 1], mergedFloats[i + 2]);
     }
-    float reachAt(int3 probe, uint2 texel) { return reachFloats[reach + reachTexelIndex(cascade, probe, texel)]; }
-    float skyShareAt(int3 probe, uint2 texel) { return skyFloats[merged + cascadeTexelIndex(cascade, probe, texel)]; }
+    float reachAt(int3 probe, uint2 texel)
+    {
+        readFloats[slot] += 1.0;
+        return reachFloats[reach + reachTexelIndex(cascade, probe, texel)];
+    }
+    float skyShareAt(int3 probe, uint2 texel)
+    {
+        readFloats[slot] += 1.0;
+        return skyFloats[merged + cascadeTexelIndex(cascade, probe, texel)];
+    }
 };
 
 // The light held for the field's cells, as a binding holds it in a texture of its own.
@@ -308,11 +326,11 @@ uint firstOf(int level, int which) { return uint(setup[Levels + level * 16 + whi
 
 // A level's probes as the level below or the gather reads them, at read texels a side, the mean
 // of the traced texels each holds, or as traced where read is 0 or not fewer, with their shares of
-// the sky.
-TracedSkyMeans<LevelProbes> meansOf(int level, uint read)
+// the sky, their reads counted at slot.
+TracedSkyMeans<LevelProbes> meansOf(int level, uint read, uint slot)
 {
     TracedSkyMeans<LevelProbes> probes;
-    probes.means.traced = probesOf(level);
+    probes.means.traced = probesOf(level, slot);
     probes.means.texels = levelCascade(level).texels;
     probes.means.perRead = read > 0u && read < probes.means.texels ? probes.means.texels / read : 1u;
     return probes;
@@ -324,10 +342,26 @@ TestPlaces placesOf(int level)
     return places;
 }
 
-LevelProbes probesOf(int level)
+LevelProbes probesOf(int level, uint slot)
 {
-    LevelProbes probes = { levelCascade(level), firstOf(level, 12), firstOf(level, 11) };
+    LevelProbes probes = { levelCascade(level), firstOf(level, 12), firstOf(level, 11), slot };
     return probes;
+}
+
+// mergeTexel by the merge the setup names at 127.
+bool mergeBy<F : IProbeField>(F field, LevelRays rays, TracedSkyMeans<LevelProbes> above, LevelMerged merged, int level,
+    ProbeCascade aboveCascade, TestSky sky, inout CountedSteps counted, uint index)
+{
+    ProbeCascade cascade = levelCascade(level);
+    if (setup[127] > 0.5)
+    {
+        MergeByReachSight merge;
+        return mergeTexel(merge, field, rays, placesOf(level), above, placesOf(level + 1), merged, cascade, aboveCascade, setup[8], sky,
+            counted, index);
+    }
+    MergeAtRayEnd merge;
+    return mergeTexel(merge, field, rays, placesOf(level), above, placesOf(level + 1), merged, cascade, aboveCascade, setup[8], sky, counted,
+        index);
 }
 
 [shader("compute")]
@@ -367,7 +401,7 @@ void test(uint3 id : SV_DispatchThreadID)
         // them, as a binding that reads a level above at the side it traced it at does, and
         // otherwise at those it keeps.
         uint read = firstOf(level + 1, 15) > 0u ? firstOf(level + 1, 15) : firstOf(level + 1, 14);
-        TracedSkyMeans<LevelProbes> above = meansOf(level + 1, read);
+        TracedSkyMeans<LevelProbes> above = meansOf(level + 1, read, firstOf(level, 10) + index);
         // Where the setup sets 126, the merge reads at each hit the light held for the cell it lies
         // in (HeldHitLight), as a binding passes it to the merge in place of its own shading.
         ProbeCascade aboveCascade = readCascade(levelCascade(level + 1), above.means.perRead);
@@ -375,12 +409,10 @@ void test(uint3 id : SV_DispatchThreadID)
         if (setup[126] > 0.5)
         {
             HeldHitLight<ProbeCells, HeldCells> heldField = { field, { field } };
-            marched = mergeTexel(heldField, rays, placesOf(level), above, placesOf(level + 1), merged, cascade, aboveCascade, setup[8], sky,
-                counted, index);
+            marched = mergeBy(heldField, rays, above, merged, level, aboveCascade, sky, counted, index);
         }
         else
-            marched = mergeTexel(field, rays, placesOf(level), above, placesOf(level + 1), merged, cascade, aboveCascade, setup[8], sky,
-                counted, index);
+            marched = mergeBy(field, rays, above, merged, level, aboveCascade, sky, counted, index);
         if (index < cascadeTexels(cascade))
         {
             marches[(firstOf(level, 10) + index) * 2u] = marched ? 1.0 : 0.0;
@@ -428,14 +460,24 @@ void test(uint3 id : SV_DispatchThreadID)
             return;
         SurfacePoints surfaces;
         uint read = firstOf(0, 15) > 0u ? firstOf(0, 15) : firstOf(0, 14);
-        TracedSkyMeans<LevelProbes> finest = meansOf(0, read);
+        TracedSkyMeans<LevelProbes> finest = meansOf(0, read, uint(setup[124]) + index);
         NoSteps none;
-        gatherTraced(field, finest, placesOf(0), readCascade(levelCascade(0), finest.means.perRead), setup[8], sky, surfaces, none, index);
+        ProbeCascade gathered = readCascade(levelCascade(0), finest.means.perRead);
+        if (setup[127] > 0.5)
+        {
+            MergeByReachSight merge;
+            gatherTraced(merge, field, finest, placesOf(0), gathered, setup[8], sky, surfaces, none, index);
+        }
+        else
+        {
+            MergeAtRayEnd merge;
+            gatherTraced(merge, field, finest, placesOf(0), gathered, setup[8], sky, surfaces, none, index);
+        }
     }
     else if (index < uint(setup[Points]))
     {
         SurfacePoints surfaces;
-        TracedSkyMeans<LevelProbes> finest = meansOf(0, firstOf(0, 14));
+        TracedSkyMeans<LevelProbes> finest = meansOf(0, firstOf(0, 14), uint(setup[124]) + index);
         gatherAt(field, finest, placesOf(0), readCascade(levelCascade(0), finest.means.perRead), surfaces, index);
     }
 }

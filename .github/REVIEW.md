@@ -113,6 +113,35 @@ pointer. One commit an engine, after item 3's first part.
     file. The engines' sessions choose between the forms at their items 265 and 138. One commit of
     the document, read by the reviewing session before it is pushed.
 
+8. **A second merge, by line of sight and agreement, and a ladder the merges climb.** The module's
+   merge lets a near probe's rays run past their interval and blends the farther cascade's probes by
+   place. A host's own passes merge another way and read a room with a door nearer the traced
+   reference on its walls, so that way is written into the module as a second merge a host selects,
+   with the first unchanged. A near probe takes the farther cascade's probes about its own place,
+   leaves out each one it has no clear line to through the distance field, leaves out each whose hit
+   along the way disagrees with the occluder the near probe's own way finds, weighs the rest by
+   place, and falls back to its own ray where none is left. The kernel is written once beside the
+   first, with the same inputs and outputs, a setting naming which merge runs, and the pass graph
+   the same for both. The source to read is the host's own merge shader, read in place and written
+   anew to this module's form, its path given by the review. The module's own tests hold for both
+   merges, each cascade's sum against a closed room's known light, no light through a wall of one
+   cell, and a probe behind a lintel. The CPU reference's table in the README gains a row for each
+   merge. The merges are kept as a ladder and not as a pair. A merge is one kernel behind one shape
+   with a name, a host selects it by that name, and adding one touches no pass and no other merge. A
+   ladder program in the module runs every merge over a set of scenes on the CPU reference with no
+   graphics device, at least six, among them a room with a door, a closed box with one lamp, a lit
+   room beside a dark one through a wall of one cell, a lintel, an open box under a sky and a long
+   hall, and one more scene held out that no merge is tuned on. For each merge and scene it reads
+   the parts' ratios to the traced answer and writes a table, the mean and the worst of the parts'
+   distance from one as a logarithm, the light through the thin wall, and the count of rays and
+   probe reads as the cost. A merge stands above another where it is nearer in the mean and no worse
+   in the worst part, the leak and the cost, and the table names the one on top, which is the
+   default. The table is kept in the README and a file of results with the date and the commit, so
+   each new merge is read against every earlier one, and a merge that every other beats on every
+   scene is deleted after the hosts have confirmed the order in their own target scenes on a device.
+   This goes in one commit with the two merges as the ladder's first rungs. No host is named in the
+   module's files.
+
 ## Verdicts
 
 Verdict 1 is settled at 22:56 on 2026-11-21, the build run on `2f0dc8e` green on the three systems,

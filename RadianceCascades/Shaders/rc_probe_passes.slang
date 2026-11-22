@@ -508,14 +508,37 @@ public bool mergeTexel<F : IProbeField, R : IProbeRays, Q : IProbePlaces, P : IF
     S : IMarchSteps>(F field, R rays, Q places, P above, U abovePlaces, M merged, ProbeCascade cascade, ProbeCascade aboveCascade,
     float marchEnd, K sky, inout S steps, uint index)
 {
+    MergeAtRayEnd merge;
+    return mergeTexel(merge, field, rays, places, above, abovePlaces, merged, cascade, aboveCascade, marchEnd, sky, steps, index);
+}
+
+// mergeTexel by the merge a binding names (IMerge), in place of the default the forms without one
+// take, MergeAtRayEnd.
+public bool mergeTexel<G : IMerge, F : IProbeField, R : IProbeRays, Q : IProbePlaces, P : IFarProbes, U : IProbePlaces, M : IMergedLight,
+    K : ISky, S : IMarchSteps>(G merge, F field, R rays, Q places, P above, U abovePlaces, M merged, ProbeCascade cascade,
+    ProbeCascade aboveCascade, float marchEnd, K sky, inout S steps, uint index)
+{
+    NoSkyShares<P> lights = { above };
+    NoSkyMerged<M> kept = { merged };
+    WholeShare<K> whole = { sky };
+    return mergeTexel(merge, field, rays, places, lights, abovePlaces, kept, cascade, aboveCascade, marchEnd, whole, steps, index);
+}
+
+// mergeTexel by the merge a binding names, keeping beside the light the share of the sky in it.
+public bool mergeTexel<G : IMerge, F : IProbeField, R : IProbeRays, Q : IProbePlaces, P : IFarSkyProbes, U : IProbePlaces,
+    M : IMergedSkyLight, K : ISkyShare, S : IMarchSteps>(G merge, F field, R rays, Q places, P above, U abovePlaces, M merged,
+    ProbeCascade cascade, ProbeCascade aboveCascade, float marchEnd, K sky, inout S steps, uint index)
+{
     if (index >= cascadeTexels(cascade))
         return false;
     uint texels = cascade.texels * cascade.texels;
     uint2 texel = uint2((index % texels) % cascade.texels, (index % texels) / cascade.texels);
     float3 place = places.placeOf(probeAt(cascade, index / texels));
-    bool marched;
-    float skyShare;
-    float3 light = mergedLight(field, above, abovePlaces, aboveCascade, marchEnd, place, cascade.texels, texel, rays.rayAt(index), sky, steps,
+    // Set before the call, since slangc does not see through a merge taken by its shape (IMerge)
+    // that it writes them, and refuses their reading as of a variable never set.
+    bool marched = false;
+    float skyShare = 0.0;
+    float3 light = merge.light(field, above, abovePlaces, aboveCascade, marchEnd, place, cascade.texels, texel, rays.rayAt(index), sky, steps,
         marched, skyShare);
     merged.keepMerged(index, light);
     merged.keepSkyShare(index, skyShare);
@@ -624,6 +647,26 @@ public void gatherTraced<F : IProbeField, P : IFarProbes, Q : IProbePlaces, K : 
 public void gatherTraced<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces, K : ISkyShare, A : ISurfaceSkyPoints, S : IMarchSteps>(F field,
     P probes, Q places, ProbeCascade cascade, float marchEnd, K sky, A surfaces, inout S steps, uint index)
 {
+    MergeAtRayEnd merge;
+    gatherTraced(merge, field, probes, places, cascade, marchEnd, sky, surfaces, steps, index);
+}
+
+// gatherTraced by the merge a binding names (IMerge), in place of the default the forms without one
+// take, MergeAtRayEnd.
+public void gatherTraced<G : IMerge, F : IProbeField, P : IFarProbes, Q : IProbePlaces, K : ISky, A : ISurfacePoints, S : IMarchSteps>(G merge,
+    F field, P probes, Q places, ProbeCascade cascade, float marchEnd, K sky, A surfaces, inout S steps, uint index)
+{
+    NoSkyShares<P> lights = { probes };
+    NoSkyPoints<A> points = { surfaces };
+    WholeShare<K> whole = { sky };
+    gatherTraced(merge, field, lights, places, cascade, marchEnd, whole, points, steps, index);
+}
+
+// gatherTraced by the merge a binding names, keeping beside the point's light the share of the sky
+// in it.
+public void gatherTraced<G : IMerge, F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces, K : ISkyShare, A : ISurfaceSkyPoints,
+    S : IMarchSteps>(G merge, F field, P probes, Q places, ProbeCascade cascade, float marchEnd, K sky, A surfaces, inout S steps, uint index)
+{
     float3 p = surfaces.placeAt(index);
     float3 n = surfaces.normalAt(index);
     int c = field.cascadeOf(p, 1.0);
@@ -644,9 +687,9 @@ public void gatherTraced<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces, K
         if (facing <= 0.0)
             continue;
         float weight = facing * texelSolidAngle(cascade.texels, texel, shares);
-        bool marched;
-        float skyShare;
-        taken += mergedLight(field, probes, places, cascade, marchEnd, origin, cascade.texels, texel, begun, sky, steps, marched, skyShare) * weight;
+        bool marched = false;
+        float skyShare = 0.0;
+        taken += merge.light(field, probes, places, cascade, marchEnd, origin, cascade.texels, texel, begun, sky, steps, marched, skyShare) * weight;
         skyShares += skyShare * weight;
         weights += weight;
     }

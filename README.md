@@ -106,6 +106,7 @@ library's functions, and the engine keeps its bindings, its threads and its atom
 | `IReachTexels` | Keeps how far each ray of a cascade's reach maps went, `ReachOpen` where it met no surface and `ReachInside` along every way of a probe inside a mesh, which `IFarProbes` reads back | `reachTexel` |
 | `IMergedLight` | Keeps each texel's light merged from every distance past its probe, which `IFarProbes` reads back for the level below and the gather | `settleTexel`, `mergeTexel` |
 | `IMergedSkyLight` | Keeps, beyond `IMergedLight`, the share of the sky in each texel's merged light, which `IFarSkyProbes` reads back | `settleTexel`, `mergeTexel` |
+| `IMerge` | Brings a texel the light from past its ray's end out of the coarser cascade's probes, a merge of the ladder's under its own name, which `MergeAtRayEnd` and `MergeByReachSight` give | `mergeTexel`, `gatherTraced` |
 | `ISurfacePoints` | Reads a surface point's place and normal and keeps the light it takes | `gatherAt`, `gatherTraced` |
 | `ISurfaceSkyPoints` | Keeps, beyond `ISurfacePoints`, the share of the sky in the light a surface point takes | `gatherAt`, `gatherTraced` |
 | `IHeldLight` | Keeps and reads the light each side of the surface nearest each of the field's cells within a cell and a tenth of a surface sends, its own apart from its probes' light, one side for a solid's cell and two for a sheet's (`heldSide`), and gives the share of the probes' light a hit takes, which the merge reads at a hit through `HeldHitLight` in place of the engine's shading | `holdCellLight`, `holdListedCell`, `HeldHitLight` |
@@ -307,15 +308,15 @@ The conventions the module stands on:
   it for a probe that stands off the surface. A probe a spacing above a floor sees what that height
   sees, more of the sky in a box open above it than the floor sees. A surface that wants its own
   light takes it from `gatherTraced`, which sends a ray from the point along each way of the
-  cascade's octahedron that faces its normal, a cell off the surface, and hands each on through
-  `mergedLight` to the cascade's probes as a ray of a cascade finer than it that ended where it
-  began, so it marches to open space and meets what lies between the surface and the probes. In
-  a box open to the sky whose floor's probes stand 2 units over it, `gatherAt` reads the floor
-  1.23 times the light traced at it and `gatherTraced` 1.03, and under a solid slab with probes
-  0.6 over the floor 1.13 and 0.93 of the light traced as the field holds the slab, for 128 rays
-  a point at 16 texels a side and 1,000 to 1,600 steps. A ray that leaves the field takes the sky,
-  so a slab reaching past the coarsest cascade reads open past its edge, and against the whole
-  slab the floor reads 1.68 and 1.39 times its light.
+  cascade's octahedron that faces its normal, a cell off the surface, and hands each on through the
+  merge it takes (`IMerge`, `MergeAtRayEnd` where it takes none) to the cascade's probes as a ray of
+  a cascade finer than it that ended where it began, so it marches to open space and meets what lies
+  between the surface and the probes. In a box open to the sky whose floor's probes stand 2 units
+  over it, `gatherAt` reads the floor 1.23 times the light traced at it and `gatherTraced` 1.03, and
+  under a solid slab with probes 0.6 over the floor 1.13 and 0.93 of the light traced as the field
+  holds the slab, for 128 rays a point at 16 texels a side and 1,000 to 1,600 steps. A ray that
+  leaves the field takes the sky, so a slab reaching past the coarsest cascade reads open past its
+  edge, and against the whole slab the floor reads 1.68 and 1.39 times its light.
 
 The face under the lintel by how many of the four cascades are traced at 2, the rest at 1:
 
@@ -369,6 +370,47 @@ for (int frame = 0; frame < 32; frame++)
             FieldTriangles.Write(triangles, instance.Vertices, corners, []);
 }
 ```
+
+## The ladder of merges
+
+A merge brings a texel the light from past its ray's end, out of the coarser cascade's probes. Each
+is one kernel behind one shape, `IMerge`, under a name of its own, and a binding takes one by
+handing an instance of it to `mergeTexel` and `gatherTraced`, as `MergeByReachSight merge;` before
+the call, their forms without one taking `MergeAtRayEnd`. A merge added is a struct of its own that
+implements `IMerge` and touches no pass and no other merge.
+
+- `MergeAtRayEnd`, in `rc_cascade_merge`, takes the far probes about where the ray ended that see
+  that point by their reach maps, and marches the ray across the far interval itself where they
+  disagree on where a surface lies along its way (`mergedLight`).
+- `MergeByReachSight`, in `rc_reach_sight_merge`, takes the far probes about the near probe's own
+  place that see that place by their reach maps and stand within the field. It marches the ray on
+  to the far cascade's end, leaves out each probe whose own hit along the way lies off the surface
+  that march meets, reads each toward the point of the ray nearest its hit, and takes its own
+  march where none is left (`reachSightLight`).
+
+The ladder runs every merge over seven scenes on the CPU, no graphics device, and reads each part
+of a scene against the light traced to its points. It writes each scene's reading, with the date
+and the commit, to the file `RC_LADDER` names, and the merges' standing to the table below, as:
+
+```bash
+RC_LADDER=.github/LADDER.md dotnet test RadianceCascades.Tests --filter FullyQualifiedName~The_Ladder
+```
+
+A merge's distance is the logarithm of a part's light over its traced light, taken whole, pooled
+over every part of six scenes, and its worst part the farthest of them. The leak is the light a dark
+room takes through a wall of one cell beside a lit one, as a share of the lit room's, and the cost a
+texel's steps past its ray's end and its reads of the probes above, on the mean over every level's
+texels. A merge stands above another where it is nearer on the mean and no worse in its worst part,
+its leak and its cost, and the one standing above every other is the default. The seventh scene is
+held out of the standing, since no merge is tuned on it. [.github/LADDER.md](.github/LADDER.md)
+holds each scene's parts.
+
+| Merge | Mean distance | Worst part | Leak | Steps a texel | Reads a texel | Stands above | Held out, mean and worst |
+|---|---|---|---|---|---|---|---|
+| at the ray's end, `MergeAtRayEnd` | 0.049 | 0.252 | 0.00000 | 1.1 | 7.1 | by reach sight | 0.038 and 0.050 |
+| by reach sight, `MergeByReachSight` | 0.089 | 0.473 | 0.00000 | 1.0 | 7.7 | none | 0.088 and 0.270 |
+
+The merge at the ray's end, `MergeAtRayEnd`, stands above every other and is the default.
 
 ## The kernels without the library
 

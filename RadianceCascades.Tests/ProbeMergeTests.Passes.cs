@@ -41,6 +41,14 @@ public sealed partial class ProbeMergeTests
         // where the setting lists them first.
         public float[] HeldLight { get; init; } = [];
         public int Listed { get; init; }
+        // The steps every level's merges took past their rays' ends and their reads of the level
+        // above's probes, a texel's light, its share of the sky or a reach texel, each over every
+        // level's texels, and the gather's reads of the finest level's over its points.
+        public float MergeSteps { get; init; }
+        public float MergeReads { get; init; }
+        public float GatherReads { get; init; }
+        // Each level's merged light, its first channel, each texel where cascadeTexelIndex puts it.
+        public float[][] LevelLight { get; init; } = [];
 
         public override string ToString() =>
             $"reflects {Reflected:0.00000}, {Marched} of the finest level's texels marching on themselves in {Steps} steps in all and {Most} at most, "
@@ -91,6 +99,15 @@ public sealed partial class ProbeMergeTests
         // (listHeldCell, holdListedCell), and Unheld is the light a cell that no pass holds keeps.
         public bool Listed { get; init; }
         public float Unheld { get; init; }
+        // The merge every level's merge and gatherTraced take, by its rung on the ladder.
+        public Merge Merge { get; init; }
+    }
+
+    // The merges the passes take (IMerge), as the test kernel names them at 127 of its setup.
+    public enum Merge
+    {
+        AtRayEnd,
+        ByReachSight,
     }
 
     private const float WallAlbedo = 0.6f;
@@ -141,6 +158,7 @@ public sealed partial class ProbeMergeTests
         setup[124] = texels;
         setup[125] = setting.GateFiner ? 1 : 0;
         setup[126] = setting.Held ? 1 : 0;
+        setup[127] = (int)setting.Merge;
         (setup[88], setup[89], setup[90]) = (setting.OneSided ? 1 : 0, setting.IndirectShare, setting.Indirect);
         var fieldCells = Math.Max(setting.FieldCascades?.Length ?? 1, 1) * Size * Size * Size;
         var held = new float[12 * fieldCells];
@@ -148,11 +166,12 @@ public sealed partial class ProbeMergeTests
         var heldList = new uint[fieldCells + 1];
         var traceSteps = new float[texels];
         var cellLight = setting.CellLight ?? [0];
+        var reads = new float[texels + points.Length];
         void Pass(int pass, int level, int threads)
         {
             (setup[6], setup[7]) = (pass, level);
             CpuKernel.Run("probe_passes_cpu.slang", ((uint)(threads + 63) / 64, 1, 1), cells, setup, rays, reach, merged, marches, surfaces, cellLight,
-                skyShares, held, traceSteps, heldList);
+                skyShares, held, traceSteps, heldList, reads);
         }
         if (setting.Held)
         {
@@ -211,6 +230,11 @@ public sealed partial class ProbeMergeTests
             HeldTwice = Enumerable.Range(0, fieldCells).Count(i => held[i * 12] != held[i * 12 + 6]),
             HeldLight = held,
             Listed = (int)heldList[0],
+            MergeSteps = Enumerable.Range(0, texels).Sum(k => marches[k * 2 + 1]) / (float)texels,
+            MergeReads = reads[..texels].Sum() / texels,
+            GatherReads = reads[texels..].Sum() / points.Length,
+            LevelLight = levels.Select((level, l) => Enumerable.Range(levels.Take(l).Sum(o => o.TexelCount), level.TexelCount)
+                .Select(k => merged[k * 3]).ToArray()).ToArray(),
         };
     }
 

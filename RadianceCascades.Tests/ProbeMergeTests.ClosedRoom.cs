@@ -10,8 +10,10 @@ namespace RadianceCascades.Tests;
 /// </summary>
 public sealed partial class ProbeMergeTests
 {
-    [CpuKernelFact]
-    public void A_Closed_Room_Whose_Every_Face_Sends_The_Same_Light_Reads_That_Light_At_Every_Point_Through_Four_Cascades()
+    [CpuKernelTheory]
+    [InlineData(Merge.AtRayEnd)]
+    [InlineData(Merge.ByReachSight)]
+    public void A_Closed_Room_Whose_Every_Face_Sends_The_Same_Light_Reads_That_Light_At_Every_Point_Through_Four_Cascades(Merge merge)
     {
         // The open box with a lid, 8 units a side inside, each surface a ray meets sending a light
         // of 1 under a black sky, read at points on the floor facing up, at the room's middle
@@ -31,16 +33,27 @@ public sealed partial class ProbeMergeTests
             .Concat(Enumerable.Range(0, 7).Select(i => (new Vector3(0.5f, 0.75f + i, 0.5f), -Vector3.UnitZ)))
             .Append((new Vector3(-3.75f, 4f, 0.5f), Vector3.UnitX)).Append((new Vector3(0.5f, 7.75f, 0.5f), -Vector3.UnitY)).ToArray();
         var light = Enumerable.Repeat(1f, Size * Size * Size).ToArray();
-        var reading = Passes(cells, chain, Floor, new Setting { Points = points, CellLight = light, SkyLight = 0 });
+        var reading = Passes(cells, chain, Floor, new Setting { Points = points, CellLight = light, SkyLight = 0, Merge = merge });
         var read = reading.Taken.Select(t => t / MathF.PI).ToArray();
-        var said = $"the closed room's {points.Length} points read from {read.Min():0.0000} to {read.Max():0.0000} of the light every face sends, {reading}";
+        // Each level's texels at its probes that stand inside the room, more than a cell off its
+        // faces, the coarsest level's none.
+        var inside = chain.Select((level, l) => Enumerable.Range(0, level.TexelCount).Where(k =>
+        {
+            var probe = k / (level.Texels * level.Texels);
+            var place = level.Corner + new Vector3(probe % level.X, probe / level.X % level.Y, probe / (level.X * level.Y)) * level.Spacing;
+            return MathF.Abs(place.X) < 4 - Cell && MathF.Abs(place.Z) < 4 - Cell && place.Y is > Cell and < 8 - Cell;
+        }).Select(k => reading.LevelLight[l][k]).ToArray()).ToArray();
+        var levels = string.Join(", ", inside.Select((texels, l) => texels.Length == 0 ? $"level {l} none"
+            : $"level {l} {texels.Min():0.0000} to {texels.Max():0.0000} over {texels.Length} texels"));
+        var said = $"{merge}, the closed room's {points.Length} points read from {read.Min():0.0000} to {read.Max():0.0000} of the light every face sends, "
+            + $"the levels' texels inside it {levels}, {reading}";
         output.WriteLine(said);
         // 1.0000 at every point. Under broad light, a wall, half the floor or the lid alone
         // sending it, the points read 0.99 to 1.12 of the light traced against the room's faces
         // on the mean and texels each marched on to the coarsest level's end 0.97 to 1.15, single
         // points up to a quarter either way in both and more where they take little, the sampling
         // of 16 by 16 texels.
-        Assert.True(read.All(q => Math.Abs(q - 1) <= 0.005), said);
+        Assert.True(read.All(q => Math.Abs(q - 1) <= 0.005) && inside.All(texels => texels.All(q => Math.Abs(q - 1) <= 0.005)), said);
     }
 
     // The cell of the field a point lies in, x fastest.
@@ -77,8 +90,10 @@ public sealed partial class ProbeMergeTests
         return (float)(MathF.PI * rows.Sum() / (side * side));
     }
 
-    [CpuKernelFact]
-    public void A_Closed_Room_Lit_By_One_Wall_Reads_The_Light_Traced_There_Within_Three_Percent_Over_Each_Facings_Points()
+    [CpuKernelTheory]
+    [InlineData(Merge.AtRayEnd)]
+    [InlineData(Merge.ByReachSight)]
+    public void A_Closed_Room_Lit_By_One_Wall_Reads_The_Light_Traced_There_Over_Each_Facings_Points(Merge merge)
     {
         // The closed box, its -x wall alone sending a light of 1 under a black sky, read at 49
         // points for each of five facings, a 7 by 7 grid on the floor facing up, under the lid
@@ -99,22 +114,27 @@ public sealed partial class ProbeMergeTests
             light[i] = (Corner + (new Vector3(i % Size, i / Size % Size, i / (Size * Size)) + new Vector3(0.5f)) * Cell).X < -3.75f ? 1 : 0;
         var read = new List<string>();
         var faults = 0;
+        var within = merge == Merge.AtRayEnd ? 0.03 : 0.12;
         foreach (var normal in new[] { Vector3.UnitY, -Vector3.UnitY, Vector3.UnitZ, -Vector3.UnitZ, -Vector3.UnitX })
         {
             var points = (from a in Enumerable.Range(0, 7)
                           from b in Enumerable.Range(0, 7)
                           select (normal.Y != 0 ? new Vector3(-3 + a, normal.Y > 0 ? 0.25f : 7.75f, -3 + b)
                               : new Vector3(-3 + a, 1 + b, normal.Z != 0 ? -normal.Z * 3.5f : 0.5f), normal)).ToArray();
-            var reading = Passes(cells, chain, Floor, new Setting { Points = points, CellLight = light, SkyLight = 0 });
+            var reading = Passes(cells, chain, Floor, new Setting { Points = points, CellLight = light, SkyLight = 0, Merge = merge });
             var share = reading.Taken.Sum() / points.Sum(p => TracedInClosedBox(p.Item1, p.Item2, light));
             read.Add($"{share:0.000} facing {normal}");
-            faults += Math.Abs(share - 1) <= 0.03 ? 0 : 1;
+            faults += Math.Abs(share - 1) <= within ? 0 : 1;
         }
-        var said = $"the closed room lit by its -x wall reads {string.Join(", ", read)} of the light traced there";
+        var said = $"{merge}, the closed room lit by its -x wall reads {string.Join(", ", read)} of the light traced there";
         output.WriteLine(said);
-        // 1.010 on the floor, 0.978 under the lid, 1.004 before either side wall and 0.997 facing
-        // the lit wall, where each texel marched on to the coarsest level's end alone reads 1.011,
-        // 0.975, 0.998 and 0.983, the merge adding 1.4 percent at most to its texels' own rays.
+        // By the merge at the ray's end 1.010 on the floor, 0.978 under the lid, 1.004 before
+        // either side wall and 0.997 facing the lit wall, within 3 percent, where each texel
+        // marched on to the coarsest level's end alone reads 1.011, 0.975, 0.998 and 0.983, the
+        // merge adding 1.4 percent at most to its texels' own rays. By reach sight 0.914, 0.900,
+        // 0.970 and 1.006, within 12 percent, the far probes about the near probe's own place read
+        // toward where the ray meets a face, each from its own place, losing a tenth on the floor
+        // and under the lid, whose texels toward the lit wall graze.
         Assert.True(faults == 0, said);
     }
 }
