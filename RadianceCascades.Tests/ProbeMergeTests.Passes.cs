@@ -37,6 +37,10 @@ public sealed partial class ProbeMergeTests
         // The field's cells whose two held sides hold different light, those the holding pass
         // shaded twice where their sides are lit differently.
         public int HeldTwice { get; init; }
+        // The light the holding pass held, twelve floats a cell, and the count of cells listed
+        // where the setting lists them first.
+        public float[] HeldLight { get; init; } = [];
+        public int Listed { get; init; }
 
         public override string ToString() =>
             $"reflects {Reflected:0.00000}, {Marched} of the finest level's texels marching on themselves in {Steps} steps in all and {Most} at most, "
@@ -83,6 +87,10 @@ public sealed partial class ProbeMergeTests
         public bool OneSided { get; init; }
         public float Indirect { get; init; }
         public float IndirectShare { get; init; } = 1;
+        // Listed lists the held cells first and holds them a thread a listed cell
+        // (listHeldCell, holdListedCell), and Unheld is the light a cell that no pass holds keeps.
+        public bool Listed { get; init; }
+        public float Unheld { get; init; }
     }
 
     private const float WallAlbedo = 0.6f;
@@ -136,18 +144,26 @@ public sealed partial class ProbeMergeTests
         (setup[88], setup[89], setup[90]) = (setting.OneSided ? 1 : 0, setting.IndirectShare, setting.Indirect);
         var fieldCells = Math.Max(setting.FieldCascades?.Length ?? 1, 1) * Size * Size * Size;
         var held = new float[12 * fieldCells];
+        Array.Fill(held, setting.Unheld);
+        var heldList = new uint[fieldCells + 1];
         var traceSteps = new float[texels];
         var cellLight = setting.CellLight ?? [0];
         void Pass(int pass, int level, int threads)
         {
             (setup[6], setup[7]) = (pass, level);
             CpuKernel.Run("probe_passes_cpu.slang", ((uint)(threads + 63) / 64, 1, 1), cells, setup, rays, reach, merged, marches, surfaces, cellLight,
-                skyShares, held, traceSteps);
+                skyShares, held, traceSteps, heldList);
         }
         if (setting.Held)
         {
             setup[89] = 1;
-            Pass(7, 0, fieldCells);
+            if (setting.Listed)
+            {
+                Pass(8, 0, fieldCells);
+                Pass(9, 0, fieldCells);
+            }
+            else
+                Pass(7, 0, fieldCells);
             setup[89] = setting.IndirectShare;
         }
         if (setting.Reference)
@@ -193,6 +209,8 @@ public sealed partial class ProbeMergeTests
             TraceMost = (int)finest.Max(),
             AllTraceSteps = traceSteps.Sum(),
             HeldTwice = Enumerable.Range(0, fieldCells).Count(i => held[i * 12] != held[i * 12 + 6]),
+            HeldLight = held,
+            Listed = (int)heldList[0],
         };
     }
 

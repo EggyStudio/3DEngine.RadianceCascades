@@ -448,6 +448,32 @@ public sealed partial class ProbeMergeTests
         Assert.True(probes.Reflected > 1.1f * expected && Math.Abs(traced.Reflected - expected) <= 0.1f * expected, said);
     }
 
+    [CpuKernelFact]
+    public void Cells_Listed_First_And_Held_A_Thread_A_Listed_Cell_Hold_What_The_Hold_Over_Every_Cell_Holds()
+    {
+        // The floor under the solid slab with a wall 0.1 thick standing on it, in the field's two
+        // cascades from 0.15 a cell, lit by a sun from above and to the side, its cells held over
+        // every cell (holdCellLight) and listed first (listHeldCell, holdListedCell), every held
+        // float starting at -1 so that a cell no pass holds shows as one.
+        (Vector3 Low, Vector3 High)[] scene =
+            [(new(-15, -1, -15), new(15, 0, 15)), (new(-10, 2, -10), new(10, 3, 10)), (new(1, 0, -3), new(1.1f, 2, 3))];
+        Vector4[] field = [new(-4.8f, -3.6f, 2.4f, 0.15f), new(-9.6f, -7.2f, -2.4f, 0.3f)];
+        var at = new Vector3(0, 1, 3.5f);
+        Level[] levels = [new(at, 1, 1, 1, 1, NearTexels, 0.5f)];
+        var cells = Cells(scene, field);
+        var setting = new Setting { FieldCascades = field, Sun = new Vector3(-0.6f, 0.8f, 0) * 3, Held = true, Reference = true, Unheld = -1 };
+        var (whole, listed) = (Passes(cells, levels, at, setting), Passes(cells, levels, at, setting with { Listed = true }));
+        var all = whole.HeldLight.Length / 12;
+        var held = Enumerable.Range(0, all).Count(i => whole.HeldLight[i * 12] != -1);
+        var differing = Enumerable.Range(0, whole.HeldLight.Length).Count(i => whole.HeldLight[i] != listed.HeldLight[i]);
+        var said = $"{listed.Listed} of {all} cells listed, where the hold over every cell holds {held}, {whole.HeldTwice} of them "
+            + $"holding their sides apart, and {differing} held floats differ";
+        output.WriteLine(said);
+        // 50,177 of 524,288 cells listed, those the hold over every cell holds, 94 of them holding
+        // their sides apart, and every held float the same.
+        Assert.True(listed.Listed == held && whole.HeldTwice > 0 && differing == 0, said);
+    }
+
     // The field's cascades of the boxes, each cascade's cells one after another.
     private static float[] Cells((Vector3 Low, Vector3 High)[] boxes, Vector4[] field)
     {

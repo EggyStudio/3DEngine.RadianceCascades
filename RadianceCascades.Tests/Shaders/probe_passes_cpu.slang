@@ -50,6 +50,10 @@ RWStructuredBuffer<float> heldFloats;
 // The steps each texel's trace took, one float a texel, the levels one after another.
 RWStructuredBuffer<float> traceStepFloats;
 
+// The cells whose light pass 8 lists for pass 9 to hold, their count first and then each cell as
+// holdCellLight counts them.
+RWStructuredBuffer<uint> heldList;
+
 static const int Levels = 16;
 static const int Field = 96;
 static const int Points = 128;
@@ -237,6 +241,19 @@ struct HeldCells : IHeldLight
     }
 };
 
+// The list of held cells as a binding keeps it, its count added to with no atomic, since the CPU
+// runs the kernel's threads one after another.
+struct HeldList : IHeldList
+{
+    void list(uint at)
+    {
+        heldList[1u + heldList[0]] = at;
+        heldList[0] = heldList[0] + 1u;
+    }
+    uint count() { return heldList[0]; }
+    uint listedAt(uint index) { return heldList[1u + index]; }
+};
+
 // The test's binding's shading of a held cell, its own light and the probes' light the setup gives
 // at 90 apart.
 struct HeldShading : IHeldShading
@@ -387,6 +404,20 @@ void test(uint3 id : SV_DispatchThreadID)
         HeldCells held = { field };
         HeldShading shading = { field };
         holdCellLight(field, shading, held, uint(field.cascades()), 1u, 0u, index);
+    }
+    else if (pass == 8u)
+    {
+        // The cells whose light pass 9 holds listed, every cell of the field at once.
+        HeldList list;
+        listHeldCell(field, list, uint(field.cascades()), 1u, 0u, index);
+    }
+    else if (pass == 9u)
+    {
+        // The light of the listed cells held, a thread a listed cell.
+        HeldCells held = { field };
+        HeldShading shading = { field };
+        HeldList list;
+        holdListedCell(field, shading, held, list, index);
     }
     else if (pass == 6u)
     {

@@ -6,8 +6,9 @@
 // (reachTexel), then the coarsest level's texels are settled (settleTexel) and each finer level's
 // merged with the merged light of the level above (mergeTexel), from the coarsest down, and last
 // the light the finest level gives each surface point is gathered (gatherAt). An engine that holds
-// the light of the field's cells (IHeldLight) holds a share of them (holdCellLight) before the
-// merges, which read it at their hits (HeldHitLight) in place of its shading.
+// the light of the field's cells (IHeldLight) holds a share of them (holdCellLight), or lists them
+// (listHeldCell) and holds the listed ones (holdListedCell), before the merges, which read it at
+// their hits (HeldHitLight) in place of its shading.
 //
 // Each level's rays begin at its probe, its start 0, and run to its end, which the engine sets in
 // its ProbeCascade, the coarsest's past the field's edge, so its rays end at a surface or leave
@@ -306,14 +307,80 @@ public void reachTexel<F : IFieldVolume, R : IReachTexels, Q : IProbePlaces>(F f
 public void holdCellLight<F : IFieldVolume, G : IHeldShading, H : IHeldLight>(F field, G shading, H held, uint cascades, uint share,
     uint turn, uint index)
 {
+    int c;
+    int3 cell;
+    float d;
+    if (heldCellAt(field, cascades, index * max(share, 1u) + turn % max(share, 1u), c, cell, d))
+        holdHeldCell(field, shading, held, c, cell, d);
+}
+
+// The list of the field's cells whose light an engine holds (holdListedCell), which listHeldCell
+// fills a cell a thread, each cell counted as holdCellLight counts them, and which the engine keeps
+// over its own buffer, with a count it adds to atomically and sets to 0 before the listing.
+public interface IHeldList
+{
+    // Adds the cell at to the list.
+    void list(uint at);
+
+    // The count of cells the list holds.
+    uint count();
+
+    // The cell the list holds at index.
+    uint listedAt(uint index);
+}
+
+// Lists the cell of the field at the thread's place in one share of the field's cells, counted
+// and chosen as holdCellLight chooses them, where holdCellLight would hold its light, so that a
+// dispatch of holdListedCell a thread a listed cell shades no more than holdCellLight does over
+// every cell. A thread a cell over the whole field leaves most threads with no cell to shade, in
+// one engine 25,600 cells held of about a million on Sponza, and a workgroup whose one thread
+// shades takes as long as one whose every thread does, so that engine's hold took 2.72 ms on Sponza
+// and 2.95 on the Bistro over every cell, and 1.60 and 1.71 listed first, the listing 0.048 and
+// 0.064 more.
+public void listHeldCell<F : IFieldVolume, L : IHeldList>(F field, L list, uint cascades, uint share, uint turn, uint index)
+{
+    uint at = index * max(share, 1u) + turn % max(share, 1u);
+    int c;
+    int3 cell;
+    float d;
+    if (heldCellAt(field, cascades, at, c, cell, d))
+        list.list(at);
+}
+
+// Holds the light of the cell the list holds at the thread's index (listHeldCell), as
+// holdCellLight holds it, a thread a listed cell, the threads past the list's count holding
+// nothing, so that a dispatch over as many threads as the field has cells holds every listed cell.
+public void holdListedCell<F : IFieldVolume, G : IHeldShading, H : IHeldLight, L : IHeldList>(F field, G shading, H held, L list,
+    uint index)
+{
+    if (index >= list.count())
+        return;
+    int c;
+    int3 cell;
+    heldCellOf(field, list.listedAt(index), c, cell);
+    float4 oc = field.cornerAndCell(c);
+    holdHeldCell(field, shading, held, c, cell, fieldDistanceSheetIn(field, c, oc.xyz + float3(cell) * oc.w + 0.5 * oc.w));
+}
+
+// The cascade and the cell of the field at at, its cells counted as holdCellLight counts them.
+void heldCellOf<F : IFieldVolume>(F field, uint at, out int c, out int3 cell)
+{
     uint size = uint(field.size());
     uint each = size * size * size;
-    uint at = index * max(share, 1u) + turn % max(share, 1u);
-    if (at >= each * cascades)
-        return;
-    int c = int(at / each);
+    c = int(at / each);
     uint i = at % each;
-    int3 cell = int3(int(i % size), int((i / size) % size), int(i / (size * size)));
+    cell = int3(int(i % size), int((i / size) % size), int(i / (size * size)));
+}
+
+// Whether holdCellLight holds the light of the cell of the field at at, its cascade, its cell and
+// the field's distance at its middle where it does.
+bool heldCellAt<F : IFieldVolume>(F field, uint cascades, uint at, out int c, out int3 cell, out float d)
+{
+    uint size = uint(field.size());
+    d = 0.0;
+    heldCellOf(field, at, c, cell);
+    if (at >= size * size * size * cascades)
+        return false;
     float4 oc = field.cornerAndCell(c);
     float3 low = oc.xyz + float3(cell) * oc.w;
     for (int f = 0; f < c; f++)
@@ -321,12 +388,17 @@ public void holdCellLight<F : IFieldVolume, G : IHeldShading, H : IHeldLight>(F 
         float4 of = field.cornerAndCell(f);
         float3 a = (low - of.xyz) / of.w, b = (low + oc.w - of.xyz) / of.w;
         if (all(a >= 1.0) && all(b <= float(size) - 1.0))
-            return;
+            return false;
     }
-    float3 middle = low + 0.5 * oc.w;
-    float d = fieldDistanceSheetIn(field, c, middle);
-    if (abs(d) >= oc.w * (1.0 + MarchHit))
-        return;
+    d = fieldDistanceSheetIn(field, c, low + 0.5 * oc.w);
+    return abs(d) < oc.w * (1.0 + MarchHit);
+}
+
+// Holds the light of a cell holdCellLight holds, the field's distance at its middle d.
+void holdHeldCell<F : IFieldVolume, G : IHeldShading, H : IHeldLight>(F field, G shading, H held, int c, int3 cell, float d)
+{
+    float4 oc = field.cornerAndCell(c);
+    float3 middle = oc.xyz + float3(cell) * oc.w + 0.5 * oc.w;
     // A sheet's sides are shaded where a march toward its plane along its normal from either side
     // stops, SheetHalf and a tenth of a cell off the plane, a solid's side 0 where a march toward
     // it along the field's normal from the cell's middle stops, and its side 1 where a march from

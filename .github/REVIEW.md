@@ -115,8 +115,8 @@ pointer. One commit an engine, after item 3's first part.
 
 ## Verdicts
 
-Verdict 1 is open, read at 21:57 on 2026-11-21, the build run 44943704829 on `d446283` ended with
-the Windows job stopped at its 30 minutes inside the tests.
+Verdict 1 is settled at 22:56 on 2026-11-21, the build run on `2f0dc8e` green on the three systems,
+the Windows job 2 minutes with the CPU kernels built at full optimization.
 
 1. **The Windows job runs the tests past its 30 minutes.** In run 44943704829 on `d446283`, read at
     21:57 on 2026-11-21, `test (windows-latest)` built in 18 seconds, began the tests and was
@@ -1005,6 +1005,17 @@ visibility in place of a march to each probe reads the view at 2.07 and 2.16 in 
 in this vault what a hit sees of the probes it reads moves the figure far more than the chain does.
 Nothing in the library changed.
 
+The listing of the held cells, which BevyCSharp asked the module to hold for every binding. A thread
+a cell over the whole field leaves most threads with no cell to shade, 25,600 cells held of about a
+million on Sponza in BevyCSharp, and a workgroup whose one thread shades takes as long as a full
+one, so its hold took 2.72 ms on Sponza and 2.95 on the Bistro over every cell, and 1.60 and 1.71
+with the cells listed first, the listing 0.048 and 0.064 more. `listHeldCell` lists into the
+binding's `IHeldList`, which the binding counts atomically and sets to 0 before the listing, the
+cells `holdCellLight` holds, chosen by the same test (`heldCellAt`) apart from the shading
+(`holdHeldCell`), and `holdListedCell` holds them a thread a listed cell. On the CPU the floor under
+the solid slab with a wall 0.1 thick, in two field cascades, lists 50,177 cells of 524,288, those
+the hold over every cell holds, and every held float is the same.
+
 Handoff, for a fresh session, in place of those above. Where the work stands: the library holds the
 field's plan, the triangles' layout and the glow lights in C#, and in Slang the probes' octahedron,
 the cell code, resolve and pinch, the hit's color read, the splat, the stamp, the field's distance
@@ -1032,24 +1043,26 @@ in one pass (`IFarSkyProbes`, `IMergedSkyLight`). A probe inside a mesh keeps `R
 reach map, and the far probes about a hand-off are tested once. The shading at a merge's hits is
 most of its cost, and each binding passes the merge a cheap hit of its own, the sun's reach read at
 the surface and the probes' light half a spacing off it, or the held light of the field's cells
-(`HeldHitLight`, `holdCellLight`) held whole each frame. A crossing passes each step's own share and
-takes its light where it has stopped half the light it carried in. A cascade's traced texels a side
-of each read one are a binding's setting for each cascade, the finest two at 2 reading the lintel's
-face 0.825 at 2.2 times the trace's steps. The closed rooms' 5 percent over lies in the bounce a
-binding's hit reads of its probes, the passes adding none on one bounce. A vestibule beside a sunlit
-court reads over its trace in the light its texels' own rays bring from their probes' places and
-their hits, the chain adding 5 percent. The tests build their kernels for the CPU at -O2, at which
-Visual Studio's cl optimizes them as gcc and clang do. Next, as the bindings land the passes: the
-engines' further findings as they take the passes, then the split sum at a hit, the screen probes,
-the light on the picture and the contact shadow's march. Left behind each part's Reply: the field's
-normal, the cascades' table, the march held within a cascade, the splat's second plane, the lending
-of thin emitters, the repaint and the clearing of codes. Open: AGENTS.md's documents rows for
-DEVLOG.md and CHEATSHEET.md wait for the owner. Read first: AGENTS.md, this file's head and
-Decisions, the Replies from the field's distance on, the README's binding section, NORM.md's N 4.8
-to 4.11 and N 7.9, `CpuKernel.cs` and the head of `rc_probe_passes.slang`. Every build and test goes
-through N 7.9's lock by `python3 -I modules/Tools/scripts/gpu.py shared -- <part> -- <part>`, built
-with `--no-restore -p:UseSharedCompilation=false`, its output written to a file of which the summary
-line and the failing lines alone are read, and each commit is read by `commitcheck.py . --staged
+(`HeldHitLight`, `holdCellLight`) held whole each frame. A binding may list the cells to hold first
+(`listHeldCell`, `IHeldList`) and hold them a thread a listed cell (`holdListedCell`). A crossing
+passes each step's own share and takes its light where it has stopped half the light it carried in.
+A cascade's traced texels a side of each read one are a binding's setting for each cascade, the
+finest two at 2 reading the lintel's face 0.825 at 2.2 times the trace's steps. The closed rooms' 5
+percent over lies in the bounce a binding's hit reads of its probes, the passes adding none on one
+bounce. A vestibule beside a sunlit court reads over its trace in the light its texels' own rays
+bring from their probes' places and their hits, the chain adding 5 percent. The tests build their
+kernels for the CPU at -O2, at which Visual Studio's cl optimizes them as gcc and clang do. Next, as
+the bindings land the passes: the engines' further findings as they take the passes, then the split
+sum at a hit, the screen probes, the light on the picture and the contact shadow's march. Left
+behind each part's Reply: the field's normal, the cascades' table, the march held within a cascade,
+the splat's second plane, the lending of thin emitters, the repaint and the clearing of codes. Open:
+AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md wait for the owner. Read first:
+AGENTS.md, this file's head and Decisions, the Replies from the field's distance on, the README's
+binding section, NORM.md's N 4.8 to 4.11 and N 7.9, `CpuKernel.cs` and the head of
+`rc_probe_passes.slang`. Every build and test goes through N 7.9's lock by `python3 -I
+modules/Tools/scripts/gpu.py shared -- <part> -- <part>`, built with `--no-restore
+-p:UseSharedCompilation=false`, its output written to a file of which the summary line and the
+failing lines alone are read, and each commit is read by `commitcheck.py . --staged
 --message=<file>` first. At a binding's request, in the commit carrying this line:
 `build/fetch-slang.sh` reads an archive's sha256 with `shasum -a 256`, on macOS, Linux and Git's
 bash on Windows alike, and Python's hashlib where a system has none, in place of `sha256sum`, which
