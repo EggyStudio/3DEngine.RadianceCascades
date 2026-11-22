@@ -20,6 +20,9 @@ of the trace from roughness 0.3 up and an engine's from 0.5 up.
 
 Commits that day
 
+- `11ece81` A rough surface's reflection is read from the merged cascades by a kernel of its own,
+  measured on the CPU against the traced lobe by roughness, with a sheet of spheres beside their
+  trace.
 - `c395762` The ladder runs every merge to a steady state of the bounce, each hit lit from the
   probes of the round before, beside a traced loop over the same cells, and the CPU kernel's runs at
   once each enter a library of their own.

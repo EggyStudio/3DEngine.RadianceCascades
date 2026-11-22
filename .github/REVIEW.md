@@ -941,3 +941,23 @@ section of rough reflections and the sheet. Open: the parity dump from the 3DEng
 replay goes first, and AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md, which wait for
 the owner, as LADDER.md's row does. Read first: `rc_cone_read.slang`, `ProbeMergeTests.Cone.cs`,
 pass 11 in the test kernel, and the cones' section of LADDER.md.
+
+The parity dump, in the commit carrying this line, after `11ece81`. 3DEngine logged probe (3, 4, 2)
+of cascade 1 in the door view on the two frames after the cold start's clear, at `42ed4e13`, whose
+module is `84c4225`. Since then the library's passes have changed only by moving the merge into its
+own shape. `ParityReplayTests` runs each texel's trace and merge again on the CPU through
+`parity_replay_cpu.slang`, every call answered from the log. On both frames, all 256 texels of the
+trace and of the merge make the device's calls in its order, their arguments at most 7.6e-6 from the
+device's, and keep its light to the bit. The library's passes run alike on the device and the CPU,
+so what parts lies in what the binding answers. The held cells do not carry the old bounce. On frame
+1, the merge's 16 hits past the rays' ends read 0 but for two directly lit cells (0.41 each), and on
+frame 2 the held cells refill and read 0.005 to 0.03. Cascade 1 traces in halves, so on frame 1 the
+probe's merge reads its rays kept from before the clear. They end where frame 2's fresh rays end on
+every texel, and frame 2's light is 0.58 of theirs on the median texel (0.32 and 0.73 the
+quartiles), so the clear leaves the old light in every ray of the parity not traced that frame. This
+probe's merged light on frame 1 is 0.95 of frame 2's, the old rays' extra light offset by the empty
+held cells, so it does not by itself give the door view's 1.482 against main's 0.834. The run that
+would part the two is frame 1 at `42ed4e13` with the kept rays cleared with the gather's images, or
+with every probe traced on the first frame. Open, in place of item 10's list, are that run in the
+3DEngine session and AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md, which wait for the
+owner, as LADDER.md's row does. Read first: `ParityReplayTests.cs` and `parity_replay_cpu.slang`.

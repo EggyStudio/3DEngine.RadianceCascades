@@ -53,6 +53,20 @@ Without slangc those tests are reported as skipped, with their reason. The tests
 on the CPU take the system's C++ compiler as well, which slangc calls to build the kernel, and are
 skipped with their reason where it finds none.
 
+A binding whose light on its device parts from the CPU's can log one probe's trace and merge, each
+call the passes make through the shapes it implements with its arguments and result, and each
+texel's ray and kept light. `ParityReplayTests` runs the passes again on the CPU with every call
+answered from that log, so the two part only where the passes' calls or their kept light part, and
+a difference that remains lies in what the binding answers:
+
+```bash
+RC_PARITY=<folder of frames> dotnet test RadianceCascades.Tests --filter FullyQualifiedName~ParityReplay
+```
+
+Each frame is a folder of `header.json` (the cascades, the field's layout and each texel's place in
+the log), `texels.json` (each texel's rays and kept light) and `calls.bin` (16 uints a call, the
+kind, the arguments and the result).
+
 ## Binding it in your engine
 
 An engine binds the module by making a `SceneFieldPlan<TMesh, TTag>` and handing it each frame the
