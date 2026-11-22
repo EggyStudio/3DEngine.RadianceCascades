@@ -419,24 +419,36 @@ about it. The ladder writes each scene's reading, with the date and the commit, 
 RC_LADDER=.github/LADDER.md dotnet test RadianceCascades.Tests --filter FullyQualifiedName~The_Ladder
 ```
 
-A merge's distance is the logarithm of a part's light over its traced light, taken whole, pooled
-over every part of seven scenes, and its worst part the farthest of them. The leak is the light a
-dark room takes through a wall of one cell beside a lit one, as a share of the lit room's, and the
-cost a texel's steps past its ray's end, the per-probe stage's among them, and its reads of the
-probes above, on the mean over every level's texels. A merge stands above another at a
+Each merge runs to a steady state of the bounce, as an engine lights each hit from its own probes
+frame over frame. A round runs the whole chain with every hit taking its surface's own light and
+what the surface reflects of the light the probes gave it the round before, a half where it is not
+black and the lintel room's 0.352, gathered at a cell of a grid over the scene's surfaces, and
+nothing is kept past that one round. The light traced to the points follows the same rounds over the
+same cells by tracing alone. Each loop stops at the first round that changes its points' light by
+under a hundredth. The loops run side by side over half the machine's threads, each kernel run in a
+library of its own.
+
+A merge's distance is the logarithm of a part's light over its traced light at the steady state,
+taken whole, pooled over every part of seven scenes, and its worst part the farthest of them. Its
+most gain a round is the largest over the scenes of the change a loop's last round makes over the
+change of the round before, the factor a bounce multiplies an error by. The leak is the light a dark
+room takes at the steady state through a wall of one cell beside a lit one, as a share of the lit
+room's, and the cost a texel's steps past its ray's end, the per-probe stage's among them, and its
+reads of the probes above, on the mean over every level's texels. A merge stands above another at a
 configuration where it is nearer on the mean and no worse in its worst part, its leak and its cost,
 and the one standing above every other at every configuration is the default. The eighth scene is
 held out of the standing, since no merge is tuned on it. [.github/LADDER.md](.github/LADDER.md)
-holds each scene's parts.
+holds each scene's parts after one gather and at the steady state, and the vestibule's walls round
+by round.
 
-| Configuration | Merge | Mean distance | Worst part | Leak | Steps a texel | Reads a texel | Stands above | Held out, mean and worst |
-|---|---|---|---|---|---|---|---|---|
-| the module's | at the ray's end, `MergeAtRayEnd` | 0.041 | 0.252 | 0.00000 | 1.1 | 6.8 | by reach sight, by marched sight | 0.038 and 0.050 |
-| the module's | by reach sight, `MergeByReachSight` | 0.095 | 0.473 | 0.00000 | 1.0 | 7.2 | none | 0.088 and 0.270 |
-| the module's | by marched sight, `MergeByMarchedSight` | 0.426 | 1.902 | 0.00000 | 1.0 | 6.9 | none | 0.234 and 0.563 |
-| an engine's | at the ray's end, `MergeAtRayEnd` | 0.049 | 0.139 | 0.00000 | 0.6 | 14.4 | by reach sight | 0.069 and 0.177 |
-| an engine's | by reach sight, `MergeByReachSight` | 0.088 | 0.343 | 0.00000 | 1.2 | 15.3 | none | 0.065 and 0.177 |
-| an engine's | by marched sight, `MergeByMarchedSight` | 0.349 | 1.163 | 0.00000 | 1.3 | 12.7 | none | 0.155 and 0.479 |
+| Configuration | Merge | Mean distance | Worst part | Leak | Steps a texel | Reads a texel | Most gain a round | Stands above | Held out, mean and worst |
+|---|---|---|---|---|---|---|---|---|---|
+| the module's | by reach sight, `MergeByReachSight` | 0.083 | 0.487 | 0.00000 | 1.0 | 7.2 | 0.501 | none | 0.065 and 0.143 |
+| the module's | at the ray's end, `MergeAtRayEnd` | 0.098 | 0.329 | 0.00000 | 1.1 | 6.8 | 0.501 | by marched sight | 0.030 and 0.041 |
+| the module's | by marched sight, `MergeByMarchedSight` | 0.467 | 1.769 | 0.00000 | 1.0 | 6.9 | 0.475 | none | 0.270 and 0.412 |
+| an engine's | at the ray's end, `MergeAtRayEnd` | 0.043 | 0.106 | 0.00000 | 0.6 | 14.4 | 0.500 | by reach sight | 0.092 and 0.153 |
+| an engine's | by reach sight, `MergeByReachSight` | 0.076 | 0.251 | 0.00000 | 1.2 | 15.3 | 0.500 | none | 0.073 and 0.143 |
+| an engine's | by marched sight, `MergeByMarchedSight` | 0.271 | 0.768 | 0.00000 | 1.3 | 12.7 | 0.500 | none | 0.087 and 0.212 |
 
 No merge stands above every other at every configuration, so the default stays the merge at the ray's end, `MergeAtRayEnd`.
 

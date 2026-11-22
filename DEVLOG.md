@@ -14,6 +14,9 @@ cascades on the CPU at 0.98 of the light traced to each point in all, beside tha
 
 Commits that day
 
+- `e310325` The merges gain a per-probe stage and a third rung, the merge by marched sight, and the
+  ladder reads every merge at an engine's configuration beside the module's, a vestibule among its
+  scenes.
 - `af7d199` The passes take a merge by name through one shape, with the merge at the ray's end and a
   merge by reach sight as its first two rungs, the closed room, the thin wall and the lintel read
   under both, and a ladder that ranks every merge over seven scenes into the README and LADDER.md.

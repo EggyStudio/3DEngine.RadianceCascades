@@ -114,6 +114,10 @@ public sealed partial class ProbeMergeTests
         public float MovedAtMost { get; init; }
         public bool GatherHolding { get; init; }
         public bool LightByPlace { get; init; }
+        // Bounce is the light the round before lends each hit, by the cell of BounceGrid the hit
+        // lies in, its least corner and its cell, Size cells a side, x fastest, none where unset.
+        public float[]? Bounce { get; init; }
+        public Vector4 BounceGrid { get; init; }
     }
 
     // The merges the passes take (IMerge), as the test kernel names them at 127 of its setup.
@@ -182,6 +186,12 @@ public sealed partial class ProbeMergeTests
         var heldList = new uint[fieldCells + 1];
         var traceSteps = new float[texels];
         var cellLight = setting.CellLight ?? [0];
+        if (setting.Bounce is { } bounce)
+        {
+            (setup[10], setup[11]) = (cellLight.Length, Size);
+            (setup[92], setup[93], setup[94], setup[95]) = (setting.BounceGrid.X, setting.BounceGrid.Y, setting.BounceGrid.Z, setting.BounceGrid.W);
+            cellLight = [.. cellLight, .. bounce];
+        }
         var reads = new float[texels + points.Length];
         // Each probe's value of the per-probe stage and the steps its marches took.
         var stage = new uint[2 * levels.Sum(level => level.Probes)];

@@ -19,9 +19,11 @@ namespace RadianceCascades.Tests;
 /// </para>
 /// <para>
 /// Each kernel is compiled the first time a test runs it and kept loaded until the run ends, since
-/// a test that runs one kernel's passes one after another would otherwise compile it for each, and
-/// the runs of one kernel are made one at a time, since nothing says the code slangc writes may be
-/// entered by two threads at once.
+/// a test that runs one kernel's passes one after another would otherwise compile it for each. A
+/// loaded library is entered by one run at a time, since nothing says the code slangc writes may be
+/// entered by two threads at once, and a run that finds every loaded library of its kernel in use
+/// loads one more from a copy of the compiled file under a name of its own, which each system loads
+/// apart from the first, so that runs on several threads at once each enter a library of their own.
 /// </para>
 /// </remarks>
 internal static class CpuKernel
@@ -37,6 +39,12 @@ internal static class CpuKernel
 
     private static readonly ConcurrentDictionary<string, Lazy<Compiled>> Kernels = new();
 
+    // Each kernel's loaded libraries no run is in, and every copy loaded beside a first, which the
+    // run's end frees with the first.
+    private static readonly ConcurrentDictionary<string, ConcurrentBag<Compiled>> Idle = new();
+    private static readonly ConcurrentBag<Compiled> Copies = new();
+    private static int copied;
+
     // The folder the kernels are compiled into, and the libraries loaded from it, freed and the
     // folder deleted as the run ends.
     private static readonly Lazy<DirectoryInfo> Folder = new(() =>
@@ -46,6 +54,8 @@ internal static class CpuKernel
         {
             foreach (var kernel in Kernels.Values.Where(kernel => kernel.IsValueCreated))
                 NativeLibrary.Free(kernel.Value.Library);
+            foreach (var copy in Copies)
+                NativeLibrary.Free(copy.Library);
             try { folder.Delete(recursive: true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
         };
         return folder;
@@ -60,7 +70,10 @@ internal static class CpuKernel
     /// </summary>
     internal static void Run(string kernel, (uint X, uint Y, uint Z) groups, params Array[] buffers)
     {
-        var compiled = Kernels.GetOrAdd(kernel, name => new Lazy<Compiled>(() => Compile(name))).Value;
+        var first = Kernels.GetOrAdd(kernel, name => new Lazy<Compiled>(() => Compile(name))).Value;
+        var idle = Idle.GetOrAdd(kernel, _ => new ConcurrentBag<Compiled>([first]));
+        if (!idle.TryTake(out var compiled))
+            compiled = Copy(kernel);
         var pinned = buffers.Select(buffer => GCHandle.Alloc(buffer, GCHandleType.Pinned)).ToArray();
         var globals = Marshal.AllocHGlobal(Math.Max(1, buffers.Length) * 2 * IntPtr.Size);
         try
@@ -71,15 +84,28 @@ internal static class CpuKernel
                 Marshal.WriteIntPtr(globals, (2 * i + 1) * IntPtr.Size, buffers[i].Length);
             }
             var range = new Groups { EndX = groups.X, EndY = groups.Y, EndZ = groups.Z };
-            lock (Kernels[kernel])
-                compiled.Entry(ref range, IntPtr.Zero, globals);
+            compiled.Entry(ref range, IntPtr.Zero, globals);
         }
         finally
         {
+            idle.Add(compiled);
             Marshal.FreeHGlobal(globals);
             foreach (var handle in pinned)
                 handle.Free();
         }
+    }
+
+    // A library of the compiled kernel loaded from a copy of its file, for a run that finds every
+    // loaded one in use.
+    private static Compiled Copy(string kernel)
+    {
+        var name = Path.GetFileNameWithoutExtension(kernel);
+        var copy = Path.Combine(Folder.Value.FullName, $"{name}-{Interlocked.Increment(ref copied)}{Extension}");
+        File.Copy(Path.Combine(Folder.Value.FullName, name + Extension), copy);
+        var library = NativeLibrary.Load(copy);
+        var loaded = new Compiled(library, Marshal.GetDelegateForFunctionPointer<Entry>(NativeLibrary.GetExport(library, "test")));
+        Copies.Add(loaded);
+        return loaded;
     }
 
     private static Compiled Compile(string kernel)

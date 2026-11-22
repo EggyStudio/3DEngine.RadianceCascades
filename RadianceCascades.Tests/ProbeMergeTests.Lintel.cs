@@ -73,13 +73,14 @@ public sealed partial class ProbeMergeTests
         return (cells, light);
     }
 
-    // The point of the boxes' surfaces nearest p and the way the surface faces there, the face of
-    // the box p lies in that it is nearest where it lies in one.
-    private static (Vector3 Point, Vector3 Normal) NearestSurface(Vector3 p)
+    // The point of the boxes' surfaces nearest p, the lintel's room's where none are given, and the
+    // way the surface faces there, the face of the box p lies in that it is nearest where it lies
+    // in one.
+    private static (Vector3 Point, Vector3 Normal) NearestSurface(Vector3 p, (Vector3 Low, Vector3 High)[]? boxes = null)
     {
         var (outside, inside) = (float.MaxValue, float.MaxValue);
         var (point, normal, innerPoint, innerNormal) = (p, Vector3.UnitY, p, Vector3.UnitY);
-        foreach (var (low, high) in LintelRoom)
+        foreach (var (low, high) in boxes ?? LintelRoom)
         {
             if (p.X > low.X && p.X < high.X && p.Y > low.Y && p.Y < high.Y && p.Z > low.Z && p.Z < high.Z)
             {

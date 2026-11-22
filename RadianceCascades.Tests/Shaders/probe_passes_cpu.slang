@@ -12,22 +12,23 @@ import rc_marched_sight_merge;
 RWStructuredBuffer<float> cells;
 
 // The field's least corner, its cell and its cells along each side, the sky's luminance, the pass,
-// the level it runs on, the coarsest level's end and the count of levels, then from the float at 16
-// each level's cascade as ProbeCascade holds them, where its texels' rays, its reach texels and its
-// texels' merged light begin in their buffers, its cap of steps and the texels along a side the
-// level below and the gather read it at, sixteen floats a level, the first four there and any past
-// them after the surface points. From the float at 80 come what the test's binding sets, whether it
-// moves probes off surfaces and the margin it moves them to, whether the sky varies with the way,
-// the way toward the sun times its irradiance, the albedo of the surfaces it lights and whether a
-// hit takes its light from cellLight, and at 91 the most a moved probe moves as a share of its
-// spacing, none where 0. From the float at 96 come the count of the field's cascades, none for the
-// one above, and each one's least corner and cell, four floats each, at 122 whether each surface
-// point is gathered from the finest level about it, at 123 whether a hit's light is read from
-// cellLight by its place in the cascade the float at 0 begins, at 124 where the surface points'
-// shares of the sky begin in skyFloats, at 125 whether the finer levels' merges lend no sky, at 127
-// the merge the passes take, 0 the merge at the ray's end, 1 by reach sight and 2 by marched sight,
-// and from the float at 128 the count of surface points and each point's place, normal and albedo,
-// seven floats each.
+// the level it runs on, the coarsest level's end and the count of levels, at 10 where the bounce a
+// hit takes begins in cellLight, none where 0, and at 11 its grid's cells along a side, then from
+// the float at 16 each level's cascade as ProbeCascade holds them, where its texels' rays, its
+// reach texels and its texels' merged light begin in their buffers, its cap of steps and the texels
+// along a side the level below and the gather read it at, sixteen floats a level, the first four
+// there and any past them after the surface points. From the float at 80 come what the test's
+// binding sets, whether it moves probes off surfaces and the margin it moves them to, whether the
+// sky varies with the way, the way toward the sun times its irradiance, the albedo of the surfaces
+// it lights and whether a hit takes its light from cellLight, at 91 the most a moved probe moves as
+// a share of its spacing, none where 0, and from 92 the least corner of the bounce's grid and its
+// cell. From the float at 96 come the count of the field's cascades, none for the one above, and
+// each one's least corner and cell, four floats each, at 122 whether each surface point is gathered
+// from the finest level about it, at 123 whether a hit's light is read from cellLight by its place
+// in the cascade the float at 0 begins, at 124 where the surface points' shares of the sky begin in
+// skyFloats, at 125 whether the finer levels' merges lend no sky, at 127 the merge the passes take,
+// 0 the merge at the ray's end, 1 by reach sight and 2 by marched sight, and from the float at 128
+// the count of surface points and each point's place, normal and albedo, seven floats each.
 RWStructuredBuffer<float> setup;
 
 // Each texel's ray as its trace ended, how, where, its carried share and its light, six floats a
@@ -124,7 +125,23 @@ struct ProbeCells : IProbeField
     // probes' light at 90, that light weighed by the share at 89.
     float3 hitLight(float3 place, float3 way, int cascade, int3 at)
     {
-        return ownLight(place, way, cascade, at) + float3(setup[89] * setup[90]);
+        return ownLight(place, way, cascade, at) + float3(setup[89] * setup[90]) + float3(bounceAt(place, way));
+    }
+
+    // The light the round before lends a hit at place along way by the bounce the setup holds, the
+    // light the surface reflects of the probes in the cell of its grid a cell back along the ray,
+    // and none where the setup holds none or that point lies outside the grid. A march stops at a
+    // sheet's plane inside a wall one cell thick, whose cell lies between the wall's two sides, and
+    // a cell back along the ray lies on the side the ray came from.
+    float bounceAt(float3 place, float3 way)
+    {
+        if (setup[10] < 0.5)
+            return 0.0;
+        int n = int(setup[11]);
+        int3 q = int3(floor((place - way * setup[95] - float3(setup[92], setup[93], setup[94])) / setup[95]));
+        if (any(q < 0) || any(q >= n))
+            return 0.0;
+        return cellLight[uint(setup[10]) + uint((q.z * n + q.y) * n + q.x)];
     }
 
     // A hit's own light, the cell's where the setup gives the cells' light, or the sun's on a

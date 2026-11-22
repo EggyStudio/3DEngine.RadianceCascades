@@ -16,12 +16,14 @@ public sealed partial class ProbeMergeTests
     // and the place the field is about, its parts each a name and its points, the light traced to a
     // point facing a way, whether it is held out of the standing, and the points of a dark room
     // beside a lit one whose light is the leak through the wall between them. AtEngine builds the
-    // scene again at an engine's configuration, its field, setting and levels.
+    // scene again at an engine's configuration, its field, setting and levels, and Bounce is how
+    // its surfaces pass light between them round after round, whatever the configuration.
     private sealed record LadderScene(string Name, float[] Cells, Setting Setting, Level[] Levels, Vector3 Place,
         (string Name, (Vector3, Vector3)[] Points)[] Parts, Func<Vector3, Vector3, float> Traced, bool HeldOut = false,
         (Vector3, Vector3)[]? Dark = null)
     {
         public Func<LadderScene>? AtEngine { get; init; }
+        public Bounce? Bounce { get; init; }
     }
 
     // The configurations the ladder reads every merge at, the module's chain of the closed room's
@@ -34,15 +36,30 @@ public sealed partial class ProbeMergeTests
     }
 
     // A merge's reading of a scene at a configuration, each part's light over the light traced
-    // there, the leak, and a texel's steps past its ray's end, the per-probe stage's among them,
-    // and its reads of the probes above on the mean.
-    private sealed record LadderRow(Configuration Configuration, LadderScene Scene, Merge Merge, float[] Ratios, float Leak, float Steps,
-        float Reads)
+    // there after one gather (First) and at the steady state of the bounce (Ratios), the rounds its
+    // loop took and whether it settled within MostRounds, the gain a round, the leak at the steady
+    // state, and a texel's steps past its ray's end, the per-probe stage's among them, and its
+    // reads of the probes above on the mean.
+    private sealed record LadderRow(Configuration Configuration, LadderScene Scene, Merge Merge, float[] First, float[] Ratios, int Rounds, bool Settles,
+        float Gain, float Leak, float Steps, float Reads)
     {
+        // Each part's light each round, summed over its points.
+        public List<float[]> EachRound { get; init; } = [];
         public float[] Distances => Ratios.Select(r => MathF.Abs(MathF.Log(r))).ToArray();
         public float Mean => Distances.Average();
         public float Worst => Distances.Max();
         public float Cost => Steps + Reads;
+    }
+
+    // A merge's standing at a configuration over the scenes the standing is read over, every
+    // part's distance at the steady state pooled, the worst part, the worst leak, the cost on the
+    // mean over the scenes, the largest gain a round, and its reading of the scene held out. It
+    // stands above another where it is nearer on the mean and no worse in its worst part, its leak
+    // and its steps and reads together.
+    private sealed record Standing(Configuration Configuration, Merge Merge, float Mean, float Worst, float Leak, float Steps, float Reads, float Gain,
+        LadderRow Held)
+    {
+        public bool Above(Standing b) => Mean < b.Mean && Worst <= b.Worst && Leak <= b.Leak && Steps + Reads <= b.Steps + b.Reads;
     }
 
     // The points of a grid from origin, count along a at a apart and along b at b apart, facing
@@ -112,19 +129,23 @@ public sealed partial class ProbeMergeTests
 
     // A scene in the test's one cascade of the field, its boxes, the light each cell takes by its
     // place and the sky's light, traced among the boxes, and at the engine's configuration about
-    // center, each hit's light read by its place in the one cascade, as the traced light reads it.
+    // center, each hit's light read by its place in the one cascade, as the traced light reads it,
+    // every surface of albedo Albedo but where albedo gives another.
     private static LadderScene BoxScene(string name, (Vector3 Low, Vector3 High)[] boxes, Func<Vector3, float> lightAt, float sky, Level finest,
-        (string, (Vector3, Vector3)[])[] parts, bool heldOut = false, (Vector3, Vector3)[]? dark = null, Vector3? center = null)
+        (string, (Vector3, Vector3)[])[] parts, bool heldOut = false, (Vector3, Vector3)[]? dark = null, Vector3? center = null,
+        Func<Vector3, float>? albedo = null)
     {
         var light = CellLightBy(lightAt);
         var triangles = boxes.SelectMany((box, i) => Cuboid(box.Low, box.High, i + 1)).ToList();
         var about = center ?? new Vector3(0, 2, 0);
         var setting = new Setting { CellLight = light, SkyLight = sky };
+        var bounce = BoxBounce(boxes, light, sky, albedo);
         return new(name, Field(triangles), setting, LadderLevels(finest), Floor, parts, (p, n) => TracedAmongBoxes(boxes, p, n, light, sky), heldOut,
             dark)
         {
             AtEngine = () => new(name, EngineCells(triangles, about), EngineSetting(setting with { LightByPlace = true }, about), EngineLevels(about), Floor,
-                parts, (p, n) => TracedAmongBoxes(boxes, p, n, light, sky), heldOut, dark),
+                parts, (p, n) => TracedAmongBoxes(boxes, p, n, light, sky), heldOut, dark) { Bounce = bounce },
+            Bounce = bounce,
         };
     }
 
@@ -173,7 +194,7 @@ public sealed partial class ProbeMergeTests
         var lamp = new LadderScene("a closed box with one lamp", Field(closedTriangles), new Setting { CellLight = lampLight, SkyLight = 0 },
             LadderLevels(new(new(-3.5f, 0.5f, -3.5f), 1, 8, 8, 8, NearTexels, 2)), Floor,
             [("floor", Grid(new(-3, 0.25f, -3), Vector3.UnitX, 7, Vector3.UnitZ, 7, Vector3.UnitY)), ("walls", RoomWalls(1, 2, 4))],
-            (p, n) => TracedAmongBoxes(closedBoxes, p, n, lampLight, 0));
+            (p, n) => TracedAmongBoxes(closedBoxes, p, n, lampLight, 0)) { Bounce = BoxBounce(closedBoxes, lampLight, 0) };
         var lampCenter = new Vector3(0, 4, 0);
         lamp = lamp with
         {
@@ -200,7 +221,7 @@ public sealed partial class ProbeMergeTests
         var lintel = new LadderScene("a room under a lintel", lintelCells,
             new Setting { FieldCascades = LintelField, CellLight = lintelLight, SkyLight = LintelSky, Moved = true }, LintelLevels, UnderLintel,
             [("by the opening", Columns(0, 3)), ("between", Columns(3, 3)), ("deepest", Columns(6, 2))],
-            (p, n) => TracedAgainstBoxes(MovedOff(p), n));
+            (p, n) => TracedAgainstBoxes(MovedOff(p), n)) { Bounce = LintelBounce(lintelLight) };
         // At the engine's configuration the lintel's own four cascades of the field are the
         // engine's finest four, about the same place, its light built again over the five.
         var lintelCenter = new Vector3(-2, 1.5f, 0);
@@ -262,7 +283,7 @@ public sealed partial class ProbeMergeTests
                     .. Grid(new(3.75f, 0.5f, 2), Vector3.UnitY, 4, Vector3.UnitZ, 2, -Vector3.UnitX)]),
                 ("floor", Grid(new(-3, 0.25f, -3), Vector3.UnitX, 7, Vector3.UnitZ, 7, Vector3.UnitY)),
                 ("ceiling", Grid(new(-3, 3.75f, -3), Vector3.UnitX, 7, Vector3.UnitZ, 7, -Vector3.UnitY)),
-            ]);
+            ], albedo: p => p.X > 3.75f && MathF.Abs(p.Z) < 1 && p.Y < 3 ? 0 : Albedo);
 
         // Held out, a room with a window of 2 by 2 in its roof over the floor's middle and a pillar
         // a unit square from 1.5 to 2.5 along x and z, the floor under the window sending 0.8 and
@@ -281,6 +302,23 @@ public sealed partial class ProbeMergeTests
                 ("pillar", Grid(new(1.25f, 0.5f, 1.75f), Vector3.UnitY, 4, Vector3.UnitZ * 0.5f, 2, -Vector3.UnitX)),
             ], heldOut: true);
         return [door, lamp, thin, lintel, open, hall, vestibule, window];
+    }
+
+    // A paragraph's words in lines of at most width characters.
+    private static IEnumerable<string> Wrapped(string paragraph, int width = 100)
+    {
+        var line = new StringBuilder();
+        foreach (var word in paragraph.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (line.Length > 0 && line.Length + 1 + word.Length > width)
+            {
+                yield return line.ToString();
+                line.Clear();
+            }
+            line.Append(line.Length > 0 ? " " : "").Append(word);
+        }
+        if (line.Length > 0)
+            yield return line.ToString();
     }
 
     private static string Invariant(float value, string format) => value.ToString(format, CultureInfo.InvariantCulture);
@@ -316,6 +354,22 @@ public sealed partial class ProbeMergeTests
         return Git("status --porcelain --untracked-files=no").Length > 0 ? $"{hash} with the changes committed beside it" : hash;
     }
 
+    // A scene's points, its parts' and then its dark room's, and the count of its parts' alone.
+    private static ((Vector3, Vector3)[] Points, int Lit) LadderPoints(LadderScene scene) =>
+        (scene.Parts.SelectMany(part => part.Points).Concat(scene.Dark ?? []).ToArray(), scene.Parts.Sum(part => part.Points.Length));
+
+    // The light of each part's points summed.
+    private static float[] ByPart(LadderScene scene, float[] light)
+    {
+        var (sums, first) = (new float[scene.Parts.Length], 0);
+        for (int p = 0; p < sums.Length; p++)
+        {
+            sums[p] = light[first..(first + scene.Parts[p].Points.Length)].Sum();
+            first += scene.Parts[p].Points.Length;
+        }
+        return sums;
+    }
+
     [CpuKernelFact]
     public void The_Ladder_Runs_Every_Merge_Over_Its_Scenes_And_Writes_Their_Standing_Where_RC_LADDER_Names_A_File()
     {
@@ -326,64 +380,76 @@ public sealed partial class ProbeMergeTests
         if (string.IsNullOrEmpty(path))
             return;
         path = Path.GetFullPath(path, Repository.Root);
-        var rows = new List<LadderRow>();
         var configurations = Enum.GetValues<Configuration>();
         var merges = Enum.GetValues<Merge>();
         var scenes = LadderScenes();
-        foreach (var configuration in configurations)
-            foreach (var each in scenes)
-            {
-                var scene = configuration == Configuration.Engine ? each.AtEngine!() : each;
-                var traced = scene.Parts.Select(part => part.Points.Sum(p => scene.Traced(p.Item1, p.Item2))).ToArray();
-                var litMean = traced.Sum() / scene.Parts.Sum(part => part.Points.Length);
-                var points = scene.Parts.SelectMany(part => part.Points).Concat(scene.Dark ?? []).Select(p => (p.Item1, p.Item2)).ToArray();
-                foreach (var merge in merges)
-                {
-                    var reading = Passes(scene.Cells, scene.Levels, scene.Place, scene.Setting with { Points = points, Merge = merge });
-                    var (ratios, first) = (new float[scene.Parts.Length], 0);
-                    for (int p = 0; p < ratios.Length; p++)
-                    {
-                        var count = scene.Parts[p].Points.Length;
-                        ratios[p] = reading.Taken[first..(first + count)].Sum() / traced[p];
-                        first += count;
-                    }
-                    var leak = scene.Dark is null ? 0 : reading.Taken[first..].Average() / litMean;
-                    rows.Add(new(configuration, each, merge, ratios, leak, reading.MergeSteps + reading.StageSteps, reading.MergeReads));
-                    output.WriteLine($"{configuration}, {scene.Name}, {merge}, {string.Join(", ", ratios.Select(r => Invariant(r, "0.000")))}, "
-                        + $"leak {Invariant(leak, "0.00000")}");
-                }
-            }
+        // Each scene's traced loop, the same at every configuration, its transport, each point's
+        // light traced after one gather and at the steady state, and the loop's rounds and gain.
+        var traced = new Dictionary<string, (Transport Transport, float[] First, float[] Steady, int Rounds, float Gain, List<float[]> EachRound)>();
+        foreach (var each in scenes)
+        {
+            var (points, lit) = LadderPoints(each);
+            var transport = TransportOf(each.Bounce!, points);
+            var own = points.Select(p => each.Traced(p.Item1, p.Item2)).ToArray();
+            var (steady, rounds, gain, eachRound) = TracedLoop(transport, own, lit);
+            traced[each.Name] = (transport, own, steady, rounds, gain, eachRound);
+            output.WriteLine($"{each.Name}, traced over {transport.Cells.Length} cells, {rounds} rounds, gain {Invariant(gain, "0.000")}");
+        }
 
-        // Each merge at each configuration over the scenes the standing is read over, every part's
-        // distance pooled, the worst part, the worst leak and the cost on the mean over the scenes.
+        // Every merge's loop over each scene at each configuration, the loops run side by side
+        // over half the machine's threads, each scene built once at each configuration.
+        var built = configurations.SelectMany(configuration => scenes.Select(each => (Configuration: configuration, Each: each))).ToArray()
+            .AsParallel().AsOrdered().Select(c => (c.Configuration, c.Each, Scene: c.Configuration == Configuration.Engine ? c.Each.AtEngine!() : c.Each))
+            .ToArray();
+        var jobs = built.SelectMany(b => merges.Select(merge => (b.Configuration, b.Each, b.Scene, Merge: merge))).ToArray();
+        var rows = new LadderRow[jobs.Length];
+        Parallel.For(0, jobs.Length, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount / 2) }, j =>
+        {
+            var (configuration, each, scene, merge) = jobs[j];
+            var (points, lit) = LadderPoints(scene);
+            var reference = traced[each.Name];
+            var (tracedFirst, tracedSteady) = (ByPart(scene, reference.First), ByPart(scene, reference.Steady));
+            var (reading, light, rounds, settles, gain, eachRound) = MergedLoop(scene, reference.Transport, scene.Setting with { Merge = merge }, points, lit);
+            var first = ByPart(scene, reading.Taken[..points.Length]).Select((sum, p) => sum / tracedFirst[p]).ToArray();
+            var ratios = ByPart(scene, light).Select((sum, p) => sum / tracedSteady[p]).ToArray();
+            var leak = scene.Dark is null ? 0 : light[lit..].Average() / reference.Steady[..lit].Average();
+            rows[j] = new(configuration, each, merge, first, ratios, rounds, settles, gain, leak, reading.MergeSteps + reading.StageSteps, reading.MergeReads)
+            {
+                EachRound = eachRound.Select(round => ByPart(scene, round)).ToList(),
+            };
+        });
+        foreach (var r in rows)
+            output.WriteLine($"{r.Configuration}, {r.Scene.Name}, {r.Merge}, {string.Join(", ", r.First.Select(q => Invariant(q, "0.000")))} after one gather, "
+                + $"{string.Join(", ", r.Ratios.Select(q => Invariant(q, "0.000")))} at the steady state in {r.Rounds} rounds, gain {Invariant(r.Gain, "0.000")}, "
+                + $"leak {Invariant(r.Leak, "0.00000")}");
+
+        // Each merge at each configuration over the scenes the standing is read over, at the
+        // steady state.
         var standing = configurations.SelectMany(configuration => merges.Select(merge =>
         {
             var own = rows.Where(r => r.Configuration == configuration && r.Merge == merge && !r.Scene.HeldOut).ToArray();
             var held = rows.Single(r => r.Configuration == configuration && r.Merge == merge && r.Scene.HeldOut);
             var distances = own.SelectMany(r => r.Distances).ToArray();
-            return (Configuration: configuration, Merge: merge, Mean: distances.Average(), Worst: distances.Max(), Leak: own.Max(r => r.Leak),
-                Steps: own.Average(r => r.Steps), Reads: own.Average(r => r.Reads), Held: held);
+            return new Standing(configuration, merge, distances.Average(), distances.Max(), own.Max(r => r.Leak), own.Average(r => r.Steps),
+                own.Average(r => r.Reads), own.Max(r => r.Gain), held);
         }).OrderBy(s => s.Mean)).ToArray();
-        bool Above((Configuration Configuration, Merge Merge, float Mean, float Worst, float Leak, float Steps, float Reads, LadderRow Held) a,
-            (Configuration Configuration, Merge Merge, float Mean, float Worst, float Leak, float Steps, float Reads, LadderRow Held) b) =>
-            a.Mean < b.Mean && a.Worst <= b.Worst && a.Leak <= b.Leak && a.Steps + a.Reads <= b.Steps + b.Reads;
         // A merge stands on top where it stands above every other at every configuration.
         var top = merges.Where(m => configurations.All(c =>
         {
             var at = standing.Where(s => s.Configuration == c).ToArray();
             var own = at.Single(s => s.Merge == m);
-            return at.All(b => b.Merge == m || Above(own, b));
+            return at.All(b => b.Merge == m || own.Above(b));
         })).ToArray();
 
         var table = new StringBuilder();
-        table.AppendLine("| Configuration | Merge | Mean distance | Worst part | Leak | Steps a texel | Reads a texel | Stands above | Held out, mean and worst |");
-        table.AppendLine("|---|---|---|---|---|---|---|---|---|");
+        table.AppendLine("| Configuration | Merge | Mean distance | Worst part | Leak | Steps a texel | Reads a texel | Most gain a round | Stands above | Held out, mean and worst |");
+        table.AppendLine("|---|---|---|---|---|---|---|---|---|---|");
         foreach (var s in standing)
         {
-            var above = standing.Where(b => b.Configuration == s.Configuration && b.Merge != s.Merge && Above(s, b))
+            var above = standing.Where(b => b.Configuration == s.Configuration && b.Merge != s.Merge && s.Above(b))
                 .Select(b => MergeName(b.Merge).Split(',')[0]).ToArray();
             table.AppendLine($"| {ConfigurationName(s.Configuration)} | {MergeName(s.Merge)} | {Invariant(s.Mean, "0.000")} | {Invariant(s.Worst, "0.000")} | "
-                + $"{Invariant(s.Leak, "0.00000")} | {Invariant(s.Steps, "0.0")} | {Invariant(s.Reads, "0.0")} | "
+                + $"{Invariant(s.Leak, "0.00000")} | {Invariant(s.Steps, "0.0")} | {Invariant(s.Reads, "0.0")} | {Invariant(s.Gain, "0.000")} | "
                 + $"{(above.Length == 0 ? "none" : string.Join(", ", above))} | {Invariant(s.Held.Mean, "0.000")} and {Invariant(s.Held.Worst, "0.000")} |");
         }
         var verdict = top.Length == 1
@@ -394,22 +460,34 @@ public sealed partial class ProbeMergeTests
         var file = new StringBuilder();
         file.AppendLine("# The ladder of merges");
         file.AppendLine();
-        file.AppendLine($"Measured on {DateTime.UtcNow:yyyy-MM-dd} on the tree of {TreeCommit()}, every merge the passes take by name");
-        file.AppendLine($"(`IMerge`) run over {scenes.Length} scenes on the CPU at {configurations.Length} configurations, as `dotnet test RadianceCascades.Tests`");
-        file.AppendLine("writes it with `RC_LADDER` naming this file. The module's configuration is its tests' chain of four levels");
-        file.AppendLine("in one cascade of the field of 64 cells of 0.25. An engine's is one an engine binds the passes at, five");
-        file.AppendLine("levels of 8 probes a side every 8 cells of the field's five cascades of 64 cells from 0.125, the finest");
-        file.AppendLine("two traced at 16 texels a side and read at 8, every ray from its probe to four times its spacing but the");
-        file.AppendLine("last two's to the field's diagonal, each point gathered from the finest level about it.");
-        file.AppendLine("A part of a scene is read as the light its points take over the light traced to them, and its distance");
-        file.AppendLine("is that ratio's logarithm taken whole, 0.105 a tenth over or under. The leak is the light the dark room");
-        file.AppendLine("takes through a wall of one cell beside the lit one, as a share of the lit room's traced light. The cost");
-        file.AppendLine("is a texel's steps past its ray's end, the per-probe stage's steps among them, and its reads of the probes");
-        file.AppendLine("above, a texel's light, its share of the sky or a reach texel, on the mean over every level's texels. A");
-        file.AppendLine("merge stands above another at a configuration where it is nearer on the mean and no worse in its worst");
-        file.AppendLine($"part, its leak and its steps and reads together, over the {counted} scenes, and the one standing above every");
-        file.AppendLine($"other at every configuration is the default. The last {(heldOut == 1 ? "scene is" : $"{heldOut} scenes are")} held out of the standing and read apart, since no");
-        file.AppendLine("merge is tuned on it.");
+        foreach (var line in Wrapped(
+            $"Measured on {DateTime.UtcNow:yyyy-MM-dd} on the tree of {TreeCommit()}, every merge the passes take by name (`IMerge`) run over "
+            + $"{scenes.Length} scenes on the CPU at {configurations.Length} configurations, as `dotnet test RadianceCascades.Tests` writes it with "
+            + "`RC_LADDER` naming this file. The module's configuration is its tests' chain of four levels in one cascade of the field of 64 cells "
+            + "of 0.25. An engine's is one an engine binds the passes at, five levels of 8 probes a side every 8 cells of the field's five cascades "
+            + "of 64 cells from 0.125, the finest two traced at 16 texels a side and read at 8, every ray from its probe to four times its spacing "
+            + "but the last two's to the field's diagonal, each point gathered from the finest level about it."))
+            file.AppendLine(line);
+        file.AppendLine();
+        foreach (var line in Wrapped(
+            "Each merge runs to a steady state of the bounce. A round runs the whole chain with every hit taking its surface's own light and what "
+            + "the surface reflects of the light the probes gave it the round before, gathered at a cell of a grid over the scene's surfaces, "
+            + $"every surface reflecting {Invariant(Albedo, "0.0")} of it but a black one and the lintel's room's {Invariant(LintelAlbedo, "0.000")}, "
+            + "and nothing kept past that one round. The light traced to the points follows the same rounds over the same cells by tracing "
+            + $"alone. Each loop stops at the first round that changes its points' light by under a hundredth, or at the {MostRounds}th."))
+            file.AppendLine(line);
+        file.AppendLine();
+        foreach (var line in Wrapped(
+            "A part of a scene is read as the light its points take over the light traced to them, after one gather and at the steady state, "
+            + "and its distance is the steady state's ratio's logarithm taken whole, 0.105 a tenth over or under. The gain a round is the change "
+            + "a loop's last round makes over the change of the round before, the factor a bounce multiplies an error by. The leak is the light "
+            + "the dark room takes through a wall of one cell beside the lit one at the steady state, as a share of the lit room's traced light. "
+            + "The cost is a texel's steps past its ray's end, the per-probe stage's steps among them, and its reads of the probes above, a "
+            + "texel's light, its share of the sky or a reach texel, on the mean over every level's texels. A merge stands above another at a "
+            + "configuration where it is nearer on the mean and no worse in its worst part, its leak and its steps and reads together, over the "
+            + $"{counted} scenes, and the one standing above every other at every configuration is the default. The last "
+            + $"{(heldOut == 1 ? "scene is" : $"{heldOut} scenes are")} held out of the standing and read apart, since no merge is tuned on it."))
+            file.AppendLine(line);
         file.AppendLine();
         file.AppendLine("## Standing");
         file.AppendLine();
@@ -419,13 +497,40 @@ public sealed partial class ProbeMergeTests
         file.AppendLine();
         file.AppendLine("## Each scene");
         file.AppendLine();
-        file.AppendLine("| Configuration | Scene | Merge | Each part's ratio | Mean distance | Worst part | Leak | Steps a texel | Reads a texel |");
-        file.AppendLine("|---|---|---|---|---|---|---|---|---|");
+        file.AppendLine("| Configuration | Scene | Merge | Each part's ratio after one gather | Each part's ratio at the steady state | Rounds | Gain a round "
+            + "| Mean distance | Worst part | Leak | Steps a texel | Reads a texel |");
+        file.AppendLine("|---|---|---|---|---|---|---|---|---|---|---|---|");
+        string Each(LadderRow r, float[] ratios) => string.Join(", ", r.Scene.Parts.Select((part, p) => $"{part.Name} {Invariant(ratios[p], "0.000")}"));
         foreach (var r in rows)
-            file.AppendLine($"| {ConfigurationName(r.Configuration)} | {r.Scene.Name} | {MergeName(r.Merge)} | "
-                + string.Join(", ", r.Scene.Parts.Select((part, p) => $"{part.Name} {Invariant(r.Ratios[p], "0.000")}"))
-                + $" | {Invariant(r.Mean, "0.000")} | {Invariant(r.Worst, "0.000")} | {(r.Scene.Dark is null ? "" : Invariant(r.Leak, "0.00000"))} | "
+            file.AppendLine($"| {ConfigurationName(r.Configuration)} | {r.Scene.Name} | {MergeName(r.Merge)} | {Each(r, r.First)} | {Each(r, r.Ratios)} | "
+                + $"{(r.Settles ? r.Rounds.ToString(CultureInfo.InvariantCulture) : $"{r.Rounds}, unsettled")} | {Invariant(r.Gain, "0.000")} | "
+                + $"{Invariant(r.Mean, "0.000")} | {Invariant(r.Worst, "0.000")} | {(r.Scene.Dark is null ? "" : Invariant(r.Leak, "0.00000"))} | "
                 + $"{Invariant(r.Steps, "0.0")} | {Invariant(r.Reads, "0.0")} |");
+        file.AppendLine();
+        file.AppendLine("## The traced loop");
+        file.AppendLine();
+        file.AppendLine("| Scene | Cells | Rounds | Gain a round |");
+        file.AppendLine("|---|---|---|---|");
+        foreach (var each in scenes)
+            file.AppendLine($"| {each.Name} | {traced[each.Name].Transport.Cells.Length} | {traced[each.Name].Rounds} | {Invariant(traced[each.Name].Gain, "0.000")} |");
+
+        // The vestibule's walls round by round, which an engine's frames from none are set beside.
+        var vestibule = scenes.Single(x => x.Name.StartsWith("a vestibule", StringComparison.Ordinal));
+        var walls = vestibule.Parts.Select((part, p) => (part.Name, p)).Where(x => x.Name.StartsWith("wall", StringComparison.Ordinal)).Select(x => x.p).ToArray();
+        var vestibuleRows = rows.Where(r => r.Scene == vestibule).ToArray();
+        var most = vestibuleRows.Max(r => r.EachRound.Count);
+        float Walls(float[] parts) => walls.Sum(p => parts[p]);
+        file.AppendLine();
+        file.AppendLine("## The vestibule round by round");
+        file.AppendLine();
+        file.AppendLine("Its two walls' light each round over the first round's, traced and by each merge.");
+        file.AppendLine();
+        file.AppendLine($"| Configuration | Merge | {string.Join(" | ", Enumerable.Range(1, most))} |");
+        file.AppendLine($"|---|---|{string.Concat(Enumerable.Repeat("---|", most))}");
+        string RoundByRound(List<float[]> rounds) => string.Join(" | ", Enumerable.Range(0, most).Select(k => k < rounds.Count ? Invariant(Walls(rounds[k]) / Walls(rounds[0]), "0.000") : ""));
+        file.AppendLine($"| every one | traced | {RoundByRound(traced[vestibule.Name].EachRound.Select(round => ByPart(vestibule, round)).ToList())} |");
+        foreach (var r in vestibuleRows)
+            file.AppendLine($"| {ConfigurationName(r.Configuration)} | {MergeName(r.Merge)} | {RoundByRound(r.EachRound)} |");
         File.WriteAllText(path, file.ToString());
 
         // The README's table under its ladder's heading takes the standing in place of the last.
@@ -446,6 +551,6 @@ public sealed partial class ProbeMergeTests
             File.WriteAllText(readme, string.Join('\n', lines) + "\n");
         }
         output.WriteLine(file.ToString());
-        Assert.True(rows.Count == configurations.Length * merges.Length * scenes.Length, "every merge reads every scene at every configuration");
+        Assert.True(rows.Length == configurations.Length * merges.Length * scenes.Length, "every merge reads every scene at every configuration");
     }
 }

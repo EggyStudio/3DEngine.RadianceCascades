@@ -142,6 +142,22 @@ pointer. One commit an engine, after item 3's first part.
    This goes in one commit with the two merges as the ladder's first rungs. No host is named in the
    module's files.
 
+9. **The ladder holds the bounce.** The ladder lights a hit with a fixed light and reads one gather,
+    where a host lights each hit from its own probes frame over frame, so a merge that reads a
+    little high or low at one gather is carried round the loop and grows or dies with every bounce.
+    At a host's configuration the ladder reads a room's walls near 1.07 where the host's device
+    reads 2.05 with the same merge, and the two part at the hit's light. The ladder gains that loop.
+    Each merge is run to a steady state, a hit taking its light from the probes of the round before,
+    with no history beyond that one round, and the traced answer it is read against follows light
+    through as many bounces until it changes by under a hundredth. For each merge and scene the
+    table gains the ratio after one gather beside the ratio at the steady state, the count of rounds
+    to reach it, and the gain a round, the factor one bounce multiplies an error by. The standing is
+    taken at the steady state. The first reading says whether the vestibule's walls then read high
+    on the CPU with the merge at the ray's end, and which merge holds the loop nearest one. Where
+    the CPU still reads near one, the Reply names the next place the device parts from it, and a
+    host's session is asked for one probe's light after each of its first frames to set beside the
+    CPU's rounds.
+
 ## Verdicts
 
 Verdict 1 is settled at 22:56 on 2026-11-21, the build run on `2f0dc8e` green on the three systems,
@@ -227,168 +243,6 @@ session pushes.
     engine's one package. Folders and project file names stay.
 
 ## Replies
-
-The sweep, in the commit carrying this line, with Tools at its head `7cb9e97`, the README check
-given the library again and the sixth fact, no tracked text naming an engine. `FieldForms` and
-`GlowForms` are `FieldPlanOptions` and `GlowOptions`, sealed records of settings each at a default,
-every summary saying what the setting does and its remarks what it trades, and the constructor and
-`GlowLights.Write` take them last, null for the defaults. `Ahead` and the constant `Lead` are the
-one setting `Lead`, 0 for none. The way the eye looks stays a parameter of `Update` and
-`OriginAround`, since a lead needs a way to lie along. `FaintThousandth` is `Faint`, a share, with
-`ReachFloor` beside it, and `StampsArrivals` is `StampArrivals`. `DrewTwice` is `DrawnTwiceInPlace`.
-
-The diagnostics stay as they are, since `Waiting` sums with LINQ and `Unsettled` builds an array, so
-one value gathering them would allocate each frame an engine reads it where a single property read
-does not. KERNELS.md leaves the repository, and the README's binding section holds the settings'
-table, each with its default, what it does and what it trades. The sheet is made again with its
-title line and gray, from the settings.
-
-The color a hit reads from the field, in the commit carrying this line, with the reading of the
-cells about a box and a thin sheet. The finding of two unlike surfaces in one field cell is mended
-in the module's field. Its found case is a floor over another of another color a tenth of a unit
-below, both facing up, whose cells between lie nearer the lower and face the hit's way as the
-upper's do. Read as both copies read it, the eight cells about the hit facing within 60 degrees of
-its normal, the upper floor's white read (0.77, 0.90, 0.77), the green blended in by a quarter,
-which the test failing first said. `paintFacing` counts a cell's paint only where the surface it
-holds, its distance back from its middle along its face's way, passes within `PaintReach`, 0.3 of a
-cell, of the hit, past the way's eight bits' error across half a cell and short of a second surface
-four tenths of a cell off, and falls back to the cells that face the hit's way and then to the plain
-blend where none holds a surface through it. The red wall on a white floor and a slab half a cell
-thick, red above and white below, read their own colors under both reads. A second surface nearer
-than 0.3 of a cell to the first still blends in, which no test here reads.
-
-The paint's reach, in the commit carrying this line. No measurement chose 0.3 of a cell; it lies
-between two bounds. Above it the found case's second surface lies 0.4 of a cell off the hit. Below
-it a face's way read back from its eight bits leans up to 14.15 degrees from it over 65,536 ways,
-the largest near the octahedron's folded corners
-(`FieldCodeTests.A_Faces_Way_Read_Back_From_Its_Eight_Bits_Lies_Within_Fourteen_And_A_Half_Degrees_Of_It`),
-so across the cells about a hit, up to 1.41 cells along the surface, a surface held through it may
-pass up to 0.35 of a cell off at the coarsest ways. My first reading took four degrees for every
-way, which is the lean of the sheet's own way alone; the sheet is drawn again saying so. Such a cell
-is left out and the cells facing the hit's way lend the color, so no hit of one surface reads
-another, but a second surface 0.3 to 0.35 of a cell off may still blend in at those ways. A floor a
-twentieth of a unit over another, a fifth of a cell, blends a quarter of the lower in, 0.74 of the
-white with 0.26 of the green as the cells' weights give, which
-`FieldPaintTests.A_Floor_Over_Another_Of_Unlike_Color_A_Twentieth_Below_Blends_A_Quarter_Of_It_In`
-states, so a change to the read shows there.
-
-The splat and the stamp, the splat at `881fa74` and the stamp in the commit carrying this line. What
-an engine's binding takes from the library in place of its own shaders' code, kernel by kernel, each
-kernel named by what it computes and the engine keeping its bindings, its threads, its atomics and
-its dispatch:
-
-1. The probes' directions, every pass's octahedral map, its share, the rays a texel sends and a
-   texel's marks, from `rc_octahedron`.
-2. The splat's distance pass, the body each lane runs over a triangle's band of cells, from
-   `splatCodes` over an `ISplatCells` the engine keeps by its atomic minimum; the code itself, the
-   nearest point with its open edges, the way's eight bits and the passing over of a sliver, from
-   `rc_field_code`.
-3. The splat's paint pass, the cells that kept a triangle's code painted its color blended at the
-   nearest point, from `splatPaint` over an `IPaintCells`, with `lightThroughPaint`, `cornerColor`,
-   `barycentric` and `glossBits`.
-4. The resolve's distance, a code and the face behind it made the distance a reader marches, the
-   thin wall held, from `resolvedDistance`; the plane a double-sided face keeps, from `sheetOf`; the
-   pinch between two blocks, from `pinched` over an `IResolvedCells` the engine reads its resolved
-   cells through.
-5. The stamp's cell, the least of a still cell and the boxes of its brick with the nearer surface's
-   paint, face and gloss, from `stampCell` over an `IStampShapes`, each shape laid out as
-   `FieldShape.WriteStamp` writes it, 32 floats.
-6. The readers' color at a hit, from `paintFacing` and `paintAt` over an `IFieldCells`, the mend of
-   two unlike surfaces in one cell with it, and the face's gloss from `glossOf`.
-
-Not yet the library's: the splat's second plane, kept where a second double-sided face of another
-way passes a cell, the lending of emitters thinner than a cell, the paint again of a mesh whose
-colors changed in place, the clearing of a cascade's codes, and every reader of the field's distance
-and of the probes. The kernels' own files, each a binding over these, stay each engine's.
-
-The field's distance at a point and the march, in the commit carrying this line, with the march's
-sheet. `rc_field_read` holds `IFieldVolume`, the cascades as a reader reads them, the finest holding
-a point, a cascade's corner and cell, its field between cells and a cell as it is, and its second
-plane; `fieldDistanceIn`, the cells' blend held half a cell below a double-sided face's plane;
-`fieldDistanceSheetIn` and `sheetDistance`, the probes' read of a cell's planes held `SheetHalf`
-either side; and `traceField` and `traceFieldSheets`, 64 steps at most of the distance read or a
-quarter of a cell at least, met within a tenth of a cell, each step handed to an `IMarchSteps`,
-`NoSteps` where none is kept. The tests, written first, measure the blend about a box of two 0.286
-of a cell off the box's own distance at worst over 400 points, held to 0.3; rays stopping 0.043 of a
-cell short of a face and 0.144 past it at worst, within the march's tenth and its quarter-cell step;
-and a ray from either side of a sheet stopping on its own side within 0.35 of a cell of the plane.
-The README's binding section names every Slang interface an engine implements. Not yet the
-library's: the field's normal, the table of cascades an engine's `cascadeOf` reads, and the march
-held within a cascade.
-
-Handoff, for a fresh session. Where the work stands: the library holds the field's plan
-(`SceneFieldPlan`, `FieldPlanOptions`), the triangles' layout (`FieldTriangles`), the glow lights
-(`GlowLights`, `GlowOptions`), and in Slang the probes' octahedron (`rc_octahedron`), the cell code,
-resolve and pinch (`rc_field_code`), the hit's color read (`rc_field_paint`), the splat and its
-paint (`rc_field_splat`), the stamp (`rc_field_stamp`) and the field's distance and march
-(`rc_field_read`), each run on the CPU by its tests through `CpuKernel` (`slangc -target
-shader-sharedlib`). Tools is pinned at `1e1ec63` through `modules/Tools/scripts/pin.py`. Next in
-order: the probes' kernels, trace, merge and gather with their readers, a hit taking the split sum
-from a 32 by 32 Slang table the tests hold to Materials' `SurfaceResponse.SplitSumIntegrated`; then
-the light through surfaces, the screen probes, the light on the picture and the contact shadow's
-march. Left behind each part's Reply: the field's normal, the cascades' table, the march held within
-a cascade, the splat's second plane, the lending of thin emitters, the repaint and the clearing of
-codes. Open: AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md wait for the owner. Read
-first: AGENTS.md, this file's head, Decisions 6 to 8 and these Replies, the README's binding
-section, NORM.md's N 4.8 to 4.11 and N 7.9, and the tests' `CpuKernel.cs`. Every build and test goes
-through N 7.9's lock (`flock -s /run/user/1000/gpu.lock` once `/run/user/1000/gpu.waiting/` holds no
-living process's file), restored outside it and built with `--no-restore
--p:UseSharedCompilation=false` and `MSBUILDDISABLENODEREUSE=1`, and each commit is read by
-`commitcheck.py . --staged --message=<file>` first.
-
-The probes' trace, the merge between cascades and the gather, on the CPU, in the commit carrying
-this line. `rc_probes` holds `ProbeCascade`, `traceProbeRay`, which crosses a surface that lets
-light through and carries share to the power of the depth crossed, a cell whose surface lets none
-through ending the crossing, the reach map (`reachAlong`, 16 by 16 ways) and the gather
-(`lightTaken`, `reflectedLight`); a cell carries its surface's share of light through as a value of
-its own (`throughAt`), not in the paint's alpha. `rc_cascade_merge` holds the agreed rule,
-`mergedLight`: a near ray past its reach takes the light of the eight far probes about its end E at
-their trilinear weights, a probe inside a mesh or not seeing E (`farProbeSees`, slack an eighth of
-the far spacing) weighing nothing, and marches on itself where none counts. The four tests, each
-failing first: the open box's floor reads 0.2540 against the dome's 0.2511 (+1.1%), and 0.3119
-(+24%) with every far probe at its trilinear weight; the lidded box reads 0 (0.0580 without the
-rule); the box lidded by a sheet reads 0.70% of the open one, under 1% with little room; the dark
-room behind a wall passing 0.707 straight on reads 0.675 of its floor with the wall away. The
-self-march is taken by 0 of 256 texels in all four; forced on every texel, the open box reads 0.2470
-with 128 texels marching 4.9 steps on the mean and 11 at most. Open, for your word: the far probes'
-rays begin at the probes, the far interval from 0, not 4 units out, since probes about E whose rays
-begin 4 out leave the near ray's next 4 units past E untraced, and the open box then reads 0.900,
-3.6 times the dome's. The phase's picture follows that word.
-
-The cost of the far rays begun at the probe and the phase's picture, in the commit carrying this
-line. Counted by the tests' kernel, a far probe's light ray takes 7.58 steps on the mean and 58 at
-most begun at the probe against 3.90 and 47 begun 4 units out in the open box, 7.49 and 61 against
-3.71 and 50 in the lidded box, 7.48 and 58 against 3.74 and 47 in the box lidded by a sheet, 8.23
-and 68 against 4.52 and 70 in the rooms parted by the wall and 7.25 and 68 against 3.87 and 54 with
-the wall away, about 1.9 times the steps on the mean and alike at most, over 46080 rays in the boxes
-and 38400 in the rooms. Begun 4 out, the floors read 0.900 in the open box, 0.696 lidded, 0.772
-lidded by a sheet and 0.376 in the dark room with the wall and without it alike. The self-march
-stays, and no texel of the four tests takes it, nor any at the picture's 15 probes. A scene that
-would is one where a near ray ends in a space narrower than the far probes' spacing, a duct, a
-closet or the gap between two walls, so the eight far probes about its end all stand in the walls or
-beyond them. The picture, `2026-11-19-item-3-open-box-rules.webp`, reads the floor across its middle
-under the trilinear weights alone, the agreed rule and that rule with the far rays begun 4 out,
-beside the dome's share there. The agreed rule reads 0.2540 at the middle against the dome's 0.2511,
-and 17% over at worst near the walls, the trilinear weights alone up to 48% over, and the far rays
-begun 4 out up to 3.6 times.
-
-The probes' passes, in the commit carrying this line. `rc_probe_passes` holds what an engine's
-kernel calls once a thread with its index, past the last index doing nothing: `traceTexel` writes a
-texel's ray to `IProbeRays`, `reachTexel` a reach texel to `IReachTexels`, `settleTexel` gives the
-coarsest cascade's texels their own light or the sky, `mergeTexel` merges a texel with the merged
-light of the cascade above through `IFarProbes` into `IMergedLight`, and `gatherAt` takes the finest
-cascade's probes about a surface point into `ISurfacePoints` by the merge's own weights. Every
-cascade's rays begin at its probe, the engine setting each one's end in its `ProbeCascade`, farther
-each cascade up and the coarsest past the field's edge, each end beyond its spacing times the root
-of three so its reach map covers the seeing test. Dispatched a thread a texel, the passes read as
-the one-thread trace in all five fields with no difference, and three cascades ending at 2, 4 and 32
-read the open box's floor 0.2317 against the dome's 0.2511 (7.7% under) and the lidded box's 0. For
-your word: in a chain longer than two, a texel no probe above sees marches on to the coarsest
-cascade's end, an extension of the agreed rule past a pair. `SlangInterfaceTests` holds every public
-Slang interface to a row in the README's table, which failed first on the four new ones. `CpuKernel`
-compiles a kernel once a run and runs one kernel's dispatches one at a time. For the engines' change
-list: a cell carries its surface's light-through as a value of its own (`throughAt`), not in the
-paint's alpha, which the README's binding section states.
 
 The three cascades' loss, read by switching each link of the chain against the finest cascade's
 texels each marched on itself to 32, which read the open box's floor 0.2470 against the dome's
@@ -976,3 +830,51 @@ bounce; AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md wait for the 
 LADDER.md's row is with the owner. Read first: the README's ladder section,
 `rc_marched_sight_merge.slang`, `stageProbe` in `rc_probe_passes.slang`, `ProbeMergeTests.Ladder.cs`
 and the test kernel's pass 10.
+
+Item 9, in the commit carrying this line, after `e310325`. The ladder runs every merge to a steady
+state of the bounce. A round runs the whole chain with every hit taking its surface's own light and
+what the surface reflects of the light the probes gave it the round before, a half where it is not
+black and the lintel room's 0.352, gathered at a cell of a grid of 64 a side over the scene's
+surfaces, and nothing is kept past that one round. The test kernel reads that light a cell back
+along the ray from the hit (`bounceAt`), so a march that stops at a sheet's plane inside a wall one
+cell thick reads the side it came from, which a first run without it leaked through the thin wall at
+0.05 of the lit room. The traced loop follows the same rounds over the same cells, those the points'
+rays meet a surface in and those the cells' own rays meet in turn, 2,392 to 6,372 a scene, so the
+two loops part only where a cell's light comes from, the probes or the trace. A closed room whose
+faces send 1 and reflect a half settles at pi times 2 less a sixty-fourth in seven rounds at a gain
+of 0.5000 traced, and the merge at the ray's end follows it at 1.0000 round for round, a test of the
+default suite. Each run of a kernel on the CPU enters a library of its own, a copy of the compiled
+file, so the ladder runs its 48 loops side by side in about five minutes.
+
+With the loop in, the vestibule's walls at 3DEngine's configuration read 1.042 of their trace after
+one gather and 1.033 at the steady state with `MergeAtRayEnd`, in seven rounds at a gain of 0.443,
+where the traced loop's is 0.447. No merge carries an error round the loop on the CPU, since no
+merge's gain lies more than 0.03 above the traced loop's in any scene. The merge that loses light at
+one gather does not hold the loop down either. By marched sight the vestibule's walls read 0.555
+after one gather and 0.600 at the steady state, since what it loses is the light from past its rays'
+ends, the court's through the opening, in every round alike, and its gain lies up to 0.085 below the
+trace's. The merge at the ray's end holds the loop nearest one at the engine's configuration, 0.043
+on the mean distance, and by reach sight at the module's, 0.083 against 0.098 with a worse worst
+part. No merge stands above every other at both, so the default stays `MergeAtRayEnd`.
+
+The CPU reads near one with the bounce in, so the 2.05 lies in what a device hit reflects of the
+probes, where the CPU's reflects its albedo over pi of the module's gather. For the device's walls
+to read twice the CPU's from the same first frame, its gain a frame must be near 0.72 against the
+CPU's 0.44. A device hit (`glossyHit` in 3DEngine's `probelight.slang`) reflects its diffuse share
+past the gloss's of a six-faced cube of each probe's light read at the normal and moved toward the
+faces' light at the surfaces (`towardSurface`), beside the gloss's share of the same cube read about
+the mirror way, both times `lights.counts.z` and `kept`. The gloss's share takes no part of the
+paint's color, so a smooth wall at a graze reflects nearly all it takes, and the gain a frame can
+lie well above the paint's albedo. The same gain would raise main's merge, which reads 0.600 on the
+CPU at the steady state, and main's 1.07 on the device would then be a merge that loses light
+carried up by a hit that reflects too much. The 3DEngine session is asked, through the reviewer's
+queue, for frames 1 to 10 from a cold start at `42ed4e13` and at `df4d0559`, the +z face of probe
+(3,4,2) of cascade 1 in `bounced` and the left wall, with `lights.counts.z`, `kept` and the gloss's
+share at the wall's hits, to set beside the vestibule's rounds in LADDER.md.
+
+Item 9 stands in one commit, the bounce in the test kernel and the tests, the ladder's tables after
+one gather and at the steady state with the rounds and the gain a round, the vestibule round by
+round, and the CPU kernel's copies. Open: the device's frames from the 3DEngine session, and
+AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md wait for the owner, LADDER.md's row with
+the owner. Read first: `ProbeMergeTests.Bounce.cs`, `bounceAt` in the test kernel, the README's
+ladder section, and the last two tables of LADDER.md.
