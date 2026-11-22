@@ -15,7 +15,7 @@ __exported import rc_cascade_merge;
 
 // The texel of an octahedron of `texels` along each side at t, a texel up to one past an edge
 // folded onto the texel across that edge, as a block of texels about a way near an edge reads it.
-int2 foldedTexel(int2 t, int texels)
+public int2 foldedTexel(int2 t, int texels)
 {
     if (t.x < 0)
         t = int2(0, texels - 1 - t.y);
@@ -192,9 +192,11 @@ public float3 reachSightLight<F : IProbeField, P : IFarSkyProbes, Q : IProbePlac
 // (reachSightLight), the ladder's second rung.
 public struct MergeByReachSight : IMerge
 {
-    public float3 light<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces, K : ISkyShare, S : IMarchSteps>(F field, P probes, Q places,
-        ProbeCascade far, float marchEnd, float3 origin, uint texels, uint2 texel, ProbeRay near, K sky, inout S steps, out bool marched,
-        out float skyShare)
+    public static const bool readsStage = false;
+
+    public float3 light<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces, K : ISkyShare, S : IMarchSteps, V : IStageValues>(F field,
+        P probes, Q places, ProbeCascade far, float marchEnd, float3 origin, uint texels, uint2 texel, ProbeRay near, K sky, inout S steps,
+        V stage, int3 probe, out bool marched, out float skyShare)
     {
         return reachSightLight(field, probes, places, far, marchEnd, origin, texels, texel, near, sky, steps, marched, skyShare);
     }

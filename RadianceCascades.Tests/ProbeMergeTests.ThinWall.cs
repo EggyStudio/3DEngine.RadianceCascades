@@ -50,6 +50,7 @@ public sealed partial class ProbeMergeTests
     [CpuKernelTheory]
     [InlineData(Merge.AtRayEnd)]
     [InlineData(Merge.ByReachSight)]
+    [InlineData(Merge.ByMarchedSight)]
     public void No_Light_Passes_A_Wall_Of_One_Cell_Into_The_Dark_Room_Beside_A_Lit_One(Merge merge)
     {
         var cells = Field(ThinWallRooms.SelectMany((box, i) => Cuboid(box.Low, box.High, i + 1)));

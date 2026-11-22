@@ -552,6 +552,59 @@ public float reachAlong<F : IFieldVolume, S : IMarchSteps>(F field, float3 place
     return ReachOpen;
 }
 
+// Where a ray from origin along way first meets, between tMin and tMax, a surface that lets no
+// light through, crossing up to four that let some through (IProbeField.throughAt), or -1 where it
+// meets none, leaves every cascade or takes MarchSteps steps, each step handed to steps. It reads
+// the field as the probes' rays take it (fieldDistanceSheetIn). A canopy's leaves hide nothing
+// behind them from a sight line taken so, however much of the light they keep, so the floor under
+// one takes the sky through the probes above the leaves as far as the leaves let it through.
+public float opaqueAlong<F : IProbeField, S : IMarchSteps>(F field, float3 origin, float3 way, float tMin, float tMax, inout S steps)
+{
+    float t = tMin;
+    int crossed = 0;
+    bool within = false;
+    [loop]
+    for (int i = 0; i < MarchSteps && t < tMax; i++)
+    {
+        float3 p = origin + way * t;
+        int c = field.cascadeOf(p, 1.0);
+        if (c < 0)
+            return -1.0;
+        float cell = field.cornerAndCell(c).w;
+        float d = fieldDistanceSheetIn(field, c, p);
+        steps.at(t, d);
+        if (d >= cell * MarchHit)
+        {
+            within = false;
+            t += max(d, cell * MarchStep);
+            continue;
+        }
+        if (field.throughAt(c, cellOf(field, c, p)) <= 0.0)
+            return t;
+        if (!within)
+        {
+            crossed++;
+            if (crossed > 4)
+                return t;
+            within = true;
+        }
+        t += max(cell * 0.5, -d);
+    }
+    return -1.0;
+}
+
+// Whether nothing the field holds stands between a and b but surfaces that let light through
+// (opaqueAlong), clearance kept clear at either end, so a point a little within a surface or a
+// probe standing on one sees and is seen, and either within twice clearance of the other sees it.
+public bool seesAcross<F : IProbeField, S : IMarchSteps>(F field, float3 a, float3 b, float clearance, inout S steps)
+{
+    float3 toward = b - a;
+    float distance = length(toward);
+    if (distance <= clearance * 2.0)
+        return true;
+    return opaqueAlong(field, a, toward / distance, clearance, distance - clearance, steps) < 0.0;
+}
+
 // A probe's texels as the gather reads them, each one's light merged from every distance.
 public interface IProbeLight
 {

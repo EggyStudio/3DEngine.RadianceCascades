@@ -509,40 +509,72 @@ public bool mergeTexel<F : IProbeField, R : IProbeRays, Q : IProbePlaces, P : IF
     float marchEnd, K sky, inout S steps, uint index)
 {
     MergeAtRayEnd merge;
-    return mergeTexel(merge, field, rays, places, above, abovePlaces, merged, cascade, aboveCascade, marchEnd, sky, steps, index);
+    NoStageValues none;
+    return mergeTexel(merge, none, field, rays, places, above, abovePlaces, merged, cascade, aboveCascade, marchEnd, sky, steps, index);
 }
 
 // mergeTexel by the merge a binding names (IMerge), in place of the default the forms without one
-// take, MergeAtRayEnd.
-public bool mergeTexel<G : IMerge, F : IProbeField, R : IProbeRays, Q : IProbePlaces, P : IFarProbes, U : IProbePlaces, M : IMergedLight,
-    K : ISky, S : IMarchSteps>(G merge, F field, R rays, Q places, P above, U abovePlaces, M merged, ProbeCascade cascade,
-    ProbeCascade aboveCascade, float marchEnd, K sky, inout S steps, uint index)
+// take, MergeAtRayEnd, with the values the per-probe stage kept for cascade's probes where the
+// merge reads them (IMerge.readsStage), and NoStageValues where it reads none.
+public bool mergeTexel<G : IMerge, V : IStageValues, F : IProbeField, R : IProbeRays, Q : IProbePlaces, P : IFarProbes, U : IProbePlaces,
+    M : IMergedLight, K : ISky, S : IMarchSteps>(G merge, V stage, F field, R rays, Q places, P above, U abovePlaces, M merged,
+    ProbeCascade cascade, ProbeCascade aboveCascade, float marchEnd, K sky, inout S steps, uint index)
 {
     NoSkyShares<P> lights = { above };
     NoSkyMerged<M> kept = { merged };
     WholeShare<K> whole = { sky };
-    return mergeTexel(merge, field, rays, places, lights, abovePlaces, kept, cascade, aboveCascade, marchEnd, whole, steps, index);
+    return mergeTexel(merge, stage, field, rays, places, lights, abovePlaces, kept, cascade, aboveCascade, marchEnd, whole, steps, index);
 }
 
 // mergeTexel by the merge a binding names, keeping beside the light the share of the sky in it.
-public bool mergeTexel<G : IMerge, F : IProbeField, R : IProbeRays, Q : IProbePlaces, P : IFarSkyProbes, U : IProbePlaces,
-    M : IMergedSkyLight, K : ISkyShare, S : IMarchSteps>(G merge, F field, R rays, Q places, P above, U abovePlaces, M merged,
-    ProbeCascade cascade, ProbeCascade aboveCascade, float marchEnd, K sky, inout S steps, uint index)
+public bool mergeTexel<G : IMerge, V : IStageValues, F : IProbeField, R : IProbeRays, Q : IProbePlaces, P : IFarSkyProbes,
+    U : IProbePlaces, M : IMergedSkyLight, K : ISkyShare, S : IMarchSteps>(G merge, V stage, F field, R rays, Q places, P above,
+    U abovePlaces, M merged, ProbeCascade cascade, ProbeCascade aboveCascade, float marchEnd, K sky, inout S steps, uint index)
 {
     if (index >= cascadeTexels(cascade))
         return false;
     uint texels = cascade.texels * cascade.texels;
     uint2 texel = uint2((index % texels) % cascade.texels, (index % texels) / cascade.texels);
-    float3 place = places.placeOf(probeAt(cascade, index / texels));
+    int3 probe = probeAt(cascade, index / texels);
+    float3 place = places.placeOf(probe);
     // Set before the call, since slangc does not see through a merge taken by its shape (IMerge)
     // that it writes them, and refuses their reading as of a variable never set.
     bool marched = false;
     float skyShare = 0.0;
     float3 light = merge.light(field, above, abovePlaces, aboveCascade, marchEnd, place, cascade.texels, texel, rays.rayAt(index), sky, steps,
-        marched, skyShare);
+        stage, probe, marched, skyShare);
     merged.keepMerged(index, light);
     merged.keepSkyShare(index, skyShare);
     return marched;
+}
+
+// A value worked out once for each probe of a cascade from its place and the far cascade above it,
+// which the per-probe stage (stageProbe) keeps for the cascade's merge to read (IStageValues),
+// where every texel of the probe would otherwise work it out again.
+public interface IProbeStage
+{
+    uint valueOf<F : IProbeField, Q : IProbePlaces, S : IMarchSteps>(F field, Q farPlaces, ProbeCascade far, float3 place, inout S steps);
+}
+
+// Keeps the value the per-probe stage worked out for the cascade's probe at index, in the order
+// probeAt reads the cascade's probes, one uint a probe, which IStageValues reads back.
+public interface IStageKeep
+{
+    void keepStage(uint index, uint value);
+}
+
+// The per-probe stage, a thread a probe of cascade, works out stage's value for the probe at index
+// from its place (places) and far's probes (farPlaces) and keeps it, each step of a march it makes
+// handed to steps. A binding runs it before cascade's merge where the merge reads it
+// (IMerge.readsStage), in a pass of its own over cascadeProbes threads, since a value shared by a
+// probe's texels is not held in groupshared memory, whose threads a dispatch does not group by
+// probe at every count of texels.
+public void stageProbe<T : IProbeStage, F : IProbeField, Q : IProbePlaces, U : IProbePlaces, W : IStageKeep, S : IMarchSteps>(T stage,
+    F field, Q places, U farPlaces, ProbeCascade cascade, ProbeCascade far, W kept, inout S steps, uint index)
+{
+    if (index >= cascadeProbes(cascade))
+        return;
+    kept.keepStage(index, stage.valueOf(field, farPlaces, far, places.placeOf(probeAt(cascade, index)), steps));
 }
 
 // One probe's texels as lightTaken reads them, its merged light through IFarProbes.
@@ -679,6 +711,9 @@ public void gatherTraced<G : IMerge, F : IProbeField, P : IFarSkyProbes, Q : IPr
     begun.t = 0.0;
     begun.carried = 1.0;
     begun.light = float3(0.0);
+    // A surface point is no probe's place, so a merge that reads the per-probe stage takes none
+    // here.
+    NoStageValues none;
     [loop]
     for (uint k = 0u; k < cascade.texels * cascade.texels; k++)
     {
@@ -689,7 +724,8 @@ public void gatherTraced<G : IMerge, F : IProbeField, P : IFarSkyProbes, Q : IPr
         float weight = facing * texelSolidAngle(cascade.texels, texel, shares);
         bool marched = false;
         float skyShare = 0.0;
-        taken += merge.light(field, probes, places, cascade, marchEnd, origin, cascade.texels, texel, begun, sky, steps, marched, skyShare) * weight;
+        taken += merge.light(field, probes, places, cascade, marchEnd, origin, cascade.texels, texel, begun, sky, steps, none, int3(-1), marched,
+            skyShare) * weight;
         skyShares += skyShare * weight;
         weights += weight;
     }

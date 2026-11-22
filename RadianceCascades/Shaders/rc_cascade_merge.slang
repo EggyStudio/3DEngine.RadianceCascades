@@ -413,14 +413,35 @@ public float3 mergedLight<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces, 
 // an octahedron of `texels` along each side brings along its way from origin, its ray traced as
 // near, with what lies past the ray's end taken from far's probes read through probes at their
 // places, in skyShare the share of the sky in that light, and in marched whether the ray marched on
-// itself to marchEnd, as mergedLight takes them. The merges stand on a ladder the module's tests
-// keep, each read against every other over a set of scenes, and the one on top is the default the
-// passes take where a binding names none.
+// itself to marchEnd, as mergedLight takes them. A merge that reads the per-probe stage
+// (readsStage) takes in stage the values it kept for the near cascade's probes and in probe the
+// near probe origin is the place of, or a probe below zero where origin is no probe's place, as a
+// surface point's is. The merges stand on a ladder the module's tests keep, each read against every
+// other over a set of scenes, and the one on top is the default the passes take where a binding
+// names none.
 public interface IMerge
 {
-    float3 light<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces, K : ISkyShare, S : IMarchSteps>(F field, P probes, Q places,
-        ProbeCascade far, float marchEnd, float3 origin, uint texels, uint2 texel, ProbeRay near, K sky, inout S steps, out bool marched,
-        out float skyShare);
+    // Whether the merge reads the values the per-probe stage keeps (stageProbe, IStageValues), so a
+    // binding runs the stage before a level's merge and keeps its values only where it is set.
+    static const bool readsStage;
+
+    float3 light<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces, K : ISkyShare, S : IMarchSteps, V : IStageValues>(F field, P probes,
+        Q places, ProbeCascade far, float marchEnd, float3 origin, uint texels, uint2 texel, ProbeRay near, K sky, inout S steps, V stage,
+        int3 probe, out bool marched, out float skyShare);
+}
+
+// Reads the value the per-probe stage (stageProbe) kept for a probe of the cascade a merge's near
+// texels belong to, one uint a probe, which a merge that reads the stage (IMerge.readsStage) takes.
+public interface IStageValues
+{
+    uint valueAt(int3 probe);
+}
+
+// No values of the per-probe stage, for a merge that reads none and for the passes' forms that take
+// no merge.
+public struct NoStageValues : IStageValues
+{
+    public uint valueAt(int3 probe) { return 0u; }
 }
 
 // The merge at the ray's end (mergedLight), the ladder's first rung. The ray marches on to open
@@ -428,9 +449,11 @@ public interface IMerge
 // where they disagree on where a surface lies along the way.
 public struct MergeAtRayEnd : IMerge
 {
-    public float3 light<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces, K : ISkyShare, S : IMarchSteps>(F field, P probes, Q places,
-        ProbeCascade far, float marchEnd, float3 origin, uint texels, uint2 texel, ProbeRay near, K sky, inout S steps, out bool marched,
-        out float skyShare)
+    public static const bool readsStage = false;
+
+    public float3 light<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces, K : ISkyShare, S : IMarchSteps, V : IStageValues>(F field,
+        P probes, Q places, ProbeCascade far, float marchEnd, float3 origin, uint texels, uint2 texel, ProbeRay near, K sky, inout S steps,
+        V stage, int3 probe, out bool marched, out float skyShare)
     {
         return mergedLight(field, probes, places, far, marchEnd, origin, texels, texel, near, sky, steps, marched, skyShare);
     }

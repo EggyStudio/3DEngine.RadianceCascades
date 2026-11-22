@@ -14,6 +14,9 @@ cascades on the CPU at 0.98 of the light traced to each point in all, beside tha
 
 Commits that day
 
+- `af7d199` The passes take a merge by name through one shape, with the merge at the ray's end and a
+  merge by reach sight as its first two rungs, the closed room, the thin wall and the lintel read
+  under both, and a ladder that ranks every merge over seven scenes into the README and LADDER.md.
 - `c0beccc` The README shows under its title a closed room lit through the cascades on the CPU
   beside its trace, and the norm asks each module's README to open with its own output.
 - `1bad0f8` A grazing way handed off over a floor, which takes what the far probes over it see past

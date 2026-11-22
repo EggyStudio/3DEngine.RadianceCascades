@@ -930,3 +930,49 @@ line and the failing lines alone are read, and each commit is read by `commitche
 bash on Windows alike, and Python's hashlib where a system has none, in place of `sha256sum`, which
 N 6.6's check refuses. This repository's own tests do not run that check on its scripts; the
 binding's suite found it.
+
+Item 8, in the commit carrying this line, after `af7d199`. A merge says whether it reads the
+per-probe stage (`IMerge.readsStage`), and a binding runs `stageProbe` over a cascade's probes
+before the cascade's merge, keeps one uint a probe (`IStageKeep`) and hands the values to
+`mergeTexel` beside the merge (`IStageValues`), `NoStageValues` where the merge reads none, so a
+merge that reads none pays nothing. `FarSightLines` keeps a bit for each of the eight far probes
+about a probe, clamped onto the far grid, set where the probe sees it along a line marched through
+the field past surfaces that let light through (`seesAcross`, `opaqueAlong`), half a cell kept clear
+at either end. The eight lengths wait for a merge that asks for them. The third rung,
+`MergeByMarchedSight`, is gi_merge.slang's merge to the letter but in three places where the module
+has no like. The far texel's mark, whole, half or inside, has none, so a far probe inside a mesh is
+passed over by its reach map. The march on begins at the near ray's end, the interval's end for a
+ray that reached it. A texel traces one ray where 3DEngine traces four. The ladder's cost counts the
+stage's steps. The theories pin each merge's own bound. The first commit's port fix stands, the
+second merge leaving out far probes outside the field, whose reach maps are open along every way.
+Its lintel weakness, far probes above the opening read toward the ground under the lintel, stays
+pinned.  The third rung loses light by its rule and not by the port. Where the march on meets a
+surface short of the far level's end and no far probe's own hit lies within its interval to agree,
+as at a graze over a floor, the light from past the ray's end is none, so the uniform closed room
+reads 0.84 to 0.96. Where every coarser probe about a probe stands behind the room's faces none is
+seen, so the lintel's deep end reads 0.15 of its trace and its face under the sky alone none of it.
+The ladder ranks it last at both configurations, 0.426 and 0.349 on the mean distance.  The ladder's
+configuration axis takes 3DEngine's configuration as its session gave it, probes every 8 cells of a
+field of five cascades of 64 cells from 0.125, 8 a side, spacing 1 to 16, the finest two traced at
+16 texels a side and read at 8 for four rays a texel, every ray to four spacings but the last two's
+to the field's diagonal of 221.7, caps of 64 but the last's, probes moved 0.1 clear by at most 0.45
+of their spacing, and each point gathered from the finest level about it. The door is Sponza's
+vestibule and not a built room, so the ladder's stand-in is a vestibule off a sunlit court. At that
+configuration the CPU does not read the walls high. `MergeAtRayEnd` reads the door's walls 1.075 and
+the vestibule's 1.04 to 1.07, where the device path at `42ed4e13` reads up to 2.05. So the cause is
+not sampling at that configuration, and the ladder does not predict the device. The two part before
+the gather, since the device's probe (3,4,2) of cascade 1 reads 2.1 times main's on its +z face, at
+what the CPU does not hold, the light a hit takes, which on the CPU is a fixed light and on the
+device the probes' own light frame over frame for 240 frames, beside the sun and Sponza's meshes.
+The engine's own merge reads the vestibule's walls 0.555 on the CPU where main reads 1.07 on the
+device, so the device's walls take most of their light through that bounce, and the ladder predicts
+the device only where it holds the bounce. No merge stands above every other at both configurations,
+`MergeAtRayEnd` reading 14.4 a texel at the engine's against marched sight's 12.7, so the default
+stays `MergeAtRayEnd`.  Item 8's two commits stand as above, every merge behind `IMerge`, the stage
+and the ladder at two configurations, `.github/LADDER.md` written by `RC_LADDER=.github/LADDER.md
+dotnet test RadianceCascades.Tests --filter FullyQualifiedName~The_Ladder` in about five and a half
+minutes. Open: the ladder holds one bounce, so it does not say whether the device's 2.05 lies in the
+bounce; AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md wait for the owner, and
+LADDER.md's row is with the owner. Read first: the README's ladder section,
+`rc_marched_sight_merge.slang`, `stageProbe` in `rc_probe_passes.slang`, `ProbeMergeTests.Ladder.cs`
+and the test kernel's pass 10.

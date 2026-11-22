@@ -47,19 +47,20 @@ public sealed partial class ProbeMergeTests
     // The cells of the field's cascades one after another, and the light a hit takes in each, the
     // lit light of the surface nearest the cell, its albedo over pi times the sky's irradiance
     // there, read against the boxes, for each cell within a cell of a surface, or none where lit
-    // is unset.
-    private static (float[] Cells, float[] Light) LintelScene(bool lit = true)
+    // is unset, over the cascades of field, LintelField where none is given.
+    private static (float[] Cells, float[] Light) LintelScene(bool lit = true, Vector4[]? field = null)
     {
+        field ??= LintelField;
         var triangles = LintelRoom.SelectMany((box, i) => Cuboid(box.Low, box.High, i + 1)).ToList();
         const int each = Size * Size * Size;
-        var cells = new float[5 * each * LintelField.Length];
-        var light = new float[each * LintelField.Length];
-        for (int c = 0; c < LintelField.Length; c++)
+        var cells = new float[5 * each * field.Length];
+        var light = new float[each * field.Length];
+        for (int c = 0; c < field.Length; c++)
         {
-            var one = FieldCascade(triangles, new(LintelField[c].X, LintelField[c].Y, LintelField[c].Z), LintelField[c].W);
+            var one = FieldCascade(triangles, new(field[c].X, field[c].Y, field[c].Z), field[c].W);
             one.CopyTo(cells, 5 * each * c);
-            var corner = new Vector3(LintelField[c].X, LintelField[c].Y, LintelField[c].Z);
-            var cell = LintelField[c].W;
+            var corner = new Vector3(field[c].X, field[c].Y, field[c].Z);
+            var cell = field[c].W;
             Parallel.For(0, lit ? each : 0, i =>
             {
                 if (MathF.Abs(one[i * 5]) > cell)
@@ -210,6 +211,7 @@ public sealed partial class ProbeMergeTests
     [CpuKernelTheory]
     [InlineData(Merge.AtRayEnd)]
     [InlineData(Merge.ByReachSight)]
+    [InlineData(Merge.ByMarchedSight)]
     public void A_Room_Open_Under_A_Lintel_Reads_Its_Deep_End_Against_The_Light_Traced_There(Merge merge)
     {
         var (cells, light) = LintelScene();
@@ -247,15 +249,24 @@ public sealed partial class ProbeMergeTests
         // opening meeting the lintel's inner face among them, and each is read toward the ray's
         // point at its hit's depth, under the lintel, a way from a probe above that falls past
         // the lintel's edge onto the ground outside and not toward the sky the ray meets. Its
-        // probe and means may lie no further under the trace than 0.4 and 0.5 of it.
-        Assert.True(merge == Merge.AtRayEnd
-            ? probe is >= 0.75f and <= 1.25f && nearer is >= 0.75 and <= 1.25 && deepest is >= 0.75 and <= 1.25 && within >= 60
-            : probe is >= 0.4f and <= 1.25f && nearer is >= 0.5 and <= 1.25 && deepest is >= 0.5 and <= 1.25 && within >= 36, said);
+        // probe and means may lie no further under the trace than 0.4 and 0.5 of it. By marched
+        // sight the probe takes 0.151 and the means 0.148 and 0.148, none of the 64 probes within
+        // a quarter. The coarsest level's probes about the room's stand outside its faces, none
+        // seen, so a texel of the level below whose ray reaches its end toward the opening takes
+        // its own ray alone and none of the sky past it. Its probe and means may lie no further
+        // under the trace than a tenth of it.
+        Assert.True(merge switch
+        {
+            Merge.AtRayEnd => probe is >= 0.75f and <= 1.25f && nearer is >= 0.75 and <= 1.25 && deepest is >= 0.75 and <= 1.25 && within >= 60,
+            Merge.ByReachSight => probe is >= 0.4f and <= 1.25f && nearer is >= 0.5 and <= 1.25 && deepest is >= 0.5 and <= 1.25 && within >= 36,
+            _ => probe is >= 0.1f and <= 1.25f && nearer is >= 0.1 and <= 1.25 && deepest is >= 0.1 and <= 1.25,
+        }, said);
     }
 
     [CpuKernelTheory]
     [InlineData(Merge.AtRayEnd)]
     [InlineData(Merge.ByReachSight)]
+    [InlineData(Merge.ByMarchedSight)]
     public void A_Room_Open_Under_A_Lintel_Lit_By_The_Sky_Alone_Reads_Its_Face_Toward_The_Opening_Against_The_Sky_Traced_There(Merge merge)
     {
         // The room as an engine binds it, every surface a ray meets black, the light a bounce gives
@@ -285,6 +296,13 @@ public sealed partial class ProbeMergeTests
         // above the opening read toward the ground outside past the lintel's edge, as the deep end
         // does, and the face takes the sky through the opening alone. The merge at the ray's end
         // may lie a fifth either way of the trace, the merge by reach sight above a quarter of it.
-        Assert.True(merge == Merge.AtRayEnd ? merged / traced is >= 0.8f and <= 1.2f : merged / traced is >= 0.25f and <= 1.2f, said);
+        // By marched sight the face takes none of it, the coarsest level's probes standing outside
+        // the room unseen, and may lie anywhere under 1.2 of it.
+        Assert.True(merge switch
+        {
+            Merge.AtRayEnd => merged / traced is >= 0.8f and <= 1.2f,
+            Merge.ByReachSight => merged / traced is >= 0.25f and <= 1.2f,
+            _ => merged / traced <= 1.2f,
+        }, said);
     }
 }

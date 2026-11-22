@@ -46,6 +46,9 @@ public sealed partial class ProbeMergeTests
         // level's texels, and the gather's reads of the finest level's over its points.
         public float MergeSteps { get; init; }
         public float MergeReads { get; init; }
+        // The steps the per-probe stage's marches took over every level's texels, which a merge
+        // that reads the stage pays beside its own.
+        public float StageSteps { get; init; }
         public float GatherReads { get; init; }
         // Each level's merged light, its first channel, each texel where cascadeTexelIndex puts it.
         public float[][] LevelLight { get; init; } = [];
@@ -101,6 +104,16 @@ public sealed partial class ProbeMergeTests
         public float Unheld { get; init; }
         // The merge every level's merge and gatherTraced take, by its rung on the ladder.
         public Merge Merge { get; init; }
+        // MovedTo is how far off the field's surfaces a moved probe stands, and MovedAtMost the
+        // most it moves as a share of its level's spacing, none where 0. GatherHolding gathers
+        // each point from the finest level whose probes stand about it on every side, in place
+        // of the finest level alone, and LightByPlace reads a hit's light from CellLight by the
+        // hit's place in the test's one cascade at Corner, whatever cascade of the field it lies
+        // in, as the light traced to a point reads it.
+        public float MovedTo { get; init; } = Margin;
+        public float MovedAtMost { get; init; }
+        public bool GatherHolding { get; init; }
+        public bool LightByPlace { get; init; }
     }
 
     // The merges the passes take (IMerge), as the test kernel names them at 127 of its setup.
@@ -108,6 +121,7 @@ public sealed partial class ProbeMergeTests
     {
         AtRayEnd,
         ByReachSight,
+        ByMarchedSight,
     }
 
     private const float WallAlbedo = 0.6f;
@@ -125,9 +139,10 @@ public sealed partial class ProbeMergeTests
     {
         setting ??= new Setting();
         var points = setting.Points ?? [(place, setting.Normal)];
-        var setup = new float[129 + 7 * points.Length];
+        // The first four levels' floats from 16 and any past them after the points.
+        var setup = new float[129 + 7 * points.Length + 16 * Math.Max(levels.Length - 4, 0)];
         (setup[0], setup[1], setup[2], setup[3], setup[4], setup[5]) = (Corner.X, Corner.Y, Corner.Z, Cell, Size, setting.SkyLight);
-        float[] binding = [setting.Moved ? 1 : 0, Margin, setting.VaryingSky ? 1 : 0, setting.Sun.X, setting.Sun.Y, setting.Sun.Z, WallAlbedo,
+        float[] binding = [setting.Moved ? 1 : 0, setting.MovedTo, setting.VaryingSky ? 1 : 0, setting.Sun.X, setting.Sun.Y, setting.Sun.Z, WallAlbedo,
             setting.CellLight is null ? 0 : 1];
         binding.CopyTo(setup, 80);
         if (setting.FieldCascades is { } field)
@@ -140,7 +155,7 @@ public sealed partial class ProbeMergeTests
         var (texels, reaches) = (0, 0);
         for (int l = 0; l < levels.Length; l++)
         {
-            var (level, at) = (levels[l], 16 + l * 16);
+            var (level, at) = (levels[l], l < 4 ? 16 + l * 16 : 129 + 7 * points.Length + (l - 4) * 16);
             float[] cascade = [level.Corner.X, level.Corner.Y, level.Corner.Z, level.Spacing, level.X, level.Y, level.Z, level.Texels, 0, level.End, texels, reaches, texels,
                 setting.Caps?[l] ?? 0, level.Kept, level.Read];
             cascade.CopyTo(setup, at);
@@ -159,6 +174,7 @@ public sealed partial class ProbeMergeTests
         setup[125] = setting.GateFiner ? 1 : 0;
         setup[126] = setting.Held ? 1 : 0;
         setup[127] = (int)setting.Merge;
+        (setup[91], setup[122], setup[123]) = (setting.MovedAtMost, setting.GatherHolding ? 1 : 0, setting.LightByPlace ? 1 : 0);
         (setup[88], setup[89], setup[90]) = (setting.OneSided ? 1 : 0, setting.IndirectShare, setting.Indirect);
         var fieldCells = Math.Max(setting.FieldCascades?.Length ?? 1, 1) * Size * Size * Size;
         var held = new float[12 * fieldCells];
@@ -167,11 +183,13 @@ public sealed partial class ProbeMergeTests
         var traceSteps = new float[texels];
         var cellLight = setting.CellLight ?? [0];
         var reads = new float[texels + points.Length];
+        // Each probe's value of the per-probe stage and the steps its marches took.
+        var stage = new uint[2 * levels.Sum(level => level.Probes)];
         void Pass(int pass, int level, int threads)
         {
             (setup[6], setup[7]) = (pass, level);
             CpuKernel.Run("probe_passes_cpu.slang", ((uint)(threads + 63) / 64, 1, 1), cells, setup, rays, reach, merged, marches, surfaces, cellLight,
-                skyShares, held, traceSteps, heldList, reads);
+                skyShares, held, traceSteps, heldList, reads, stage);
         }
         if (setting.Held)
         {
@@ -200,7 +218,13 @@ public sealed partial class ProbeMergeTests
             }
             Pass(2, levels.Length - 1, levels[^1].TexelCount);
             for (int l = levels.Length - 2; l >= 0; l--)
+            {
+                // The merge by marched sight reads the lines of sight its stage marched for the
+                // level's probes, a pass a thread a probe ahead of the level's merge.
+                if (setting.Merge == Merge.ByMarchedSight)
+                    Pass(10, l, levels[l].Probes);
                 Pass(3, l, levels[l].TexelCount);
+            }
         }
         Pass(setting.Traced ? 6 : 4, 0, points.Length);
         var (marched, steps, most) = (0, 0, 0);
@@ -231,6 +255,7 @@ public sealed partial class ProbeMergeTests
             HeldLight = held,
             Listed = (int)heldList[0],
             MergeSteps = Enumerable.Range(0, texels).Sum(k => marches[k * 2 + 1]) / (float)texels,
+            StageSteps = Enumerable.Range(0, stage.Length / 2).Sum(k => (float)stage[k * 2 + 1]) / texels,
             MergeReads = reads[..texels].Sum() / texels,
             GatherReads = reads[texels..].Sum() / points.Length,
             LevelLight = levels.Select((level, l) => Enumerable.Range(levels.Take(l).Sum(o => o.TexelCount), level.TexelCount)
