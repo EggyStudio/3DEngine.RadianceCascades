@@ -140,12 +140,15 @@ public sealed class SlangTests
     // every call, and with a call at each of the three ways the march met a surface and a march at
     // each of the merge's three legs, one engine's merge took 2.6 minutes and 3.75 GB to compile.
     // A hitLight that counts its calls atomically leaves one atomic in the SPIR-V for each copy of
-    // it, since slangc inlines every call and an atomic is never merged with another.
+    // it, since slangc inlines every call and an atomic is never merged with another. The copy lies
+    // outside the loop the march's steps take, in a loop about it that shades once and goes on,
+    // since a shading inlined in the step loop is paid for at every step: one engine's trace took
+    // 4.02 and 5.50 ms in two scenes so, and 1.75 and 2.02 with the shading after its step loop.
     [SlangTheory]
     [InlineData("traceProbeRay(field, float3(0.0), float3(1.0, 0.0, 0.0), 0.0, read[9]).light.x")]
     [InlineData("mergedLight(field, probes, gridPlaces(far), far, read[9], float3(0.0), 4u, uint2(1u), near, sky, none, marched).x")]
     [InlineData("mergedLight(field, probes, gridPlaces(far), far, read[9], float3(0.0), 4u, uint2(1u), near, sky, none, marched, share).x + share")]
-    public void A_Ray_Traced_Or_Merged_Shades_A_Surface_It_Meets_At_One_Place(string light)
+    public void A_Ray_Traced_Or_Merged_Shades_A_Surface_It_Meets_At_One_Place_Outside_The_Loop_Of_Its_Steps(string light)
     {
         var kernel = $$"""
             import rc_cascade_merge;
@@ -191,8 +194,64 @@ public sealed class SlangTests
                 read[8] = {{light}};
             }
             """;
-        var copies = CompiledOf(kernel, "spirv-asm").Count(line => line.Contains(" OpAtomicIAdd ", StringComparison.Ordinal));
+        var assembly = CompiledOf(kernel, "spirv-asm");
+        var copies = assembly.Count(line => line.Contains(" OpAtomicIAdd ", StringComparison.Ordinal));
         Assert.Equal(1, copies);
+        var (around, nested) = LoopsAboutTheAtomic(assembly);
+        Assert.True(around > 0 && nested > 0,
+            $"the shading lies within {around} loops, the innermost of them holding {nested} loops of its own, where the steps' loop is to lie within it");
+    }
+
+    // How many loops of a kernel's SPIR-V hold the block of its one atomic, and how many loops lie
+    // within the innermost of them, read from the blocks' branches: a loop is every block its
+    // header, the block holding its OpLoopMerge, reaches without passing its merge block or coming
+    // back to the header, as SPIR-V's structured control flow lays a loop out.
+    private static (int Around, int Nested) LoopsAboutTheAtomic(string[] assembly)
+    {
+        var next = new Dictionary<string, string[]>();
+        var merges = new Dictionary<string, string>();
+        string? block = null, atomic = null;
+        foreach (var line in assembly)
+        {
+            var words = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (words.Length >= 3 && words[1] == "=" && words[2] == "OpLabel")
+            {
+                block = words[0];
+                next[block] = [];
+                continue;
+            }
+            if (block is null || words.Length == 0)
+                continue;
+            var (op, args) = words[0].StartsWith("Op", StringComparison.Ordinal) ? (words[0], words[1..])
+                : words.Length > 2 && words[1] == "=" ? (words[2], words[3..]) : ("", []);
+            if (op == "OpLoopMerge")
+                merges[block] = args[0];
+            else if (op == "OpBranch")
+                next[block] = [args[0]];
+            else if (op == "OpBranchConditional")
+                next[block] = [args[1], args[2]];
+            else if (op == "OpSwitch")
+                next[block] = args[1..].Where(arg => arg.StartsWith('%')).ToArray();
+            else if (op == "OpAtomicIAdd")
+                atomic = block;
+            else if (op == "OpFunctionEnd")
+                block = null;
+        }
+        var loops = merges.ToDictionary(loop => loop.Key, loop =>
+        {
+            var held = new HashSet<string> { loop.Key };
+            var reached = new Stack<string>(next[loop.Key]);
+            while (reached.TryPop(out var at))
+                if (at != loop.Value && held.Add(at))
+                    foreach (var to in next[at])
+                        reached.Push(to);
+            return held;
+        });
+        var around = loops.Where(loop => atomic is not null && loop.Value.Contains(atomic)).OrderBy(loop => loop.Value.Count).ToList();
+        if (around.Count == 0)
+            return (0, 0);
+        var innermost = around[0];
+        return (around.Count, loops.Keys.Count(header => header != innermost.Key && innermost.Value.Contains(header)));
     }
 
     // The lines slangc writes for a kernel to target, SPIR-V assembly or WGSL.

@@ -220,51 +220,65 @@ ProbeRay marchProbeRay<F : IProbeField, S : IMarchSteps>(F field, float3 origin,
     // it has taken its light at its last point.
     bool again = false;
     uint taken = 0u;
+    // The steps take the inner loop, which reads the field alone and leaves where a step takes the
+    // light of a surface, and the outer loop shades the surface there once and goes on, since a
+    // driver inlines an engine's shading at its call and a call in the steps' loop is paid for at
+    // every step: one engine's trace took 4.02 and 5.50 ms in two scenes so, and 1.75 and 2.02 with
+    // its shading after the steps' loop, every reading the same.
     [loop]
     while (true)
     {
-        // Whether the march ends here, at its end, at its cap or where it leaves every cascade.
-        bool ending = false;
-        float3 p = origin + way * t;
-        int c = -1;
-        if (t >= end)
+        // What the light at q in cascade qc is taken for (Shading), none where the march ends
+        // with no light to take, and the step's point, its cascade, cell and distance.
+        uint shading = ShadeNone;
+        float3 p = origin, q = origin;
+        int c = -1, qc = -1;
+        float cell = 0.0, d = 0.0;
+        [loop]
+        while (true)
         {
-            ending = true;
-            ray.ended = RayPast;
-            ray.t = end;
-        }
-        else if (cap > 0u && taken >= cap)
-        {
-            ending = true;
-            ray.ended = RayCapped;
-            ray.t = t;
-        }
-        else
-        {
-            c = field.cascadeOf(p, 1.0);
-            if (c < 0)
+            // Whether the march ends here, at its end, at its cap or where it leaves every
+            // cascade.
+            bool ending = false;
+            p = origin + way * t;
+            c = -1;
+            if (t >= end)
             {
                 ending = true;
-                ray.ended = RayLeft;
+                ray.ended = RayPast;
+                ray.t = end;
+            }
+            else if (cap > 0u && taken >= cap)
+            {
+                ending = true;
+                ray.ended = RayCapped;
                 ray.t = t;
             }
-        }
-        // What the light at q in cascade qc is taken for, where any is (Shading).
-        uint shading = ShadeNone;
-        float3 q = p;
-        int qc = c;
-        float cell = 0.0, d = 0.0;
-        if (ending)
-        {
-            // A crossing whose light is still to take takes it at its last point.
-            if (entered < 0.0 || lit)
+            else
+            {
+                c = field.cascadeOf(p, 1.0);
+                if (c < 0)
+                {
+                    ending = true;
+                    ray.ended = RayLeft;
+                    ray.t = t;
+                }
+            }
+            q = p;
+            qc = c;
+            cell = 0.0;
+            d = 0.0;
+            if (ending)
+            {
+                // A crossing whose light is still to take takes it at its last point.
+                if (entered >= 0.0 && !lit)
+                {
+                    shading = ShadeEnded;
+                    q = last;
+                    qc = lastCascade;
+                }
                 break;
-            shading = ShadeEnded;
-            q = last;
-            qc = lastCascade;
-        }
-        else
-        {
+            }
             cell = field.cornerAndCell(c).w;
             d = fieldDistanceSheetIn(field, c, p);
             if (clearance > 0.0 && entered < 0.0 && d >= openAt(clearance, cell))
@@ -282,13 +296,14 @@ ProbeRay marchProbeRay<F : IProbeField, S : IMarchSteps>(F field, float3 origin,
             {
                 if (d < cell * MarchHit)
                 {
-                    // A solid that lets no light through, met within the one the ray crosses, as a
-                    // floor under a glass wall, stops it, where marched on it would come out past
-                    // the floor's underside. Each step within passes the share of the cell it began
-                    // in, as a crown's leaves pass more at its edge than at its core, and a crown 6
-                    // units deep passing 0.9 a unit within a unit of its faces and 0.3 within read
-                    // the sky a probe before it takes through it 0.99 of its trace, where with the
-                    // share it was met at taken for its whole depth it read 1.23 times it.
+                    // A solid that lets no light through, met within the one the ray crosses, as
+                    // a floor under a glass wall, stops it, where marched on it would come out past
+                    // the floor's underside. Each step within passes the share of the cell it
+                    // began in, as a crown's leaves pass more at its edge than at its core, and a
+                    // crown 6 units deep passing 0.9 a unit within a unit of its faces and 0.3
+                    // within read the sky a probe before it takes through it 0.99 of its trace,
+                    // where with the share it was met at taken for its whole depth it read 1.23
+                    // times it.
                     float share = field.throughAt(c, cellOf(field, c, p));
                     if (share > 0.0)
                     {
@@ -351,46 +366,47 @@ ProbeRay marchProbeRay<F : IProbeField, S : IMarchSteps>(F field, float3 origin,
                     shading = ShadeHalf;
                 }
             }
-        }
-        if (shading != ShadeNone)
-        {
-            // hitLight is called at this one place of the march, since a driver inlines an
-            // engine's shading at every call, and with a call at each of the three ways a surface
-            // is met a merge took 2.6 minutes to compile on one engine. A crossing takes its light
-            // where it has stopped half the light it carried in, or at its last point within where
-            // it passes more, its light deferred a step past that point, since the light of the
-            // place a crown is met at, taken for all the crossing stops, reads its sunlit front for
-            // the shaded inside behind it: a crown lit from before it read a probe there 1.58
-            // times its trace so.
-            float3 light = field.hitLight(q, way, qc, cellOf(field, qc, q));
-            if (shading == ShadeStop)
-            {
-                ray.ended = RayMet;
-                ray.t = t;
-                ray.light += light * ray.carried;
-                return ray;
-            }
-            crossed = light;
-            lit = true;
-            if (shading == ShadeEnded)
+            if (shading != ShadeNone)
                 break;
-            if (shading == ShadeBeforeSolid)
-            {
-                crossSurface(ray, crossedShare(passed, through, t - from, sheet), crossed);
-                entered = -1.0;
-                again = true;
-                continue;
-            }
-            if (shading == ShadeHalf)
-            {
-                last = p;
-                lastCascade = c;
-                t += max(cell * 0.5, -d);
-                continue;
-            }
-            crossSurface(ray, crossedShare(passed, through, t - d - from, sheet), crossed);
-            entered = -1.0;
+            t += max(d, cell * MarchStep);
         }
+        if (shading == ShadeNone)
+            break;
+        // hitLight is called at this one place of the march, since a driver inlines an engine's
+        // shading at every call, and with a call at each of the three ways a surface is met a
+        // merge took 2.6 minutes to compile on one engine. A crossing takes its light where it has
+        // stopped half the light it carried in, or at its last point within where it passes more,
+        // its light deferred a step past that point, since the light of the place a crown is met
+        // at, taken for all the crossing stops, reads its sunlit front for the shaded inside
+        // behind it: a crown lit from before it read a probe there 1.58 times its trace so.
+        float3 light = field.hitLight(q, way, qc, cellOf(field, qc, q));
+        if (shading == ShadeStop)
+        {
+            ray.ended = RayMet;
+            ray.t = t;
+            ray.light += light * ray.carried;
+            return ray;
+        }
+        crossed = light;
+        lit = true;
+        if (shading == ShadeEnded)
+            break;
+        if (shading == ShadeBeforeSolid)
+        {
+            crossSurface(ray, crossedShare(passed, through, t - from, sheet), crossed);
+            entered = -1.0;
+            again = true;
+            continue;
+        }
+        if (shading == ShadeHalf)
+        {
+            last = p;
+            lastCascade = c;
+            t += max(cell * 0.5, -d);
+            continue;
+        }
+        crossSurface(ray, crossedShare(passed, through, t - d - from, sheet), crossed);
+        entered = -1.0;
         t += max(d, cell * MarchStep);
     }
     // A ray that ends within a surface it crosses passes the depth it crossed of it.

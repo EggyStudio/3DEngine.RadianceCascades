@@ -1016,6 +1016,22 @@ cells `holdCellLight` holds, chosen by the same test (`heldCellAt`) apart from t
 the solid slab with a wall 0.1 thick, in two field cascades, lists 50,177 cells of 524,288, those
 the hold over every cell holds, and every held float is the same.
 
+The shading inside the march's step loop. `marchProbeRay` called `hitLight` within the loop its
+steps take, so a driver inlined a binding's whole shading in that loop and every step paid for it:
+one binding that left the loop at a stop and shaded once after it took its trace from 4.02 to 1.75
+ms in one scene and from 5.50 to 2.02 in another, every reading the same, with a second call site.
+The march's steps take an inner loop that reads the field alone and leaves where a step takes the
+light of a surface, a crossing that has stopped half its light, one leaving a surface or meeting a
+solid within it before its light is taken, a stop, or the march's end with a crossing's light still
+to take, and an outer loop shades there at the one call and goes on. The merge marches through the
+same function, so its marches take the same form. The test of one call site holds, beside the one
+copy of the shading in the SPIR-V of a trace and of both merges, that the innermost loop about it
+holds a loop of its own, the steps', where before the change it held none. All 175 tests pass and
+every line the tests print reads the same as before. The README names as a binding's choice the rays
+of each cascade above the finest beginning at the finer one's end, which took that binding's trace
+from 4.02 to 3.27 ms and from 5.50 to 5.14 alone, beside the floor of a box open to the sky that it
+read 3.6 times its light.
+
 Handoff, for a fresh session, in place of those above. Where the work stands: the library holds the
 field's plan, the triangles' layout and the glow lights in C#, and in Slang the probes' octahedron,
 the cell code, resolve and pinch, the hit's color read, the splat, the stamp, the field's distance
@@ -1035,31 +1051,31 @@ the module's own kernels by their SPIR-V. A hand-off near an opening's edge read
 about 1.4 times the fine trace, and the split rule, a ray marching on where its far probes disagree
 (`HitSpread`), takes it within a quarter at about 1.15 times the steps, reading a four-cascade open
 box's floor 8 percent under, its figures in its Reply. A field's build runs `seamSheet` after the
-pinch. The march calls `hitLight` at one place and the merge marches at one place, which a test
-holds by the SPIR-V. A cascade is traced at `TracedMeans.perRead` texels a side of each it is read
-at, 2 at four times the rays, which the lintel's sampling asks, or 1. A surface whose probes stand
-off it gathers along its own rays (`gatherTraced`). The merge keeps the sky's share beside the light
-in one pass (`IFarSkyProbes`, `IMergedSkyLight`). A probe inside a mesh keeps `ReachInside` in its
-reach map, and the far probes about a hand-off are tested once. The shading at a merge's hits is
-most of its cost, and each binding passes the merge a cheap hit of its own, the sun's reach read at
-the surface and the probes' light half a spacing off it, or the held light of the field's cells
-(`HeldHitLight`, `holdCellLight`) held whole each frame. A binding may list the cells to hold first
-(`listHeldCell`, `IHeldList`) and hold them a thread a listed cell (`holdListedCell`). A crossing
-passes each step's own share and takes its light where it has stopped half the light it carried in.
-A cascade's traced texels a side of each read one are a binding's setting for each cascade, the
-finest two at 2 reading the lintel's face 0.825 at 2.2 times the trace's steps. The closed rooms' 5
-percent over lies in the bounce a binding's hit reads of its probes, the passes adding none on one
-bounce. A vestibule beside a sunlit court reads over its trace in the light its texels' own rays
-bring from their probes' places and their hits, the chain adding 5 percent. The tests build their
-kernels for the CPU at -O2, at which Visual Studio's cl optimizes them as gcc and clang do. Next, as
-the bindings land the passes: the engines' further findings as they take the passes, then the split
-sum at a hit, the screen probes, the light on the picture and the contact shadow's march. Left
-behind each part's Reply: the field's normal, the cascades' table, the march held within a cascade,
-the splat's second plane, the lending of thin emitters, the repaint and the clearing of codes. Open:
-AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md wait for the owner. Read first:
-AGENTS.md, this file's head and Decisions, the Replies from the field's distance on, the README's
-binding section, NORM.md's N 4.8 to 4.11 and N 7.9, `CpuKernel.cs` and the head of
-`rc_probe_passes.slang`. Every build and test goes through N 7.9's lock by `python3 -I
+pinch. The march calls `hitLight` at one place, outside the loop its steps take, and the merge
+marches at one place, which a test holds by the SPIR-V. A cascade is traced at `TracedMeans.perRead`
+texels a side of each it is read at, 2 at four times the rays, which the lintel's sampling asks, or
+1. A surface whose probes stand off it gathers along its own rays (`gatherTraced`). The merge keeps
+the sky's share beside the light in one pass (`IFarSkyProbes`, `IMergedSkyLight`). A probe inside a
+mesh keeps `ReachInside` in its reach map, and the far probes about a hand-off are tested once. The
+shading at a merge's hits is most of its cost, and each binding passes the merge a cheap hit of its
+own, the sun's reach read at the surface and the probes' light half a spacing off it, or the held
+light of the field's cells (`HeldHitLight`, `holdCellLight`) held whole each frame. A binding may
+list the cells to hold first (`listHeldCell`, `IHeldList`) and hold them a thread a listed cell
+(`holdListedCell`). A crossing passes each step's own share and takes its light where it has stopped
+half the light it carried in. A cascade's traced texels a side of each read one are a binding's
+setting for each cascade, the finest two at 2 reading the lintel's face 0.825 at 2.2 times the
+trace's steps. The closed rooms' 5 percent over lies in the bounce a binding's hit reads of its
+probes, the passes adding none on one bounce. A vestibule beside a sunlit court reads over its trace
+in the light its texels' own rays bring from their probes' places and their hits, the chain adding 5
+percent. The tests build their kernels for the CPU at -O2, at which Visual Studio's cl optimizes
+them as gcc and clang do. Next, as the bindings land the passes: the engines' further findings as
+they take the passes, then the split sum at a hit, the screen probes, the light on the picture and
+the contact shadow's march. Left behind each part's Reply: the field's normal, the cascades' table,
+the march held within a cascade, the splat's second plane, the lending of thin emitters, the repaint
+and the clearing of codes. Open: AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md wait for
+the owner. Read first: AGENTS.md, this file's head and Decisions, the Replies from the field's
+distance on, the README's binding section, NORM.md's N 4.8 to 4.11 and N 7.9, `CpuKernel.cs` and the
+head of `rc_probe_passes.slang`. Every build and test goes through N 7.9's lock by `python3 -I
 modules/Tools/scripts/gpu.py shared -- <part> -- <part>`, built with `--no-restore
 -p:UseSharedCompilation=false`, its output written to a file of which the summary line and the
 failing lines alone are read, and each commit is read by `commitcheck.py . --staged

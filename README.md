@@ -164,7 +164,11 @@ The conventions the module stands on:
   probe's reach at its share of the light, where handed on at its end it read 37 percent under. The
   band is 4 cells, a unit at a first cell of a quarter, so an edge farther than that past a hand-off
   is still smeared. The lower bound keeps a cascade's reach map covering the cell about any point
-  handed to it.
+  handed to it. Every cascade's rays begin at its probe. A binding may begin the rays of each
+  cascade above the finest at the finer one's end, which took one engine's trace from 4.02 to 3.27
+  ms and from 5.50 to 5.14 in two scenes, and leaves the near ray's next interval past its end
+  untraced by the far probes about it, so that a floor in a box open to the sky took the sky's light
+  along every way whose ray meets a wall there, 3.6 times what it should.
 - Where the far probes about a hand-off that count disagree on where a surface lies along the ray,
   some meeting one within their reach and some none, or all meeting one at points of the ray
   farther apart than a quarter of the farther (`HitSpread`) and two cells, the ray takes none of
@@ -226,7 +230,10 @@ The conventions the module stands on:
   copies and a merge kernel once where it held nine. A driver inlines the shading at every call, and
   one engine's, which shades with its sun's and lamps' shadows, took 46 s to compile in a trace and
   2.6 minutes and 3.75 GB in a merge. A binding shades a surface in hitLight itself, with nothing to
-  gather after the march.
+  gather after the march. The one call lies outside the loop the march's steps take, in a loop about
+  it that shades once and goes on, since a shading inlined in the steps' loop is paid for at every
+  step: one engine's trace took 4.02 and 5.50 ms in two scenes so, and 1.75 and 2.02 with its
+  shading after the steps' loop.
 - The engine's shading at the surfaces a merge's marches meet is most of what the merge costs: of a
   merge of three cascades that took 4.9 ms on Sponza and 9.2 on the Bistro on one engine, its
   marches and reads took 0.54 and 0.57. A merge that takes nothing at a hit reads the room's deep
