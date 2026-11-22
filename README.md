@@ -115,6 +115,9 @@ library's functions, and the engine keeps its bindings, its threads and its atom
 | `IHeldLight` | Keeps and reads the light each side of the surface nearest each of the field's cells within a cell and a tenth of a surface sends, its own apart from its probes' light, one side for a solid's cell and two for a sheet's (`heldSide`), and gives the share of the probes' light a hit takes, which the merge reads at a hit through `HeldHitLight` in place of the engine's shading | `holdCellLight`, `holdListedCell`, `HeldHitLight` |
 | `IHeldShading` | Shades a held cell's surface, its own light and its probes' apart, which `WholeShading` gives from `IProbeField.hitLight` as its own alone | `holdCellLight`, `holdListedCell` |
 | `IHeldList` | Keeps the list of the field's cells whose light is held, a cell added as `listHeldCell` finds it, the count of cells listed and each listed cell, which `holdListedCell` holds a thread a cell | `listHeldCell`, `holdListedCell` |
+| `IConeLevels` | Reads the levels a cone is read from, finest first, each level's cascade at the texels it keeps, a probe's merged light at a texel, its reach toward a way and its place | `coneLevel`, `ConeAtProbes` |
+| `IConePoints` | Reads a point's place, normal, way toward the eye, roughness and the finest level its gather reads, and keeps the light its cone reflects | `readCone` |
+| `IConeRead` | Brings the mean light of the cone a rough surface reflects toward the eye from the levels about it, one read behind one name, which `ConeAtProbes` is the first of | `readCone` |
 
 The engine's struct is handed to the library's functions by value, so an array it holds is copied
 into each thread's own memory where it is read, which one macOS device reads wrong where every other
@@ -451,6 +454,49 @@ by round.
 | an engine's | by marched sight, `MergeByMarchedSight` | 0.271 | 0.768 | 0.00000 | 1.3 | 12.7 | 0.500 | none | 0.087 and 0.212 |
 
 No merge stands above every other at every configuration, so the default stays the merge at the ray's end, `MergeAtRayEnd`.
+
+## Rough reflections
+
+A rough surface reflects the light of a cone of ways about the mirror of the way toward the eye,
+and a probe's merged texels are that light by way, so `rc_cone_read` reads the cone from the probes
+and traces nothing, whole each frame with no history. `readCone` takes a point's place, normal, way
+toward the eye and roughness through `IConePoints` and the levels through `IConeLevels`, and keeps
+the lobe's mean light, the light a mirror would reflect blurred by the lobe of a GGX surface whose
+alpha is the roughness squared, which the binding scales by its own reflectance as a split sum
+does. The read stands behind `IConeRead`, so a second way of reading the cone stands beside the
+first and is read against it as the merges are. The first, `ConeAtProbes`, reads the finest level
+from the one the point gathers from up whose kept texels are as narrow as the cone, a lobe no
+narrower than half a texel's width, at the probes about the point weighed as the gather weighs
+them, so a wall hides what lies behind it. A binding hands it what its gather reads, each level's
+merged light at the texels it keeps, its reach maps and its probes' places, and for each point the
+way toward the eye, the roughness and the level its gather reads.
+
+The ladder reads the cones on the CPU over its scenes and two of their own, a low room lit by a
+small bright light and a red wall beside a gray floor, at six roughnesses after one gather, against
+the same lobe traced with 4,096 rays a cone, and writes the table below with the rest of
+[.github/LADDER.md](.github/LADDER.md). A part's difference is the sum over its points of the reading
+less the trace, taken whole, over the count of its points times the scene's light, its traced light
+on the mean at roughness 1.0, and the median scene the median of the scenes' means over their parts.
+The cone widened is the share of it the lobe's widening to half a texel makes alone, the trace at
+the read's alpha against the trace at the cone's own, and the trace's own noise the share its two
+halves of rays differ by, the floor under which no difference is read.
+
+| Configuration | Roughness | Mean difference | Median scene | Worst part | Of it the cone widened | The trace's own noise | Reading less the trace | Leak | Reads a point |
+|---|---|---|---|---|---|---|---|---|---|
+| the module's | 0.1 | 0.664 | 0.284 | 4.785 | 0.438 | 0.000 | +0.052 | 0.00000 | 167 |
+| the module's | 0.2 | 0.525 | 0.192 | 4.092 | 0.295 | 0.004 | +0.059 | 0.00000 | 167 |
+| the module's | 0.3 | 0.342 | 0.103 | 2.770 | 0.081 | 0.007 | +0.103 | 0.00000 | 167 |
+| the module's | 0.5 | 0.192 | 0.061 | 1.899 | 0.000 | 0.010 | -0.037 | 0.00000 | 323 |
+| the module's | 0.7 | 0.135 | 0.054 | 1.349 | 0.000 | 0.012 | -0.044 | 0.00000 | 323 |
+| the module's | 1.0 | 0.109 | 0.048 | 0.986 | 0.000 | 0.017 | -0.048 | 0.00000 | 323 |
+| an engine's | 0.1 | 0.779 | 0.281 | 7.885 | 0.438 | 0.000 | -0.469 | 0.02060 | 171 |
+| an engine's | 0.2 | 0.732 | 0.283 | 7.199 | 0.295 | 0.004 | -0.462 | 0.02060 | 171 |
+| an engine's | 0.3 | 0.642 | 0.269 | 5.820 | 0.081 | 0.007 | -0.418 | 0.02060 | 171 |
+| an engine's | 0.5 | 0.231 | 0.118 | 1.084 | 0.000 | 0.010 | -0.020 | 0.00000 | 88 |
+| an engine's | 0.7 | 0.188 | 0.094 | 1.160 | 0.000 | 0.012 | +0.012 | 0.00000 | 88 |
+| an engine's | 1.0 | 0.164 | 0.076 | 1.207 | 0.000 | 0.017 | +0.027 | 0.00000 | 88 |
+
+The cones read within a tenth of their trace on the median scene from roughness 0.5 up at the module's configuration and from roughness 0.7 up at an engine's, and on the mean over every part at no roughness of the six and at no roughness of the six.
 
 ## The kernels without the library
 

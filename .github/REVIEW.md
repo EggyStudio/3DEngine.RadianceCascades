@@ -158,6 +158,26 @@ pointer. One commit an engine, after item 3's first part.
     host's session is asked for one probe's light after each of its first frames to set beside the
     CPU's rounds.
 
+10. **Rough reflections read from the cascades.** The next large step after the probe passes is
+    reflection, and its rough half is tried first here, whole each frame with no history (the
+    lighting's rule stays). A rough surface reflects a cone about the mirror direction, and a cone
+    of light by direction is the thing a cascade stores, so a kernel reads it and traces nothing.
+    The kernel takes a point, a normal, a view direction and a roughness and gives the reflected
+    light, choosing by the cone's width the cascade whose rays are as wide and reading it across the
+    cone at the point's probes, with the same sight weighting the gather uses so a wall hides what
+    lies behind it. It is written once beside the merges and behind a shape of its own, so a second
+    way of reading the cone can stand next to the first and be compared as the merges are. The
+    reading is on the CPU against a traced reference that samples the same cone with many rays, on
+    the ladder's scenes plus one with a small bright light and one with a colored wall beside a gray
+    floor, at roughness 0.1, 0.2, 0.3, 0.5, 0.7 and 1.0. It gives the mean and worst difference by
+    roughness, the leak through the thin wall, the cost in reads a point, and above all the
+    roughness below which the cascades' directions are too few and the reading parts from the
+    reference by more than 0.10, since a traced ray takes over below that mark in a later item. A
+    sheet shows a row of spheres or a floor strip by roughness, the kernel beside the reference with
+    a difference panel. The Reply says the mark, what sets it (rays a probe, probe spacing, or the
+    far cascades' sky share) and what a host needs to hand the kernel. No host is named and nothing
+    is taken from one.
+
 ## Verdicts
 
 Verdict 1 is settled at 22:56 on 2026-11-21, the build run on `2f0dc8e` green on the three systems,
@@ -878,3 +898,46 @@ round, and the CPU kernel's copies. Open: the device's frames from the 3DEngine 
 AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md wait for the owner, LADDER.md's row with
 the owner. Read first: `ProbeMergeTests.Bounce.cs`, `bounceAt` in the test kernel, the README's
 ladder section, and the last two tables of LADDER.md.
+
+Item 10, in the commit carrying this line, after `c395762`. `rc_cone_read` reads the cone a rough
+surface reflects from the merged levels and traces nothing, whole each frame with no history, behind
+`IConeRead`, whose first read is `ConeAtProbes`. It weighs each texel of a level by the lobe of a
+GGX surface of alpha the roughness squared at the texel's middle way times its solid angle, at the
+eight probes about the point by their trilinear weight and the gather's sight, so the thin wall's
+leak is 0 at the module's configuration. The lobe is never narrower than half a texel's mean width,
+the square root of pi over the texels a side, and the level read is the finest from the point's own
+up that keeps texels as narrow as the cone, or else the first that keeps the most. Test pass 11 runs
+it over the ladder's eight scenes, a low room lit by a small bright light and a red wall beside a
+gray floor, at 0.1, 0.2, 0.3, 0.5, 0.7 and 1.0, against the same lobe traced with 4,096 rays a cone,
+the trace's own noise at most 0.017 of a scene's light. A difference is taken over a scene's traced
+light at roughness 1.0, so a scene whose narrow cones see little is read against the light it holds.
+
+The mark, on the median scene, is 0.5 at the module's configuration, 0.3 reading 0.103, and 0.7 at
+3DEngine's, 0.5 reading 0.118. Rays a probe set it at the module's: 16 texels a side floor the lobe
+at alpha 0.111, roughness 0.333, and the widening alone parts by 0.081 at 0.3, 0.295 at 0.2 and
+0.438 at 0.1. Probe spacing sets it at 3DEngine's. Its finest two levels keep 8 texels, flooring the
+lobe at roughness 0.471, so a narrower cone reads the first level that keeps 16, whose probes stand
+4 apart against the point's 1. There it reads under the trace by 0.42 to 0.47 of the scenes' light
+on the mean and leaks 0.021 of the lit room through the thin wall. The far cascades' sky share does
+not set it, since the open box and the red wall under a sky mark with the closed rooms. On the mean
+over every part, no roughness reads within 0.10 at either configuration. The lintel room's points by
+the opening part most, by 4.8 at the module's and 7.9 at 3DEngine's at 0.1, falling to 0.11 and 0.14
+at 1.0, and the lintel room and the roof window read within 0.10 only at 1.0. The small bright
+light's floor parts by 1.0 to 3.2 at the module's at every roughness and the closed box with one
+lamp by 0.12 to 0.88 at both, since a texel takes its light from one ray at the module's finest
+level and from four at 3DEngine's, so a small source fills a whole texel or misses it. A cone reads
+167 to 323 texels at the module's and 88 to 171 at 3DEngine's. On the sheet's spheres before the red
+wall, the module's reading parts from the trace by 0.039 at 0.3 and 3DEngine's by 0.030 at 0.5.
+
+For each level from the one a point gathers from up, a host hands the kernel the level's cascade at
+the texels it keeps, its merged light at those texels, its reach map and its probes' places. Its
+merge writes all of these from the coarsest level down. Per point, it hands the place, the normal,
+the way toward the eye, the roughness and the level its gather reads, and a buffer for the light. It
+scales that light by its own reflectance, as a split sum scales its filtered light.
+
+Item 10 stands in one commit, which holds the read and its shapes, test pass 11, the closed room's
+fact of every cone reading 1, the cones' section of LADDER.md with each scene's mark, the README's
+section of rough reflections and the sheet. Open: the parity dump from the 3DEngine session, whose
+replay goes first, and AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md, which wait for
+the owner, as LADDER.md's row does. Read first: `rc_cone_read.slang`, `ProbeMergeTests.Cone.cs`,
+pass 11 in the test kernel, and the cones' section of LADDER.md.

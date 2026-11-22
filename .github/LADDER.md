@@ -120,3 +120,185 @@ Its two walls' light each round over the first round's, traced and by each merge
 | an engine's | at the ray's end, `MergeAtRayEnd` | 1.000 | 1.500 | 1.732 | 1.836 | 1.881 | 1.902 | 1.911 |
 | an engine's | by reach sight, `MergeByReachSight` | 1.000 | 1.484 | 1.709 | 1.810 | 1.854 | 1.874 | 1.882 |
 | an engine's | by marched sight, `MergeByMarchedSight` | 1.000 | 1.578 | 1.861 | 1.989 | 2.046 | 2.071 | 2.082 |
+
+## The cones by roughness
+
+Measured on 2026-11-22 on the tree of c395762 with the changes committed beside it, the cone a rough
+surface reflects read from the cascades by `ConeAtProbes` (`IConeRead`) over 10 scenes, the ladder's
+and two of their own, on the CPU at 2 configurations after one gather, as `dotnet test
+RadianceCascades.Tests` writes it with `RC_LADDER` naming this file. Each point of a scene reflects
+toward an eye 45 degrees off its normal, at each roughness of 0.1, 0.2, 0.3, 0.5, 0.7, 1.0, the lobe
+of a GGX surface whose alpha is the roughness squared, and the trace draws the same lobe's ways with
+4,096 rays a cone, each taking the light of the surface it meets or the sky's.
+
+A part's difference is the sum over its points of the reading less the trace, taken whole, over the
+count of its points times the scene's light, its traced light on the mean over its points at
+roughness 1.0, the channels of the red wall's scene summed alike, so a scene whose narrow cones
+mostly see nothing is read against the light it holds. The median scene is the median over the
+scenes of each one's mean over its parts. The reading less the trace is the same sum signed, over a
+scene's points. The trace's own noise is the same difference of half the two halves of its rays,
+those of a checkerboard's black squares against its white ones, about how far the trace lies from
+the lobe's light. The cone widened is the difference the trace makes at the alpha the read takes,
+never under half the width of a texel of the level it reads, against the trace at its own alpha, the
+part of the difference the cascades' count of directions makes alone. The leak is the light the dark
+room's cones take through the wall of one cell, as a share of the lit room's traced cones. The reads
+are a cone's reads of a texel or a reach texel. A mark is the least roughness from which on every
+roughness reads within a tenth, and the leak is the dark room's cones' light over the lit room's
+light.
+
+| Configuration | Roughness | Mean difference | Median scene | Worst part | Of it the cone widened | The trace's own noise | Reading less the trace | Leak | Reads a point |
+|---|---|---|---|---|---|---|---|---|---|
+| the module's | 0.1 | 0.664 | 0.284 | 4.785 | 0.438 | 0.000 | +0.052 | 0.00000 | 167 |
+| the module's | 0.2 | 0.525 | 0.192 | 4.092 | 0.295 | 0.004 | +0.059 | 0.00000 | 167 |
+| the module's | 0.3 | 0.342 | 0.103 | 2.770 | 0.081 | 0.007 | +0.103 | 0.00000 | 167 |
+| the module's | 0.5 | 0.192 | 0.061 | 1.899 | 0.000 | 0.010 | -0.037 | 0.00000 | 323 |
+| the module's | 0.7 | 0.135 | 0.054 | 1.349 | 0.000 | 0.012 | -0.044 | 0.00000 | 323 |
+| the module's | 1.0 | 0.109 | 0.048 | 0.986 | 0.000 | 0.017 | -0.048 | 0.00000 | 323 |
+| an engine's | 0.1 | 0.779 | 0.281 | 7.885 | 0.438 | 0.000 | -0.469 | 0.02060 | 171 |
+| an engine's | 0.2 | 0.732 | 0.283 | 7.199 | 0.295 | 0.004 | -0.462 | 0.02060 | 171 |
+| an engine's | 0.3 | 0.642 | 0.269 | 5.820 | 0.081 | 0.007 | -0.418 | 0.02060 | 171 |
+| an engine's | 0.5 | 0.231 | 0.118 | 1.084 | 0.000 | 0.010 | -0.020 | 0.00000 | 88 |
+| an engine's | 0.7 | 0.188 | 0.094 | 1.160 | 0.000 | 0.012 | +0.012 | 0.00000 | 88 |
+| an engine's | 1.0 | 0.164 | 0.076 | 1.207 | 0.000 | 0.017 | +0.027 | 0.00000 | 88 |
+
+The cones read within a tenth of their trace on the median scene from roughness 0.5 up at the module's configuration and from roughness 0.7 up at an engine's, and on the mean over every part at no roughness of the six and at no roughness of the six.
+
+### Each scene's mark
+
+| Scene | From the module's configuration | From an engine's configuration |
+|---|---|---|
+| a room with a door | 0.3 | 0.5 |
+| a closed box with one lamp | none | none |
+| a lit room beside a dark one through a wall of one cell | 0.1 | 0.1 |
+| a room under a lintel | 1.0 | 1.0 |
+| an open box under a sky | 0.3 | 0.5 |
+| a long hall | 0.1 | 0.5 |
+| a vestibule off a sunlit court | 0.5 | 0.7 |
+| held out, a room with a roof window and a pillar | 1.0 | 1.0 |
+| a low room lit by a small bright light | none | none |
+| a red wall beside a gray floor | 0.3 | 0.5 |
+
+### Each scene's cones
+
+| Configuration | Scene | Roughness | Each part's difference | Each part's reading less its trace | The scene's reading less its trace |
+|---|---|---|---|---|---|
+| the module's | a room with a door | 0.1 | 0.007, 0.471, 0.006 | +0.007, -0.023, +0.006 | -0.009 |
+| the module's | a room with a door | 0.2 | 0.006, 0.366, 0.005 | +0.006, -0.006, +0.005 | -0.001 |
+| the module's | a room with a door | 0.3 | 0.005, 0.206, 0.005 | -0.002, +0.037, +0.001 | +0.019 |
+| the module's | a room with a door | 0.5 | 0.012, 0.099, 0.006 | +0.001, +0.041, +0.003 | +0.023 |
+| the module's | a room with a door | 0.7 | 0.026, 0.064, 0.013 | +0.004, +0.021, +0.008 | +0.014 |
+| the module's | a room with a door | 1.0 | 0.051, 0.043, 0.032 | -0.001, +0.015, +0.021 | +0.013 |
+| the module's | a closed box with one lamp | 0.1 | 0.364, 0.796 | +0.364, +0.796 | +0.665 |
+| the module's | a closed box with one lamp | 0.2 | 0.291, 0.731 | +0.291, +0.731 | +0.597 |
+| the module's | a closed box with one lamp | 0.3 | 0.189, 0.627 | +0.066, +0.564 | +0.412 |
+| the module's | a closed box with one lamp | 0.5 | 0.256, 0.394 | -0.081, +0.133 | +0.068 |
+| the module's | a closed box with one lamp | 0.7 | 0.206, 0.390 | -0.070, -0.086 | -0.081 |
+| the module's | a closed box with one lamp | 1.0 | 0.123, 0.385 | -0.032, -0.186 | -0.139 |
+| the module's | a lit room beside a dark one through a wall of one cell | 0.1 | 0.002, 0.088 | -0.002, -0.088 | -0.036 |
+| the module's | a lit room beside a dark one through a wall of one cell | 0.2 | 0.002, 0.088 | -0.002, -0.088 | -0.036 |
+| the module's | a lit room beside a dark one through a wall of one cell | 0.3 | 0.002, 0.088 | -0.002, -0.088 | -0.036 |
+| the module's | a lit room beside a dark one through a wall of one cell | 0.5 | 0.010, 0.088 | -0.010, -0.088 | -0.041 |
+| the module's | a lit room beside a dark one through a wall of one cell | 0.7 | 0.027, 0.068 | -0.027, -0.068 | -0.044 |
+| the module's | a lit room beside a dark one through a wall of one cell | 1.0 | 0.050, 0.048 | -0.050, -0.048 | -0.049 |
+| the module's | a room under a lintel | 0.1 | 4.785, 3.214, 1.114 | -2.232, -1.263, +1.114 | -1.032 |
+| the module's | a room under a lintel | 0.2 | 4.092, 2.371, 1.020 | -1.546, -0.601, +0.893 | -0.582 |
+| the module's | a room under a lintel | 0.3 | 2.770, 1.204, 0.818 | -0.166, +0.338, +0.811 | +0.267 |
+| the module's | a room under a lintel | 0.5 | 0.823, 0.450, 0.209 | -0.818, -0.435, -0.208 | -0.522 |
+| the module's | a room under a lintel | 0.7 | 0.250, 0.125, 0.094 | -0.250, -0.113, -0.094 | -0.160 |
+| the module's | a room under a lintel | 1.0 | 0.113, 0.042, 0.052 | -0.111, -0.033, -0.052 | -0.067 |
+| the module's | an open box under a sky | 0.1 | 0.303, 0.128 | +0.303, +0.128 | +0.182 |
+| the module's | an open box under a sky | 0.2 | 0.197, 0.104 | +0.197, +0.104 | +0.132 |
+| the module's | an open box under a sky | 0.3 | 0.085, 0.040 | +0.078, +0.039 | +0.051 |
+| the module's | an open box under a sky | 0.5 | 0.034, 0.021 | +0.032, +0.010 | +0.017 |
+| the module's | an open box under a sky | 0.7 | 0.025, 0.019 | +0.022, +0.009 | +0.013 |
+| the module's | an open box under a sky | 1.0 | 0.023, 0.016 | +0.023, +0.003 | +0.009 |
+| the module's | a long hall | 0.1 | 0.239, 0.025, 0.003 | +0.124, +0.025, +0.003 | +0.052 |
+| the module's | a long hall | 0.2 | 0.152, 0.022, 0.002 | +0.051, +0.022, +0.002 | +0.025 |
+| the module's | a long hall | 0.3 | 0.053, 0.006, 0.006 | -0.035, +0.002, -0.006 | -0.014 |
+| the module's | a long hall | 0.5 | 0.096, 0.023, 0.037 | -0.093, -0.023, -0.036 | -0.053 |
+| the module's | a long hall | 0.7 | 0.097, 0.033, 0.050 | -0.097, -0.032, -0.049 | -0.061 |
+| the module's | a long hall | 1.0 | 0.073, 0.029, 0.041 | -0.071, -0.025, -0.038 | -0.046 |
+| the module's | a vestibule off a sunlit court | 0.1 | 2.424, 0.078, 0.523, 0.041, 0.038 | -1.870, +0.010, +0.523, +0.039, +0.033 | -0.236 |
+| the module's | a vestibule off a sunlit court | 0.2 | 1.666, 0.051, 0.343, 0.035, 0.033 | -1.304, +0.007, +0.343, +0.034, +0.029 | -0.163 |
+| the module's | a vestibule off a sunlit court | 0.3 | 0.763, 0.025, 0.161, 0.020, 0.019 | -0.614, -0.010, +0.135, +0.008, +0.008 | -0.086 |
+| the module's | a vestibule off a sunlit court | 0.5 | 0.220, 0.009, 0.077, 0.021, 0.019 | -0.144, 0.000, +0.053, +0.006, +0.017 | -0.012 |
+| the module's | a vestibule off a sunlit court | 0.7 | 0.116, 0.011, 0.051, 0.024, 0.036 | -0.081, +0.005, +0.024, -0.011, +0.029 | -0.005 |
+| the module's | a vestibule off a sunlit court | 1.0 | 0.058, 0.025, 0.032, 0.045, 0.076 | -0.039, +0.004, +0.012, -0.042, +0.055 | -0.001 |
+| the module's | held out, a room with a roof window and a pillar | 0.1 | 0.238, 0.145, 0.732, 0.230 | +0.238, +0.145, +0.015, +0.230 | +0.140 |
+| the module's | held out, a room with a roof window and a pillar | 0.2 | 0.149, 0.125, 0.462, 0.142 | +0.094, +0.116, +0.078, +0.142 | +0.104 |
+| the module's | held out, a room with a roof window and a pillar | 0.3 | 0.093, 0.102, 0.188, 0.153 | +0.018, +0.070, +0.108, -0.091 | +0.061 |
+| the module's | held out, a room with a roof window and a pillar | 0.5 | 0.052, 0.085, 0.114, 0.223 | +0.032, +0.021, +0.107, -0.181 | +0.035 |
+| the module's | held out, a room with a roof window and a pillar | 0.7 | 0.055, 0.080, 0.089, 0.189 | +0.041, +0.021, +0.064, -0.131 | +0.030 |
+| the module's | held out, a room with a roof window and a pillar | 1.0 | 0.045, 0.078, 0.066, 0.175 | +0.039, +0.041, +0.037, -0.125 | +0.034 |
+| the module's | a low room lit by a small bright light | 0.1 | 3.217, 0.018, 0.000 | +3.217, +0.006, 0.000 | +0.754 |
+| the module's | a low room lit by a small bright light | 0.2 | 2.730, 0.075, 0.000 | +2.217, -0.063, 0.000 | +0.483 |
+| the module's | a low room lit by a small bright light | 0.3 | 2.231, 0.191, 0.000 | +1.910, -0.179, 0.000 | +0.350 |
+| the module's | a low room lit by a small bright light | 0.5 | 1.899, 0.395, 0.000 | +1.298, -0.347, 0.000 | +0.118 |
+| the module's | a low room lit by a small bright light | 0.7 | 1.349, 0.518, 0.000 | +0.408, -0.449, 0.000 | -0.144 |
+| the module's | a low room lit by a small bright light | 1.0 | 0.986, 0.530, 0.000 | +0.106, -0.483, 0.000 | -0.233 |
+| the module's | a red wall beside a gray floor | 0.1 | 0.337, 0.227, 0.133 | -0.109, +0.119, 0.000 | +0.038 |
+| the module's | a red wall beside a gray floor | 0.2 | 0.242, 0.153, 0.100 | -0.055, +0.072, +0.005 | +0.027 |
+| the module's | a red wall beside a gray floor | 0.3 | 0.115, 0.054, 0.046 | -0.012, +0.007, +0.011 | +0.003 |
+| the module's | a red wall beside a gray floor | 0.5 | 0.038, 0.030, 0.021 | +0.018, -0.013, +0.009 | -0.001 |
+| the module's | a red wall beside a gray floor | 0.7 | 0.020, 0.020, 0.013 | +0.012, -0.010, +0.006 | -0.001 |
+| the module's | a red wall beside a gray floor | 1.0 | 0.019, 0.017, 0.011 | +0.010, -0.011, +0.004 | -0.002 |
+| an engine's | a room with a door | 0.1 | 0.059, 0.504, 0.007 | +0.059, -0.109, +0.007 | -0.043 |
+| an engine's | a room with a door | 0.2 | 0.059, 0.436, 0.006 | +0.058, -0.092, +0.006 | -0.034 |
+| an engine's | a room with a door | 0.3 | 0.057, 0.351, 0.004 | +0.051, -0.049, +0.001 | -0.014 |
+| an engine's | a room with a door | 0.5 | 0.012, 0.104, 0.010 | 0.000, +0.097, +0.005 | +0.053 |
+| an engine's | a room with a door | 0.7 | 0.026, 0.131, 0.016 | +0.005, +0.129, +0.012 | +0.073 |
+| an engine's | a room with a door | 1.0 | 0.053, 0.111, 0.036 | -0.001, +0.110, +0.032 | +0.066 |
+| an engine's | a closed box with one lamp | 0.1 | 0.182, 0.189 | +0.182, +0.189 | +0.187 |
+| an engine's | a closed box with one lamp | 0.2 | 0.123, 0.135 | +0.108, +0.124 | +0.119 |
+| an engine's | a closed box with one lamp | 0.3 | 0.163, 0.192 | -0.117, -0.044 | -0.066 |
+| an engine's | a closed box with one lamp | 0.5 | 0.573, 0.883 | -0.053, +0.391 | +0.256 |
+| an engine's | a closed box with one lamp | 0.7 | 0.459, 0.758 | -0.114, +0.130 | +0.056 |
+| an engine's | a closed box with one lamp | 1.0 | 0.314, 0.752 | -0.039, +0.025 | +0.005 |
+| an engine's | a lit room beside a dark one through a wall of one cell | 0.1 | 0.001, 0.053 | -0.001, -0.053 | -0.021 |
+| an engine's | a lit room beside a dark one through a wall of one cell | 0.2 | 0.001, 0.053 | -0.001, -0.053 | -0.021 |
+| an engine's | a lit room beside a dark one through a wall of one cell | 0.3 | 0.001, 0.053 | -0.001, -0.053 | -0.021 |
+| an engine's | a lit room beside a dark one through a wall of one cell | 0.5 | 0.011, 0.050 | -0.011, -0.050 | -0.026 |
+| an engine's | a lit room beside a dark one through a wall of one cell | 0.7 | 0.028, 0.046 | -0.028, -0.046 | -0.036 |
+| an engine's | a lit room beside a dark one through a wall of one cell | 1.0 | 0.051, 0.032 | -0.051, -0.032 | -0.044 |
+| an engine's | a room under a lintel | 0.1 | 7.885, 3.735, 0.436 | -7.885, -3.446, +0.112 | -4.221 |
+| an engine's | a room under a lintel | 0.2 | 7.199, 3.058, 0.532 | -7.199, -2.784, -0.110 | -3.771 |
+| an engine's | a room under a lintel | 0.3 | 5.820, 2.109, 0.591 | -5.820, -1.845, -0.192 | -2.922 |
+| an engine's | a room under a lintel | 0.5 | 1.084, 0.446, 0.163 | -1.084, -0.438, -0.155 | -0.610 |
+| an engine's | a room under a lintel | 0.7 | 0.396, 0.164, 0.062 | -0.396, -0.163, -0.060 | -0.224 |
+| an engine's | a room under a lintel | 1.0 | 0.141, 0.084, 0.034 | -0.140, -0.075, -0.032 | -0.089 |
+| an engine's | an open box under a sky | 0.1 | 0.395, 0.230 | +0.395, +0.230 | +0.280 |
+| an engine's | an open box under a sky | 0.2 | 0.289, 0.206 | +0.289, +0.206 | +0.231 |
+| an engine's | an open box under a sky | 0.3 | 0.184, 0.161 | +0.170, +0.141 | +0.150 |
+| an engine's | an open box under a sky | 0.5 | 0.061, 0.031 | +0.057, +0.019 | +0.031 |
+| an engine's | an open box under a sky | 0.7 | 0.055, 0.020 | +0.051, -0.007 | +0.011 |
+| an engine's | an open box under a sky | 1.0 | 0.048, 0.022 | +0.048, -0.015 | +0.004 |
+| an engine's | a long hall | 0.1 | 1.282, 0.638, 0.638 | +0.243, -0.638, -0.638 | -0.324 |
+| an engine's | a long hall | 0.2 | 1.364, 0.642, 0.640 | +0.171, -0.642, -0.640 | -0.351 |
+| an engine's | a long hall | 0.3 | 1.483, 0.661, 0.648 | +0.084, -0.661, -0.648 | -0.390 |
+| an engine's | a long hall | 0.5 | 0.162, 0.058, 0.027 | -0.023, -0.058, -0.027 | -0.034 |
+| an engine's | a long hall | 0.7 | 0.144, 0.092, 0.049 | -0.083, -0.091, -0.049 | -0.073 |
+| an engine's | a long hall | 1.0 | 0.118, 0.078, 0.049 | -0.110, -0.077, -0.049 | -0.079 |
+| an engine's | a vestibule off a sunlit court | 0.1 | 4.106, 0.139, 0.346, 0.265, 0.031 | -3.872, +0.103, +0.346, +0.265, +0.031 | -0.503 |
+| an engine's | a vestibule off a sunlit court | 0.2 | 3.410, 0.130, 0.181, 0.260, 0.027 | -3.306, +0.099, +0.166, +0.260, +0.027 | -0.430 |
+| an engine's | a vestibule off a sunlit court | 0.3 | 2.667, 0.108, 0.135, 0.238, 0.009 | -2.616, +0.082, -0.041, +0.234, +0.006 | -0.352 |
+| an engine's | a vestibule off a sunlit court | 0.5 | 0.756, 0.019, 0.116, 0.042, 0.036 | -0.248, +0.015, -0.055, +0.029, +0.034 | -0.025 |
+| an engine's | a vestibule off a sunlit court | 0.7 | 0.331, 0.027, 0.051, 0.022, 0.036 | -0.017, +0.019, +0.027, +0.001, +0.035 | +0.013 |
+| an engine's | a vestibule off a sunlit court | 1.0 | 0.127, 0.062, 0.033, 0.038, 0.087 | -0.021, +0.036, +0.027, -0.033, +0.086 | +0.020 |
+| an engine's | held out, a room with a roof window and a pillar | 0.1 | 0.113, 0.142, 0.737, 0.006 | -0.045, -0.034, -0.584, -0.006 | -0.157 |
+| an engine's | held out, a room with a roof window and a pillar | 0.2 | 0.226, 0.163, 0.620, 0.094 | -0.188, -0.062, -0.520, -0.094 | -0.193 |
+| an engine's | held out, a room with a roof window and a pillar | 0.3 | 0.282, 0.206, 0.547, 0.327 | -0.264, -0.108, -0.490, -0.327 | -0.236 |
+| an engine's | held out, a room with a roof window and a pillar | 0.5 | 0.124, 0.252, 0.097, 0.141 | +0.029, +0.248, +0.032, +0.006 | +0.143 |
+| an engine's | held out, a room with a roof window and a pillar | 0.7 | 0.067, 0.204, 0.062, 0.134 | +0.039, +0.199, +0.034, -0.042 | +0.118 |
+| an engine's | held out, a room with a roof window and a pillar | 1.0 | 0.045, 0.207, 0.053, 0.081 | +0.037, +0.204, +0.024, -0.012 | +0.119 |
+| an engine's | a low room lit by a small bright light | 0.1 | 0.165, 0.007, 0.000 | -0.165, -0.007, 0.000 | -0.042 |
+| an engine's | a low room lit by a small bright light | 0.2 | 1.166, 0.076, 0.000 | -1.166, -0.076, 0.000 | -0.313 |
+| an engine's | a low room lit by a small bright light | 0.3 | 1.472, 0.192, 0.000 | -1.472, -0.192, 0.000 | -0.446 |
+| an engine's | a low room lit by a small bright light | 0.5 | 0.929, 0.585, 0.000 | +0.084, -0.025, 0.000 | +0.006 |
+| an engine's | a low room lit by a small bright light | 0.7 | 1.160, 1.011, 0.000 | +0.132, +0.282, 0.000 | +0.181 |
+| an engine's | a low room lit by a small bright light | 1.0 | 0.988, 1.207, 0.000 | +0.036, +0.479, 0.000 | +0.264 |
+| an engine's | a red wall beside a gray floor | 0.1 | 0.350, 0.594, 0.131 | -0.109, +0.349, -0.038 | +0.152 |
+| an engine's | a red wall beside a gray floor | 0.2 | 0.252, 0.519, 0.099 | -0.054, +0.302, -0.033 | +0.141 |
+| an engine's | a red wall beside a gray floor | 0.3 | 0.124, 0.412, 0.058 | -0.012, +0.237, -0.027 | +0.117 |
+| an engine's | a red wall beside a gray floor | 0.5 | 0.047, 0.077, 0.034 | -0.018, +0.017, +0.027 | +0.011 |
+| an engine's | a red wall beside a gray floor | 0.7 | 0.016, 0.039, 0.038 | +0.004, -0.007, +0.038 | +0.006 |
+| an engine's | a red wall beside a gray floor | 1.0 | 0.015, 0.024, 0.045 | +0.006, -0.011, +0.044 | +0.006 |

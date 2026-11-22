@@ -6,6 +6,7 @@
 import rc_probe_passes;
 import rc_reach_sight_merge;
 import rc_marched_sight_merge;
+import rc_cone_read;
 
 // Each cell's distance, the plane it keeps and its share of light through, five floats a cell, as
 // probe_field_cpu.slang builds them, the field's cascades one after another, finest first.
@@ -23,12 +24,13 @@ RWStructuredBuffer<float> cells;
 // it lights and whether a hit takes its light from cellLight, at 91 the most a moved probe moves as
 // a share of its spacing, none where 0, and from 92 the least corner of the bounce's grid and its
 // cell. From the float at 96 come the count of the field's cascades, none for the one above, and
-// each one's least corner and cell, four floats each, at 122 whether each surface point is gathered
-// from the finest level about it, at 123 whether a hit's light is read from cellLight by its place
-// in the cascade the float at 0 begins, at 124 where the surface points' shares of the sky begin in
-// skyFloats, at 125 whether the finer levels' merges lend no sky, at 127 the merge the passes take,
-// 0 the merge at the ray's end, 1 by reach sight and 2 by marched sight, and from the float at 128
-// the count of surface points and each point's place, normal and albedo, seven floats each.
+// each one's least corner and cell, four floats each, at 121 the count of cones pass 11 reads, at
+// 122 whether each surface point is gathered from the finest level about it, at 123 whether a hit's
+// light is read from cellLight by its place in the cascade the float at 0 begins, at 124 where the
+// surface points' shares of the sky begin in skyFloats, at 125 whether the finer levels' merges
+// lend no sky, at 127 the merge the passes take, 0 the merge at the ray's end, 1 by reach sight and
+// 2 by marched sight, and from the float at 128 the count of surface points and each point's place,
+// normal and albedo, seven floats each.
 RWStructuredBuffer<float> setup;
 
 // Each texel's ray as its trace ended, how, where, its carried share and its light, six floats a
@@ -70,6 +72,11 @@ RWStructuredBuffer<float> readFloats;
 // Each probe's value of the per-probe stage and the steps its marches took, two a probe, the
 // levels one after another, which pass 10 keeps for the merge by marched sight to read.
 RWStructuredBuffer<uint> stageValues;
+
+// Each cone pass 11 reads, nine floats a cone, the surface point it is read at, the way toward the
+// eye and the roughness, which the test gives, and the light it reflects and its reads, which the
+// pass keeps.
+RWStructuredBuffer<float> coneFloats;
 
 static const int Levels = 16;
 static const int Field = 96;
@@ -459,6 +466,46 @@ bool mergeBy<F : IProbeField>(F field, LevelRays rays, TracedSkyMeans<LevelProbe
         counted, index);
 }
 
+// The levels as a cone's read takes them, each read at the texels it keeps as its gather reads it,
+// each read of a texel or a reach texel counted at slot of coneFloats.
+struct ConeLevels : IConeLevels
+{
+    uint slot;
+    int levels() { return int(setup[9]); }
+    TracedSkyMeans<LevelProbes> kept(int level) { return meansOf(level, firstOf(level, 14), uint(setup[124] + setup[Points])); }
+    ProbeCascade cascadeOf(int level) { return readCascade(levelCascade(level), kept(level).means.perRead); }
+    float3 lightAt(int level, int3 probe, uint2 texel)
+    {
+        coneFloats[slot] += 1.0;
+        return kept(level).lightAt(probe, texel);
+    }
+    float reachAt(int level, int3 probe, uint2 texel)
+    {
+        coneFloats[slot] += 1.0;
+        return kept(level).reachAt(probe, texel);
+    }
+    float3 placeOf(int level, int3 probe) { return placesOf(level).placeOf(probe); }
+};
+
+// The cones as coneFloats holds them, each at its surface point, read from the level the point's
+// gather reads.
+struct ConePoints : IConePoints
+{
+    SurfacePoints surfaces;
+    uint pointOf(uint index) { return uint(coneFloats[index * 9u]); }
+    float3 placeAt(uint index) { return surfaces.placeAt(pointOf(index)); }
+    float3 normalAt(uint index) { return surfaces.normalAt(pointOf(index)); }
+    float3 viewAt(uint index) { uint i = index * 9u; return float3(coneFloats[i + 1u], coneFloats[i + 2u], coneFloats[i + 3u]); }
+    float roughnessAt(uint index) { return coneFloats[index * 9u + 4u]; }
+    int levelAt(uint index) { return gatherLevel(placeAt(index)); }
+    void keepReflected(uint index, float3 light)
+    {
+        coneFloats[index * 9u + 5u] = light.x;
+        coneFloats[index * 9u + 6u] = light.y;
+        coneFloats[index * 9u + 7u] = light.z;
+    }
+};
+
 [shader("compute")]
 [numthreads(64, 1, 1)]
 void test(uint3 id : SV_DispatchThreadID)
@@ -585,6 +632,16 @@ void test(uint3 id : SV_DispatchThreadID)
             MergeAtRayEnd merge;
             gatherTraced(merge, field, finest, placesOf(g), gathered, setup[8], sky, surfaces, none, index);
         }
+    }
+    else if (pass == 11u)
+    {
+        // Each cone a surface point reflects toward its eye, read from the merged levels.
+        if (index >= uint(setup[121]))
+            return;
+        ConePoints points;
+        ConeLevels levels = { index * 9u + 8u };
+        ConeAtProbes cone;
+        readCone(cone, levels, points, index);
     }
     else if (index < uint(setup[Points]))
     {

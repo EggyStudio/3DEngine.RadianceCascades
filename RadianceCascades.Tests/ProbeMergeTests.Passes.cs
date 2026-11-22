@@ -50,6 +50,10 @@ public sealed partial class ProbeMergeTests
         // that reads the stage pays beside its own.
         public float StageSteps { get; init; }
         public float GatherReads { get; init; }
+        // Each cone's light as pass 11 read it, where the setting gives cones, and its reads of a
+        // texel or a reach texel.
+        public float[] ConeLight { get; init; } = [];
+        public float[] ConeReads { get; init; } = [];
         // Each level's merged light, its first channel, each texel where cascadeTexelIndex puts it.
         public float[][] LevelLight { get; init; } = [];
 
@@ -117,6 +121,9 @@ public sealed partial class ProbeMergeTests
         // Bounce is the light the round before lends each hit, by the cell of BounceGrid the hit
         // lies in, its least corner and its cell, Size cells a side, x fastest, none where unset.
         public float[]? Bounce { get; init; }
+        // The cones pass 11 reads after the gather, each at a surface point toward its eye at a
+        // roughness, none where null.
+        public (int Point, Vector3 View, float Roughness)[]? Cones { get; init; }
         public Vector4 BounceGrid { get; init; }
     }
 
@@ -192,14 +199,22 @@ public sealed partial class ProbeMergeTests
             (setup[92], setup[93], setup[94], setup[95]) = (setting.BounceGrid.X, setting.BounceGrid.Y, setting.BounceGrid.Z, setting.BounceGrid.W);
             cellLight = [.. cellLight, .. bounce];
         }
-        var reads = new float[texels + points.Length];
+        // Each texel's reads and each point's, then one the cone's levels count their reads of the
+        // kept texels at apart from their own.
+        var reads = new float[texels + points.Length + 1];
+        var cones = setting.Cones ?? [];
+        var coneFloats = new float[9 * Math.Max(cones.Length, 1)];
+        for (int c = 0; c < cones.Length; c++)
+            (coneFloats[c * 9], coneFloats[c * 9 + 1], coneFloats[c * 9 + 2], coneFloats[c * 9 + 3], coneFloats[c * 9 + 4]) =
+                (cones[c].Point, cones[c].View.X, cones[c].View.Y, cones[c].View.Z, cones[c].Roughness);
+        setup[121] = cones.Length;
         // Each probe's value of the per-probe stage and the steps its marches took.
         var stage = new uint[2 * levels.Sum(level => level.Probes)];
         void Pass(int pass, int level, int threads)
         {
             (setup[6], setup[7]) = (pass, level);
             CpuKernel.Run("probe_passes_cpu.slang", ((uint)(threads + 63) / 64, 1, 1), cells, setup, rays, reach, merged, marches, surfaces, cellLight,
-                skyShares, held, traceSteps, heldList, reads, stage);
+                skyShares, held, traceSteps, heldList, reads, stage, coneFloats);
         }
         if (setting.Held)
         {
@@ -237,6 +252,8 @@ public sealed partial class ProbeMergeTests
             }
         }
         Pass(setting.Traced ? 6 : 4, 0, points.Length);
+        if (cones.Length > 0)
+            Pass(11, 0, cones.Length);
         var (marched, steps, most) = (0, 0, 0);
         var (onward, onwardSteps, onwardMost, capped) = (0, 0, 0, 0);
         for (int k = 0; k < levels[0].TexelCount; k++)
@@ -267,7 +284,9 @@ public sealed partial class ProbeMergeTests
             MergeSteps = Enumerable.Range(0, texels).Sum(k => marches[k * 2 + 1]) / (float)texels,
             StageSteps = Enumerable.Range(0, stage.Length / 2).Sum(k => (float)stage[k * 2 + 1]) / texels,
             MergeReads = reads[..texels].Sum() / texels,
-            GatherReads = reads[texels..].Sum() / points.Length,
+            GatherReads = reads[texels..(texels + points.Length)].Sum() / points.Length,
+            ConeLight = Enumerable.Range(0, cones.Length).Select(c => coneFloats[c * 9 + 5]).ToArray(),
+            ConeReads = Enumerable.Range(0, cones.Length).Select(c => coneFloats[c * 9 + 8]).ToArray(),
             LevelLight = levels.Select((level, l) => Enumerable.Range(levels.Take(l).Sum(o => o.TexelCount), level.TexelCount)
                 .Select(k => merged[k * 3]).ToArray()).ToArray(),
         };

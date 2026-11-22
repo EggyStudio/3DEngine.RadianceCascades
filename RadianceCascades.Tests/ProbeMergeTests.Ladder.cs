@@ -531,7 +531,8 @@ public sealed partial class ProbeMergeTests
         file.AppendLine($"| every one | traced | {RoundByRound(traced[vestibule.Name].EachRound.Select(round => ByPart(vestibule, round)).ToList())} |");
         foreach (var r in vestibuleRows)
             file.AppendLine($"| {ConfigurationName(r.Configuration)} | {MergeName(r.Merge)} | {RoundByRound(r.EachRound)} |");
-        File.WriteAllText(path, file.ToString());
+        // The cones' section, which their own reading writes, is kept as it stands.
+        File.WriteAllText(path, file.ToString() + KeptConeSection(path));
 
         // The README's table under its ladder's heading takes the standing in place of the last.
         var readme = Path.Combine(Repository.Root, "README.md");

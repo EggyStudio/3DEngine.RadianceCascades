@@ -12,8 +12,17 @@ names the item of .github/REVIEW.md or .github/REVIEW-ARCHIVE.md and the commit 
 A closed room whose left wall gives the light, its other walls, floor and ceiling lit through the
 cascades on the CPU at 0.98 of the light traced to each point in all, beside that trace.
 
+![](.github/assets/readings/2026-11-22-item-10-cone-spheres.webp)
+Six spheres of roughness 0.1, 0.2, 0.3, 0.5, 0.7 and 1.0 before a red wall in a room open to the
+sky, each pixel the cone its surface reflects read from the cascades on the CPU, beside the same
+lobe traced with 4,096 rays a cone and the reading less the trace, the module's reading within 0.04
+of the trace from roughness 0.3 up and an engine's from 0.5 up.
+
 Commits that day
 
+- `c395762` The ladder runs every merge to a steady state of the bounce, each hit lit from the
+  probes of the round before, beside a traced loop over the same cells, and the CPU kernel's runs at
+  once each enter a library of their own.
 - `e310325` The merges gain a per-probe stage and a third rung, the merge by marched sight, and the
   ladder reads every merge at an engine's configuration beside the module's, a vestibule among its
   scenes.
