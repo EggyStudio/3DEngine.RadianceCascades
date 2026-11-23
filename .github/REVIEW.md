@@ -199,6 +199,19 @@ pointer. One commit an engine, after item 3's first part.
     scene, says whether the merge at the ray's end stays the default, and names what a host hands
     the new merge that it does not hand today.
 
+12. **What carries the high wall's surplus in the arcade court.** Every merge on the ladder reads
+    the court's high wall at 2.37 to 2.73 of the trace at a host's configuration, so the surplus
+    lies outside the hand-off, in a scene made to hold a host's case. This item finds its source on
+    the CPU by taking one thing out at a time, as the host's readings did. Read the high wall with
+    the far cascades' light set to zero (the near interval alone), with the sky share set to zero,
+    with each cascade's rays a probe doubled, with the probe spacing halved, and with the probes
+    that stand inside or behind the roof left out, and give the wall's reading for each beside the
+    trace. Follow one probe at the high wall through its texels as the parity replay does and name
+    the texels that carry the surplus and where their rays end. The Reply names the source in one
+    reading or says it is suspected, says whether the same source is in the module's configuration
+    (the high wall there), and proposes the mend with its cost. No mend is made in this item unless
+    it is a fault in a kernel, which is mended with a test.
+
 ## Verdicts
 
 Verdict 1 is settled at 22:56 on 2026-11-21, the build run on `2f0dc8e` green on the three systems,
@@ -952,3 +965,47 @@ merge at the ray's end stays the default. `ParityReplayTests` replays a binding'
 through the passes. Open are AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md, which wait
 for the owner, as LADDER.md's row does. Read first `ProbeMergeTests.Court.cs`,
 `ProbeMergeTests.Ladder.cs` and `rc_reach_sight_merge.slang`.
+
+Item 12, in the commit carrying this line, after `6aa63e9`. The source is the level the gather
+reads, named in one reading. At an engine's configuration the court's wall points lie at z = -3.75,
+a quarter of a unit past the finest level's last probes at -3.5, so the gather takes them to the
+level spaced 2 (`gatherLevel` in the test binding, the finest level whose probes stand about a point
+on every side). Of that level's trilinear weight over the high wall, the probes 0.75 off the wall
+above the roof hold 0.572 and count, and the row at y = 3 in and under the roof (0.084) and the
+column behind the wall (0.344) are left out already, by the field and by their sight of the point,
+so leaving out the probes the item names reads 2.367 as it stands, and so do the probes left at
+their grid places. Probe (-1, 5, -3) of that level, followed through its 256 texels, keeps the light
+traced from its place along every way, 5.065 toward the court against 5.065, where the wall's point
+behind it sees 1.238 along the same ways. The texels that carry it look down past the roof's edge,
+from (0.09, -0.83, 0.55) to (0.53, -0.74, 0.42) and their mirrors, and their rays end on the sunlit
+strip 5.3 to 9.5 units out, where the same ways from the wall's point meet the roof's top 1.6 to 2.9
+out. One thing at a time, after one gather, the high wall reads 2.367 of its trace as it stands,
+1.240 gathered from the finest level, 1.729 along each point's own rays, 1.801 with the level spaced
+2 the last and its light past its end none, 2.027 with four times the rays a probe (32 texels a
+side, as an octahedron holds a square count), 1.432 with the spacing halved, and 2.367 with the sky
+share zero, since the court's sky is black and the share of 0.093 carries no light. The module's
+configuration gathers from the finest level alone, its edge probes a quarter of a unit off the wall,
+and reads the high wall 1.212, the same source at a third of the offset. Along each point's own rays
+it reads 1.535 there and 1.729 at an engine's, since `gatherTraced` hands each ray on at open space,
+half a unit out, to the probes about it, which see past the roof's edge as the gathered probes do.
+The mend proposed is the binding's rule and no kernel's, to gather a point from the finest level
+whose probes stand about it or within half its spacing past its edge probes, the level's own cells,
+which `GatherRim` sets in the test binding. It adds no read and no step. The court's high wall reads
+1.240 after one gather and 1.177 settled, in place of 2.367 and 1.922. Over the ladder's scenes at
+an engine's configuration with the merge at the ray's end, settled, the mean distance goes from
+0.072 to 0.074 and the worst part from 0.653 to 0.446. The vestibule's walls go from 1.033 to 0.995
+and the held-out room's walls from 1.166 to 1.026, and the lamp's box falls from 0.907 to 0.640 on
+its floor and from 0.919 to 0.672 on its walls, which is the mend's cost and which this item does
+not read further. By the ladder's rule the mend does not stand above the gather as it stands, being
+farther on the mean.
+`A_Court_Wall_Past_The_Finest_Probes_Takes_The_Light_The_Probes_A_Level_Above_See_Three_Quarters_Of_A_Unit_Off_It`
+holds the probe and the two readings of the high wall, and `dotnet test RadianceCascades.Tests
+--filter FullyQualifiedName~Court` with `RC_COURT` set measures the rest in some ten minutes. The
+setup comment of the test kernel now names the fourth merge at 127.
+
+Handoff, for a fresh session, beside the two above. The court's surplus on the CPU is the gather's
+level, the wall's points read by probes a level above that stand 0.75 off the wall. The rule that
+would mend it, `GatherRim`, is in the test binding and off in the ladder, waiting on the owner's
+choice against the lamp's box. Open are AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md,
+which wait for the owner, as LADDER.md's row does. Read first `ProbeMergeTests.Court.cs` and
+`gatherLevel` in `probe_passes_cpu.slang`.

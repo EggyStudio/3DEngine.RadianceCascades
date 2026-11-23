@@ -117,6 +117,9 @@ public sealed partial class ProbeMergeTests
         public float MovedTo { get; init; } = Margin;
         public float MovedAtMost { get; init; }
         public bool GatherHolding { get; init; }
+        // GatherRim gathers each point from the finest level whose probes stand about it or lie
+        // within half its spacing of it past its edge probes, the level's own cells.
+        public bool GatherRim { get; init; }
         public bool LightByPlace { get; init; }
         // Bounce is the light the round before lends each hit, by the cell of BounceGrid the hit
         // lies in, its least corner and its cell, Size cells a side, x fastest, none where unset.
@@ -186,7 +189,7 @@ public sealed partial class ProbeMergeTests
         setup[125] = setting.GateFiner ? 1 : 0;
         setup[126] = setting.Held ? 1 : 0;
         setup[127] = (int)setting.Merge;
-        (setup[91], setup[122], setup[123]) = (setting.MovedAtMost, setting.GatherHolding ? 1 : 0, setting.LightByPlace ? 1 : 0);
+        (setup[91], setup[122], setup[123]) = (setting.MovedAtMost, setting.GatherRim ? 2 : setting.GatherHolding ? 1 : 0, setting.LightByPlace ? 1 : 0);
         (setup[88], setup[89], setup[90]) = (setting.OneSided ? 1 : 0, setting.IndirectShare, setting.Indirect);
         var fieldCells = Math.Max(setting.FieldCascades?.Length ?? 1, 1) * Size * Size * Size;
         var held = new float[12 * fieldCells];

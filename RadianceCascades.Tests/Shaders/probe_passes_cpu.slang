@@ -25,12 +25,13 @@ RWStructuredBuffer<float> cells;
 // a share of its spacing, none where 0, and from 92 the least corner of the bounce's grid and its
 // cell. From the float at 96 come the count of the field's cascades, none for the one above, and
 // each one's least corner and cell, four floats each, at 121 the count of cones pass 11 reads, at
-// 122 whether each surface point is gathered from the finest level about it, at 123 whether a hit's
-// light is read from cellLight by its place in the cascade the float at 0 begins, at 124 where the
-// surface points' shares of the sky begin in skyFloats, at 125 whether the finer levels' merges
-// lend no sky, at 127 the merge the passes take, 0 the merge at the ray's end, 1 by reach sight and
-// 2 by marched sight, and from the float at 128 the count of surface points and each point's place,
-// normal and albedo, seven floats each.
+// 122 whether each surface point is gathered from the finest level about it, 1 where its probes
+// stand about the point on every side and 2 where the point lies within half a spacing past them,
+// at 123 whether a hit's light is read from cellLight by its place in the cascade the float at 0
+// begins, at 124 where the surface points' shares of the sky begin in skyFloats, at 125 whether the
+// finer levels' merges lend no sky, at 127 the merge the passes take, 0 the merge at the ray's end,
+// 1 by reach sight, 2 by marched sight and 3 about its own probe, and from the float at 128 the
+// count of surface points and each point's place, normal and albedo, seven floats each.
 RWStructuredBuffer<float> setup;
 
 // Each texel's ray as its trace ended, how, where, its carried share and its light, six floats a
@@ -385,7 +386,8 @@ int gatherLevel(float3 p)
     {
         ProbeCascade cascade = levelCascade(l);
         float3 q = (p - cascade.corner) / cascade.spacing;
-        if (all(q >= 0.0) && all(q <= float3(cascade.count - 1)))
+        float rim = setup[122] > 1.5 ? 0.5 : 0.0;
+        if (all(q >= -rim) && all(q <= float3(cascade.count - 1) + rim))
             return l;
     }
     return levels - 1;

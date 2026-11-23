@@ -18,22 +18,25 @@ public sealed partial class ProbeMergeTests
     // one another, read on the long walls in the court's middle 7, low within the arcades at 0.5,
     // 1.5 and 2.5 and high above them at 4.5, 5.5 and 6.5, its finest level at the module's
     // configuration 8 by 8 by 8 probes a unit apart.
+    private static readonly (Vector3 Low, Vector3 High)[] CourtBoxes =
+    [
+        (new(-7.75f, -0.5f, -4.5f), new(7.75f, 0, 4.5f)), (new(-7.75f, 0, -4.5f), new(7.75f, 8, -4)), (new(-7.75f, 0, 4), new(7.75f, 8, 4.5f)),
+        (new(-7.75f, 0, -4), new(-7.25f, 8, 4)), (new(7.25f, 0, -4), new(7.75f, 8, 4)),
+        (new(-7.25f, 2.5f, -2.75f), new(7.25f, 3, -2.5f)), (new(-7.25f, 2.5f, 2.5f), new(7.25f, 3, 2.75f)),
+        (new(-7.25f, 3, -4), new(7.25f, 3.5f, -2.5f)), (new(-7.25f, 3, 2.5f), new(7.25f, 3.5f, 4)),
+    ];
+
+    // The light the court's surfaces send by their place, the sunlit strip's 1 and none elsewhere.
+    private static float CourtLight(Vector3 p) => p.Y < 0.25f && MathF.Abs(p.Z) < 1.5f && MathF.Abs(p.X) < 7.25f ? 1 : 0;
+
     private static LadderScene ArcadeCourt()
     {
-        (Vector3, Vector3)[] boxes =
-        [
-            (new(-7.75f, -0.5f, -4.5f), new(7.75f, 0, 4.5f)), (new(-7.75f, 0, -4.5f), new(7.75f, 8, -4)), (new(-7.75f, 0, 4), new(7.75f, 8, 4.5f)),
-            (new(-7.75f, 0, -4), new(-7.25f, 8, 4)), (new(7.25f, 0, -4), new(7.75f, 8, 4)),
-            (new(-7.25f, 2.5f, -2.75f), new(7.25f, 3, -2.5f)), (new(-7.25f, 2.5f, 2.5f), new(7.25f, 3, 2.75f)),
-            (new(-7.25f, 3, -4), new(7.25f, 3.5f, -2.5f)), (new(-7.25f, 3, 2.5f), new(7.25f, 3.5f, 4)),
-        ];
         (Vector3, Vector3)[] Walls(float from) =>
         [
             .. Grid(new(-3, from, -3.75f), Vector3.UnitX, 7, Vector3.UnitY, 3, Vector3.UnitZ),
             .. Grid(new(-3, from, 3.75f), Vector3.UnitX, 7, Vector3.UnitY, 3, -Vector3.UnitZ),
         ];
-        return BoxScene("a court lit in a strip between arcades", boxes,
-            p => p.Y < 0.25f && MathF.Abs(p.Z) < 1.5f && MathF.Abs(p.X) < 7.25f ? 1 : 0, 0, new(new(-3.5f, 0.5f, -3.5f), 1, 8, 8, 8, NearTexels, 2),
+        return BoxScene("a court lit in a strip between arcades", CourtBoxes, CourtLight, 0, new(new(-3.5f, 0.5f, -3.5f), 1, 8, 8, 8, NearTexels, 2),
             [("low wall", Walls(0.5f)), ("high wall", Walls(4.5f))], center: new Vector3(0, 4, 0));
     }
 
@@ -64,4 +67,166 @@ public sealed partial class ProbeMergeTests
         output.WriteLine(said);
         Assert.True(settles && first[1] > 1 && ratios[1] > 1 && first[1] > first[0] && ratios[1] > ratios[0], said);
     }
+
+    // The probe of an engine's level spaced 2 the court's high wall reads most, at (-1, 5, -3) of
+    // its grid, three quarters of a unit off the wall and a unit and a half over the roof, and the
+    // wall's point behind it.
+    private static readonly (int X, int Y, int Z) CourtProbe = (3, 4, 2);
+    private static readonly Vector3 CourtPoint = new(-1, 5, -3.75f);
+
+    // A probe's light toward n summed over its texels at their middle ways, each texel's merged
+    // light by its facing, beside the light traced along the same ways from the probe's grid place
+    // and from point, the light of the surface first met among the court's boxes, at the same
+    // weights for the three.
+    private static (float Merged, float FromProbe, float FromPoint) CourtTexels(Chained reading, Level[] levels, int l, (int X, int Y, int Z) probe,
+        Vector3 point, Vector3 n)
+    {
+        var level = levels[l];
+        var light = CellLightBy(CourtLight);
+        var place = level.Corner + new Vector3(probe.X, probe.Y, probe.Z) * level.Spacing;
+        var at = ((probe.Z * level.Y + probe.Y) * level.X + probe.X) * level.Texels * level.Texels;
+        float Along(Vector3 from, Vector3 way)
+        {
+            var t = FirstBox(CourtBoxes, from, way);
+            return t < LeavesField(from, way) ? light[ClosedCellOf(from + way * (t - 0.01f))] : 0;
+        }
+        var (merged, fromProbe, fromPoint) = (0f, 0f, 0f);
+        for (int k = 0; k < level.Texels * level.Texels; k++)
+        {
+            var way = Vector3.Normalize(OctahedronPoint((k % level.Texels + 0.5f) / level.Texels, (k / level.Texels + 0.5f) / level.Texels));
+            var facing = MathF.Max(Vector3.Dot(n, way), 0);
+            merged += reading.LevelLight[l][at + k] * facing;
+            fromProbe += Along(place, way) * facing;
+            fromPoint += Along(point, way) * facing;
+        }
+        return (merged, fromProbe, fromPoint);
+    }
+
+    [CpuKernelFact]
+    public void A_Court_Wall_Past_The_Finest_Probes_Takes_The_Light_The_Probes_A_Level_Above_See_Three_Quarters_Of_A_Unit_Off_It()
+    {
+        // At an engine's configuration the court's walls lie a quarter of a unit past the finest
+        // level's last probes, so the gather takes their points to the level spaced 2, and of its
+        // probes about the high wall those that count stand three quarters of a unit off the wall
+        // over the roof. Such a probe keeps the light traced from where it stands, and along its
+        // ways down past the roof's edge onto the sunlit strip the wall's point behind it meets
+        // the roof's top, so the wall reads what the probe sees. Gathered from the finest level
+        // within half its spacing, its edge probes a quarter of a unit off, the high wall reads
+        // near its trace.
+        var court = ArcadeCourt();
+        var scene = court.AtEngine!();
+        var (points, _) = LadderPoints(court);
+        var traced = ByPart(scene, points.Select(p => court.Traced(p.Item1, p.Item2)).ToArray());
+        var setting = scene.Setting with { Merge = Merge.AtRayEnd, Points = points };
+        float High(Chained r) => ByPart(scene, r.Taken[..points.Length])[1] / traced[1];
+        var standing = Passes(scene.Cells, scene.Levels, scene.Place, setting);
+        var rim = Passes(scene.Cells, scene.Levels, scene.Place, setting with { GatherRim = true });
+        var (merged, fromProbe, fromPoint) = CourtTexels(standing, scene.Levels, 1, CourtProbe, CourtPoint, Vector3.UnitZ);
+        var said = $"the probe's texels give {merged:0.000} toward the court, the light traced along their ways {fromProbe:0.000} from its place "
+            + $"and {fromPoint:0.000} from the wall's point, and the high wall reads {High(standing):0.000} of its trace, {High(rim):0.000} "
+            + "gathered from the finest level within half its spacing";
+        output.WriteLine(said);
+        Assert.True(MathF.Abs(merged / fromProbe - 1) < 0.01f && fromPoint < fromProbe / 3 && High(standing) > 2 && High(rim) < 1.3f, said);
+    }
+
+    [CpuKernelFact]
+    public void The_Court_Read_Taking_One_Thing_Out_At_A_Time_And_The_Ladder_Gathered_Within_Half_A_Spacing_Where_RC_COURT_Is_Set()
+    {
+        // dotnet test RadianceCascades.Tests with RC_COURT set reads the court's walls after one
+        // gather at an engine's configuration with one thing changed at a time, and every ladder
+        // scene there with each point gathered from the finest level within half its spacing, the
+        // merge at the ray's end throughout, some twelve minutes in all.
+        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RC_COURT")))
+            return;
+        var court = ArcadeCourt();
+        var scene = court.AtEngine!();
+        var (points, lit) = LadderPoints(court);
+        var own = points.Select(p => court.Traced(p.Item1, p.Item2)).ToArray();
+        var traced = ByPart(scene, own);
+        string Ratios(LadderScene at, float[] light, float[] by) =>
+            string.Join(", ", ByPart(at, light).Select((v, i) => $"{at.Parts[i].Name} {v / by[i]:0.000}"));
+        var center = new Vector3(0, 4, 0);
+        Level[] halved = [.. EngineField(center).Select((f, c) =>
+        {
+            var spacing = 4 * f.W;
+            return new Level(new Vector3(f.X, f.Y, f.Z) + new Vector3(spacing / 2), spacing, 16, 16, 16, 16, c < 3 ? 4 * spacing : EngineEnd, c < 2 ? 8 : 0);
+        })];
+        var setting = scene.Setting with { Merge = Merge.AtRayEnd, Points = points };
+        (string, LadderScene, Level[], Setting)[] readings =
+        [
+            ("as it stands", scene, scene.Levels, setting),
+            ("gathered from the finest level", scene, scene.Levels, setting with { GatherHolding = false }),
+            ("gathered from the finest level within half its spacing", scene, scene.Levels, setting with { GatherRim = true }),
+            ("gathered along each point's own rays", scene, scene.Levels, setting with { Traced = true }),
+            ("the level spaced 2 the last, its light past its end none", scene, scene.Levels[..2], setting),
+            ("four times the rays a probe, 32 texels a side", scene, [.. scene.Levels.Select(v => v with { Texels = v.Texels * 2, Kept = v.Kept * 2 })],
+                setting),
+            ("the spacing halved", scene, halved, setting),
+            ("the probes at their grid places", scene, scene.Levels, setting with { Moved = false }),
+            ("the module's configuration", court, court.Levels, court.Setting with { Merge = Merge.AtRayEnd, Points = points }),
+            ("the module's configuration along each point's own rays", court, court.Levels,
+                court.Setting with { Merge = Merge.AtRayEnd, Points = points, Traced = true }),
+        ];
+        foreach (var (name, at, levels, s) in readings)
+        {
+            var r = Passes(at.Cells, levels, at.Place, s);
+            output.WriteLine($"{name}: {Ratios(at, r.Taken[..points.Length], traced)}, the first point's share of the sky {r.SkyShare:0.000}");
+        }
+
+        // The share of the trilinear weight of the level spaced 2 over the high wall's points that
+        // each row of its probes holds, both walls' together, and whether the gather counts it, a
+        // probe inside a box or whose straight line to the point meets one short of the sight's
+        // slack left out.
+        var level = scene.Levels[1];
+        var count = new Vector3(level.X, level.Y, level.Z);
+        var rows = new SortedDictionary<string, double>(StringComparer.Ordinal);
+        bool Inside(Vector3 q) => CourtBoxes.Any(b => Vector3.Min(q - b.Low, b.High - q) is { X: > 0, Y: > 0, Z: > 0 });
+        foreach (var (p, _) in points[scene.Parts[0].Points.Length..lit])
+        {
+            var g = (p - level.Corner) / level.Spacing;
+            var b = Vector3.Clamp(new(MathF.Floor(g.X), MathF.Floor(g.Y), MathF.Floor(g.Z)), Vector3.Zero, count - new Vector3(2));
+            var f = Vector3.Clamp(g - b, Vector3.Zero, Vector3.One);
+            for (int c = 0; c < 8; c++)
+            {
+                var offset = new Vector3(c & 1, (c >> 1) & 1, c >> 2);
+                var q = level.Corner + (b + offset) * level.Spacing;
+                var (d, slack) = (p - q, SeeingSlackOf(level));
+                var lerps = Vector3.Lerp(Vector3.One - f, f, offset);
+                var counts = !Inside(q) && FirstBox(CourtBoxes, q, Vector3.Normalize(d)) >= d.Length() - slack;
+                var key = $"y {q.Y} {MathF.Abs(q.Z)} off the middle{(counts ? "" : " left out")}";
+                rows[key] = rows.GetValueOrDefault(key) + lerps.X * lerps.Y * lerps.Z;
+            }
+        }
+        output.WriteLine("the high wall's weight by row of the level spaced 2: "
+            + string.Join(", ", rows.Select(r => $"{r.Key} {r.Value / rows.Values.Sum():0.000}")));
+
+        var transport = TransportOf(court.Bounce!, points);
+        var (steady, _, _, _) = TracedLoop(transport, own, lit);
+        foreach (var (name, s) in new[] { ("as it stands", setting), ("within half a spacing", setting with { GatherRim = true }) })
+        {
+            var (_, light, rounds, _, _, _) = MergedLoop(scene, transport, s with { Points = null }, points, lit);
+            output.WriteLine($"settled, gathered {name}: {Ratios(scene, light, ByPart(scene, steady))} in {rounds} rounds");
+        }
+
+        var distances = new List<float>();
+        foreach (var ladder in LadderScenes())
+        {
+            var at = ladder.AtEngine!();
+            var (ps, lp) = LadderPoints(ladder);
+            var tr = TransportOf(ladder.Bounce!, ps);
+            var ow = ps.Select(p => ladder.Traced(p.Item1, p.Item2)).ToArray();
+            var (st, _, _, _) = TracedLoop(tr, ow, lp);
+            var (_, light, _, _, _, _) = MergedLoop(at, tr, at.Setting with { Merge = Merge.AtRayEnd, GatherRim = true }, ps, lp);
+            var ratios = ByPart(at, light).Select((v, i) => v / ByPart(at, st)[i]).ToArray();
+            if (!ladder.HeldOut)
+                distances.AddRange(ratios.Select(r => MathF.Abs(MathF.Log(r))));
+            output.WriteLine($"{ladder.Name} settled within half a spacing: "
+                + string.Join(", ", at.Parts.Select((part, i) => $"{part.Name} {ratios[i]:0.000}")));
+        }
+        output.WriteLine($"the ladder at an engine's configuration within half a spacing, the mean distance {distances.Average():0.000} and the worst "
+            + $"{distances.Max():0.000}");
+    }
+
+    // The sight's slack the gather allows a probe of level, as farProbeSees takes it.
+    private static float SeeingSlackOf(Level level) => 0.125f * level.Spacing;
 }
