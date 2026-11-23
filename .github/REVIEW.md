@@ -1009,3 +1009,41 @@ would mend it, `GatherRim`, is in the test binding and off in the ladder, waitin
 choice against the lamp's box. Open are AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md,
 which wait for the owner, as LADDER.md's row does. Read first `ProbeMergeTests.Court.cs` and
 `gatherLevel` in `probe_passes_cpu.slang`.
+
+Item 12's rim, in the commit carrying this line, after `1e53334`. An engine's configuration in the
+tests now gathers each point from the finest level whose probes stand about it or within half its
+spacing past its edge probes (`GatherRim`), and the README says what a binding does at a level's rim
+and why. A host's binding should hold by a level every point within half its spacing past its edge
+probes, the level's own cells, its edge probes taking it, and hand to the level above only a point
+past that rim, since a wall's points a quarter of a unit past the finest level's last probes
+otherwise go to the level above, whose probes stand a spacing off the wall and see past what hides
+it. With it the ladder at an engine's configuration reads, on the mean and in the worst part, 0.074
+and 0.446 for `MergeAtRayEnd`, 0.117 and 0.388 for `MergeByReachSight`, 0.229 and 0.655 for
+`MergeAboutProbe` and 0.316 and 0.810 for `MergeByMarchedSight`, and the merge at the ray's end
+stands above `MergeAboutProbe` alone there and stays the default. The lamp's box moves to 0.640
+since its floor's and walls' points, past the finest level's probes as the court's are, now go to
+that level's probes a quarter of a unit off, which trace the lamp nearly as the points do (0.373 at
+a wall probe's place against 0.343 beside it), where the level above's probes 0.75 off stood nearer
+the lamp and traced more of it (0.484 against 0.387). Probes of both levels keep only part of the
+small lamp where it lies past their rays' end, a finest wall probe 7.016 of the 10.482 its ways
+trace, one of the level above 6.535 of 13.117 and a finest probe over the floor 3.445 of 14.905, so
+the over-read 0.75 off had hidden a loss at the hand-off, which the rim shows. With the rim the
+court parts the merges, the merge at the ray's end nearest and the three that blend the far probes
+about the near probe's own place over the trace on the high wall, the other way round from the
+device, each part's light after one gather and settled as `RC_LADDER` writes it.
+
+| Merge | Low wall | High wall |
+|---|---|---|
+| `MergeAtRayEnd` | 1.175 and 1.137 | 1.240 and 1.177 |
+| `MergeByReachSight` | 1.324 and 1.259 | 1.668 and 1.474 |
+| `MergeByMarchedSight` | 0.871 and 0.871 | 1.681 and 1.454 |
+| `MergeAboutProbe` | 0.899 and 0.899 | 1.780 and 1.484 |
+
+The lamp's box's figures come from `dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~Court` with `RC_COURT` set, which reads the court's knockouts of item 12 with
+each point held by the probes about it, as they were read.
+
+Handoff, for a fresh session, beside the ones above. The rim is on at an engine's configuration in
+the tests, the court parts the merges with the merge at the ray's end nearest, and the lamp's box
+shows the merge's loss of a small bright light past a ray's end. Open are AGENTS.md's documents rows
+for DEVLOG.md and CHEATSHEET.md, which wait for the owner, as LADDER.md's row does.

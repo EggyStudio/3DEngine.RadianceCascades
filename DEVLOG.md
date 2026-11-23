@@ -10,6 +10,9 @@ names the item of .github/REVIEW.md or .github/REVIEW-ARCHIVE.md and the commit 
 
 Commits that day
 
+- `1e53334` Follows the court's surplus on the high wall to the level its points are gathered from,
+  and lets the test binding gather a point within half a spacing past the finest level's probes to
+  read what that would cost.
 - `6aa63e9` Adds a merge that blends the far probes about the near probe's own place, and a court
   lit in a strip between arcades to the ladder, which keeps the merge at the ray's end as the
   default.

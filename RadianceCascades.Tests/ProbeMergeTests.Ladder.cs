@@ -108,7 +108,10 @@ public sealed partial class ProbeMergeTests
 
     // The engine's setting beside a scene's own, its field about center, its caps of steps, its
     // probes moved off the field's surfaces to stand a tenth of a unit clear by at most 0.45 of
-    // their spacing, and each point gathered from the finest level that holds it.
+    // their spacing, and each point gathered from the finest level whose probes stand about it or
+    // within half its spacing past its edge probes, the level's own cells. A wall's points a
+    // quarter of a unit past the finest level's last probes would go to the level above, whose
+    // probes stand a spacing off the wall and see what the wall does not.
     private static Setting EngineSetting(Setting setting, Vector3 center) => setting with
     {
         FieldCascades = EngineField(center),
@@ -117,6 +120,7 @@ public sealed partial class ProbeMergeTests
         MovedTo = 0.1f,
         MovedAtMost = 0.45f,
         GatherHolding = true,
+        GatherRim = true,
     };
 
     // The cells of the engine's field about center that the triangles resolve to, its cascades one
@@ -160,6 +164,17 @@ public sealed partial class ProbeMergeTests
         .. beside,
     ];
 
+    // The closed room 8 high of the lamp's box, its walls, floor and lid, and the light each place
+    // of its surfaces sends, the lid's middle square of 2 a side 5 and every other face none.
+    private static readonly (Vector3 Low, Vector3 High)[] LampBoxes =
+    [
+        (new(-4 - Wall, -1.5f, -4 - Wall), new(4 + Wall, 0, 4 + Wall)), (new(4, 0, -4 - Wall), new(4 + Wall, 8, 4 + Wall)),
+        (new(-4 - Wall, 0, -4 - Wall), new(-4, 8, 4 + Wall)), (new(-4, 0, 4), new(4, 8, 4 + Wall)), (new(-4, 0, -4 - Wall), new(4, 8, -4)),
+        (new(-4 - Wall, 8, -4 - Wall), new(4 + Wall, 8 + Wall, 4 + Wall)),
+    ];
+
+    private static float LampAt(Vector3 p) => MathF.Abs(p.X) < 1 && MathF.Abs(p.Z) < 1 && p.Y is > 7.75f and < 8 ? 5 : 0;
+
     // The ladder's scenes, eight the standing is read over and one held out.
     private static LadderScene[] LadderScenes()
     {
@@ -185,12 +200,8 @@ public sealed partial class ProbeMergeTests
         // every other face none.
         const float o = 4 + Wall;
         var closedTriangles = OpenBox().Concat(Cuboid(new(-o, 8, -o), new(o, 8 + Wall, o), 6)).ToList();
-        var lampLight = CellLightBy(p => MathF.Abs(p.X) < 1 && MathF.Abs(p.Z) < 1 && p.Y is > 7.75f and < 8 ? 5 : 0);
-        (Vector3, Vector3)[] closedBoxes =
-        [
-            (new(-o, -1.5f, -o), new(o, 0, o)), (new(4, 0, -o), new(o, 8, o)), (new(-o, 0, -o), new(-4, 8, o)),
-            (new(-4, 0, 4), new(4, 8, o)), (new(-4, 0, -o), new(4, 8, -4)), (new(-o, 8, -o), new(o, 8 + Wall, o)),
-        ];
+        var lampLight = CellLightBy(LampAt);
+        var closedBoxes = LampBoxes;
         var lamp = new LadderScene("a closed box with one lamp", Field(closedTriangles), new Setting { CellLight = lampLight, SkyLight = 0 },
             LadderLevels(new(new(-3.5f, 0.5f, -3.5f), 1, 8, 8, 8, NearTexels, 2)), Floor,
             [("floor", Grid(new(-3, 0.25f, -3), Vector3.UnitX, 7, Vector3.UnitZ, 7, Vector3.UnitY)), ("walls", RoomWalls(1, 2, 4))],

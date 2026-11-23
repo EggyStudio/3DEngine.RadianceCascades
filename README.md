@@ -337,6 +337,15 @@ The conventions the module stands on:
   holds the slab, for 128 rays a point at 16 texels a side and 1,000 to 1,600 steps. A ray that
   leaves the field takes the sky, so a slab reaching past the coarsest cascade reads open past its
   edge, and against the whole slab the floor reads 1.68 and 1.39 times its light.
+- A binding that gathers each point from the finest level about it holds by that level a point
+  that lies within half its spacing past its edge probes, the level's own cells, its edge probes
+  taking it alone, and hands to the level above only a point past that rim. A wall's points a
+  quarter of a unit past the finest level's last probes would otherwise go to the level above, whose
+  probes stand a spacing off the wall and see what the wall does not. In a court lit in a strip
+  between arcades at an engine's configuration, the high wall over the arcades' roof reads 2.367 of
+  its trace gathered from the level above, whose probes see past the roof's edge onto the sunlit
+  floor where the wall meets the roof, and 1.240 from the finest level's edge probes a quarter of a
+  unit off, as `ProbeMergeTests.Court.cs` reads it.
 
 The face under the lintel by how many of the four cascades are traced at 2, the rest at 1:
 
@@ -428,14 +437,15 @@ groupshared memory, since a dispatch does not group its threads by probe at ever
   leaves any out, and the ray marches on itself where none counts (`aboutProbeLight`). It is the
   merge by reach sight without that march.
 
-The ladder runs every merge over nine scenes on the CPU, no graphics device, at two
-configurations, and reads each part of a scene against the light traced to its points. The
-module's configuration is the tests' chain of four levels in one cascade of the field. An engine's
-is five levels of 8 probes a side, every 8 cells of a field of five cascades of 64 cells from 0.125,
-the finest two traced at 16 texels a side and read at 8, every ray from its probe to four times its
-spacing but the last two's to the field's diagonal, and each point gathered from the finest level
-about it. The ladder writes each scene's reading, with the date and the commit, to the file
-`RC_LADDER` names, and the merges' standing to the table below, as:
+The ladder runs every merge over nine scenes on the CPU, no graphics device, at two configurations,
+and reads each part of a scene against the light traced to its points. The module's configuration is
+the tests' chain of four levels in one cascade of the field. An engine's is five levels of 8 probes
+a side, every 8 cells of a field of five cascades of 64 cells from 0.125, the finest two traced at
+16 texels a side and read at 8, every ray from its probe to four times its spacing but the last
+two's to the field's diagonal, and each point gathered from the finest level whose probes stand
+about it or within half its spacing past its edge probes. The ladder writes each scene's reading,
+with the date and the commit, to the file `RC_LADDER` names, and the merges' standing to the table
+below, as:
 
 ```bash
 RC_LADDER=.github/LADDER.md dotnet test RadianceCascades.Tests --filter FullyQualifiedName~The_Ladder
@@ -469,10 +479,10 @@ by round.
 | the module's | at the ray's end, `MergeAtRayEnd` | 0.099 | 0.329 | 0.00000 | 1.1 | 6.7 | 0.501 | about its own probe, by marched sight | 0.030 and 0.041 |
 | the module's | about its own probe, `MergeAboutProbe` | 0.130 | 0.720 | 0.00000 | 0.0 | 7.9 | 0.501 | none | 0.073 and 0.170 |
 | the module's | by marched sight, `MergeByMarchedSight` | 0.501 | 1.769 | 0.00000 | 1.1 | 6.8 | 0.475 | none | 0.270 and 0.412 |
-| an engine's | at the ray's end, `MergeAtRayEnd` | 0.072 | 0.653 | 0.00000 | 0.6 | 14.3 | 0.500 | by reach sight, about its own probe | 0.092 and 0.153 |
-| an engine's | by reach sight, `MergeByReachSight` | 0.107 | 0.724 | 0.00000 | 1.2 | 15.3 | 0.500 | none | 0.073 and 0.143 |
-| an engine's | about its own probe, `MergeAboutProbe` | 0.227 | 0.750 | 0.00000 | 0.0 | 16.2 | 0.500 | none | 0.071 and 0.186 |
-| an engine's | by marched sight, `MergeByMarchedSight` | 0.283 | 0.768 | 0.00000 | 1.3 | 12.9 | 0.500 | none | 0.087 and 0.212 |
+| an engine's | at the ray's end, `MergeAtRayEnd` | 0.074 | 0.446 | 0.00000 | 0.6 | 14.3 | 0.501 | about its own probe | 0.032 and 0.040 |
+| an engine's | by reach sight, `MergeByReachSight` | 0.117 | 0.388 | 0.00000 | 1.2 | 15.3 | 0.501 | none | 0.030 and 0.050 |
+| an engine's | about its own probe, `MergeAboutProbe` | 0.229 | 0.655 | 0.00000 | 0.0 | 16.2 | 0.501 | none | 0.109 and 0.219 |
+| an engine's | by marched sight, `MergeByMarchedSight` | 0.316 | 0.810 | 0.00000 | 1.3 | 12.9 | 0.497 | none | 0.154 and 0.262 |
 
 No merge stands above every other at every configuration, so the default stays the merge at the ray's end, `MergeAtRayEnd`.
 
@@ -513,9 +523,9 @@ halves of rays differ by, the floor under which no difference is read.
 | an engine's | 0.1 | 0.741 | 0.250 | 7.885 | 0.457 | 0.000 | -0.413 | 0.02060 | 167 |
 | an engine's | 0.2 | 0.706 | 0.290 | 7.199 | 0.302 | 0.004 | -0.436 | 0.02060 | 167 |
 | an engine's | 0.3 | 0.635 | 0.341 | 5.820 | 0.081 | 0.006 | -0.426 | 0.02060 | 167 |
-| an engine's | 0.5 | 0.247 | 0.153 | 1.084 | 0.000 | 0.010 | +0.018 | 0.00000 | 86 |
-| an engine's | 0.7 | 0.224 | 0.095 | 1.160 | 0.000 | 0.012 | +0.056 | 0.00000 | 86 |
-| an engine's | 1.0 | 0.218 | 0.082 | 1.211 | 0.000 | 0.017 | +0.099 | 0.00000 | 86 |
+| an engine's | 0.5 | 0.213 | 0.116 | 1.084 | 0.000 | 0.010 | -0.035 | 0.00000 | 94 |
+| an engine's | 0.7 | 0.167 | 0.085 | 1.160 | 0.000 | 0.012 | -0.037 | 0.00000 | 94 |
+| an engine's | 1.0 | 0.149 | 0.068 | 0.988 | 0.000 | 0.017 | -0.025 | 0.00000 | 94 |
 
 The cones read within a tenth of their trace on the median scene from roughness 0.5 up at the module's configuration and from roughness 0.7 up at an engine's, and on the mean over every part at no roughness of the six and at no roughness of the six.
 
