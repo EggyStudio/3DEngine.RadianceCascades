@@ -448,6 +448,12 @@ bool mergeBy<F : IProbeField>(F field, LevelRays rays, TracedSkyMeans<LevelProbe
 {
     ProbeCascade cascade = levelCascade(level);
     NoStageValues none;
+    if (setup[127] > 2.5)
+    {
+        MergeAboutProbe merge;
+        return mergeTexel(merge, none, field, rays, placesOf(level), above, placesOf(level + 1), merged, cascade, aboveCascade, setup[8],
+            sky, counted, index);
+    }
     if (setup[127] > 1.5)
     {
         MergeByMarchedSight merge;
@@ -617,7 +623,12 @@ void test(uint3 id : SV_DispatchThreadID)
         TracedSkyMeans<LevelProbes> finest = meansOf(g, read, uint(setup[124]) + index);
         NoSteps none;
         ProbeCascade gathered = readCascade(levelCascade(g), finest.means.perRead);
-        if (setup[127] > 1.5)
+        if (setup[127] > 2.5)
+        {
+            MergeAboutProbe merge;
+            gatherTraced(merge, field, finest, placesOf(g), gathered, setup[8], sky, surfaces, none, index);
+        }
+        else if (setup[127] > 1.5)
         {
             MergeByMarchedSight merge;
             gatherTraced(merge, field, finest, placesOf(g), gathered, setup[8], sky, surfaces, none, index);

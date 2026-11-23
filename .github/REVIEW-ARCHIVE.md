@@ -379,3 +379,85 @@ Slang interface to a row in the README's table, which failed first on the four n
 compiles a kernel once a run and runs one kernel's dispatches one at a time. For the engines' change
 list: a cell carries its surface's light-through as a value of its own (`throughAt`), not in the
 paint's alpha, which the README's binding section states.
+
+The three cascades' loss, read by switching each link of the chain against the finest cascade's
+texels each marched on itself to 32, which read the open box's floor 0.2470 against the dome's
+0.2511. The finest-to-middle link by the rule, the middle's texels marched on themselves, reads
+0.2504, 1.4% over the reference; the middle-to-far link alone reads 0.2116, 14.3% under; both links
+by the rule 0.2317, 6.2% under. The middle cascade ending at 4 hands its rays to the far probes some
+6 units out, 2 under the box's rim, where the far probes about that point stand up to 2 units off
+the ray and their rays meet the rim, so the opening's edge is smeared across the ways about it and
+light moves from the steep texels, which weigh most on the floor, to shallow ones toward the walls.
+It is not the lookup between cascades (16 texels at each), the grids' edges (no texel marched on
+itself) or the slack (a quarter of it reads the same). The same hand-off lets 4.28% of the open
+box's light through the sheet lid in three cascades, which the committed test does not read. Ending
+the middle cascade at 2, twice its spacing, so its rays reach the far cascade 4 out as in the pair,
+reads the open box 0.2548 in three cascades (1.5% over), the lidded box 0 and the sheet-lidded 0.81%
+of the open box's, and leaves the pair at 1.1% over, so a test at 5% holds. Reading each far probe
+toward where its own ray stopped, or toward a point two far spacings along the ray, mended the open
+box and let 4.4 to 9.3% through the sheet lid. A hand-off that lands within a far spacing of an edge
+still smears it, so short ends lessen the loss in other scenes and do not end it. For your word: the
+mend, the three-cascade test's middle end at 2 held to 5% with the sheet-lidded box beside it, and
+the note on ends in `rc_probe_passes` that engines set their ends by.
+
+Decision, from the review, recorded as the probes' readers enter: a hit takes the split sum with its
+cell's own reflectance, its shares from the integrated table, a 32 by 32 Slang constant array the
+tests hold to Materials' `SurfaceResponse.SplitSumIntegrated`, with a floor of 0.045. It is not yet
+built; a hit's light is read through `IProbeField.surfaceLightAt` until it is.
+
+The mend, agreed, in the commit carrying this line: the three-cascade test's middle cascade ends at
+2, twice its spacing, held to 5 percent, reading the open box's floor 0.2548 against the dome's
+0.2511, and reads the box lidded by a sheet beside the lidded one, 0.81 percent of the open box's
+where reaching 4 let through 4.28; the note on ends in `rc_probe_passes` says why, and the README
+states the ends' rule as a convention a binding follows, a cascade's end no farther than twice its
+spacing and past its spacing times the root of three, with its limit, that an edge within a far
+spacing past a hand-off is still smeared.
+
+The passes' four additions a binding asked for, in the commit carrying this line, each held by a
+test in `ProbeMergeTests.Bindings.cs` run failing first. `IProbePlaces.placeOf`, `GridPlaces` its
+default, gives each probe's place, read by the trace, the reach map, the merge's tests of a probe
+inside a mesh and of seeing and the gather, the trilinear weights staying on the grid: probes
+standing on the open box's floor read it 0, and moved a quarter unit up along the field's normal by
+the test's rule read 0.2540 against the dome's 0.2511. `IProbeField.hitLight(place, way, cascade,
+cell)` takes the place of `surfaceLightAt`, a hit's light as the binding shades it, read in the
+march and the march-on alike, with `fieldNormalIn` in `rc_field_read` for the normal a split sum
+needs: a probe 3 units from a sunlit wall read it 0 by emission alone and 0.1574 against 0.1575
+through either. `ISky.skyAlong(way)`, `UniformSky` its default, gives the light of every cascade's
+ray that leaves the field and of the march-on: the open box under a sky varying with the way read
+0.2540 by a uniform sky of its scale and 0.4779 against the sky's integral over the opening, 0.4789.
+`farTexelsLight` gives a near texel the far texels it covers, weighed by their solid angles, where
+the far cascade keeps a whole multiple of the near's texels a side, and the one its middle way falls
+in at any other count: 8 near to 16 far under the varying sky read 10.5% off the texels' own rays at
+worst by the middle texel alone and 1.9% by the covered ones. Shape changes: `mergedLight` takes the
+places and the near texel in place of its way, `lastCascadeLight` the way and the sky, `traceTexel`,
+`reachTexel` and `gatherAt` the cascade's places, `mergeTexel` both cascades' places and the sky,
+and `settleTexel` the sky; the README has rows for `IProbePlaces` and `ISky` and a convention on far
+texel counts.
+
+A finding from the hit's test, for your word: at a near reach of 4 the merge read the sunlit wall
+37% under (0.0989), the hand-off landing 0.4 units before the wall and the far probes' rays passing
+its edge, the smear the ends' rule names, here before a lit wall and not at a rim. The march alone
+(reach 8) and the march-on (reach 2) read it within 0.1%, so the hook holds and the loss is the
+hand-off's; the test holds the hook at those reaches and does not hold a hand-off before a wall.
+
+Not built, as the review asked, three options a binding may set or keep outside the passes, drafted
+in the code's terms.
+
+More than one ray a texel. `ProbeCascade` would gain `rays`, the rays each texel sends, with
+`RaysAt(texels)` as the count a binding takes where it sets none: four from the middles of a texel's
+quarters at 8 a side, one from its middle at 16. `traceTexel`'s index would run over a cascade's
+texels times its rays, and `IProbeRays` would keep each ray at its texel's index times `rays` plus
+the ray's own. `settleTexel` and `mergeTexel` would read each of a texel's rays, merge each from its
+own end with the level above, and keep their mean as the texel's merged light, so `IMergedLight` and
+the gather keep a texel's index. `mergedLight` would take the ray's way in place of the texel's
+middle way and keep `farTexelsLight` over the texel's covered far texels.
+
+A cap on a march's steps. `traceProbeRay` would take a `steps` count at most, 0 for none, carried in
+`ProbeCascade` so each level sets its own. A ray that takes its last step without meeting a surface
+would end as `RayPast` at the distance it reached, not as `RayLeft`. A finer level would then hand
+it to the level above about the point where it stopped, as at its interval's end. The coarsest
+level, with none above it, would take no light for it, since a ray out of steps mostly grazes a
+surface inside the field, and the sky would light a closed room through it. The self-march would
+stop the same way and take, where capped, the merged light of the level above about its stop, or
+none from the coarsest. A `RayCapped` ending beside the three would let a binding count its capped
+rays.

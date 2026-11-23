@@ -213,6 +213,7 @@ public sealed partial class ProbeMergeTests
     [InlineData(Merge.AtRayEnd)]
     [InlineData(Merge.ByReachSight)]
     [InlineData(Merge.ByMarchedSight)]
+    [InlineData(Merge.AboutProbe)]
     public void A_Room_Open_Under_A_Lintel_Reads_Its_Deep_End_Against_The_Light_Traced_There(Merge merge)
     {
         var (cells, light) = LintelScene();
@@ -255,10 +256,14 @@ public sealed partial class ProbeMergeTests
         // a quarter. The coarsest level's probes about the room's stand outside its faces, none
         // seen, so a texel of the level below whose ray reaches its end toward the opening takes
         // its own ray alone and none of the sky past it. Its probe and means may lie no further
-        // under the trace than a tenth of it.
+        // under the trace than a tenth of it. About its own probe the probe takes 1.184 and the
+        // means 1.128 and 1.070, 56 of 64 probes within a quarter, every far probe that sees the
+        // probe's place kept with no march to leave out those above the opening. Its probe and
+        // means may lie neither a quarter under the trace nor a quarter over it.
         Assert.True(merge switch
         {
             Merge.AtRayEnd => probe is >= 0.75f and <= 1.25f && nearer is >= 0.75 and <= 1.25 && deepest is >= 0.75 and <= 1.25 && within >= 60,
+            Merge.AboutProbe => probe is >= 0.75f and <= 1.25f && nearer is >= 0.75 and <= 1.25 && deepest is >= 0.75 and <= 1.25 && within >= 52,
             Merge.ByReachSight => probe is >= 0.4f and <= 1.25f && nearer is >= 0.5 and <= 1.25 && deepest is >= 0.5 and <= 1.25 && within >= 36,
             _ => probe is >= 0.1f and <= 1.25f && nearer is >= 0.1 and <= 1.25 && deepest is >= 0.1 and <= 1.25,
         }, said);
@@ -268,6 +273,7 @@ public sealed partial class ProbeMergeTests
     [InlineData(Merge.AtRayEnd)]
     [InlineData(Merge.ByReachSight)]
     [InlineData(Merge.ByMarchedSight)]
+    [InlineData(Merge.AboutProbe)]
     public void A_Room_Open_Under_A_Lintel_Lit_By_The_Sky_Alone_Reads_Its_Face_Toward_The_Opening_Against_The_Sky_Traced_There(Merge merge)
     {
         // The room as an engine binds it, every surface a ray meets black, the light a bounce gives
@@ -298,11 +304,14 @@ public sealed partial class ProbeMergeTests
         // does, and the face takes the sky through the opening alone. The merge at the ray's end
         // may lie a fifth either way of the trace, the merge by reach sight above a quarter of it.
         // By marched sight the face takes none of it, the coarsest level's probes standing outside
-        // the room unseen, and may lie anywhere under 1.2 of it.
+        // the room unseen, and may lie anywhere under 1.2 of it. About its own probe the face
+        // takes 0.0373, 0.485 of it, and traced at 16 0.0305, 0.396 of it, and may lie above 0.4
+        // of it.
         Assert.True(merge switch
         {
             Merge.AtRayEnd => merged / traced is >= 0.8f and <= 1.2f,
             Merge.ByReachSight => merged / traced is >= 0.25f and <= 1.2f,
+            Merge.AboutProbe => merged / traced is >= 0.4f and <= 1.2f,
             _ => merged / traced <= 1.2f,
         }, said);
     }

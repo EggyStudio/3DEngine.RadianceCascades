@@ -14,6 +14,7 @@ public sealed partial class ProbeMergeTests
     [InlineData(Merge.AtRayEnd)]
     [InlineData(Merge.ByReachSight)]
     [InlineData(Merge.ByMarchedSight)]
+    [InlineData(Merge.AboutProbe)]
     public void A_Closed_Room_Whose_Every_Face_Sends_The_Same_Light_Reads_That_Light_At_Every_Point_Through_Four_Cascades(Merge merge)
     {
         // The open box with a lid, 8 units a side inside, each surface a ray meets sending a light
@@ -100,6 +101,7 @@ public sealed partial class ProbeMergeTests
     [InlineData(Merge.AtRayEnd)]
     [InlineData(Merge.ByReachSight)]
     [InlineData(Merge.ByMarchedSight)]
+    [InlineData(Merge.AboutProbe)]
     public void A_Closed_Room_Lit_By_One_Wall_Reads_The_Light_Traced_There_Over_Each_Facings_Points(Merge merge)
     {
         // The closed box, its -x wall alone sending a light of 1 under a black sky, read at 49
@@ -121,7 +123,7 @@ public sealed partial class ProbeMergeTests
             light[i] = (Corner + (new Vector3(i % Size, i / Size % Size, i / (Size * Size)) + new Vector3(0.5f)) * Cell).X < -3.75f ? 1 : 0;
         var read = new List<string>();
         var faults = 0;
-        var within = merge switch { Merge.AtRayEnd => 0.03, Merge.ByReachSight => 0.12, _ => 0.25 };
+        var within = merge switch { Merge.AtRayEnd => 0.03, Merge.ByReachSight => 0.12, Merge.AboutProbe => 0.08, _ => 0.25 };
         foreach (var normal in new[] { Vector3.UnitY, -Vector3.UnitY, Vector3.UnitZ, -Vector3.UnitZ, -Vector3.UnitX })
         {
             var points = (from a in Enumerable.Range(0, 7)
@@ -143,7 +145,9 @@ public sealed partial class ProbeMergeTests
         // toward where the ray meets a face, each from its own place, losing a tenth on the floor
         // and under the lid, whose texels toward the lit wall graze. By marched sight 0.810,
         // 0.776, 0.885 and 0.932, within a quarter, losing what the room every face of which sends
-        // the light loses where no far probe agrees.
+        // the light loses where no far probe agrees. About its own probe 0.926, 0.932, 0.943 and
+        // 0.980, within 8 percent, the far probes read as by reach sight with no march to leave
+        // any out.
         Assert.True(faults == 0, said);
     }
 }

@@ -133,6 +133,7 @@ public sealed partial class ProbeMergeTests
         AtRayEnd,
         ByReachSight,
         ByMarchedSight,
+        AboutProbe,
     }
 
     private const float WallAlbedo = 0.6f;

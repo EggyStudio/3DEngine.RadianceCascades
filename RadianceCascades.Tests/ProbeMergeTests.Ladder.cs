@@ -160,7 +160,7 @@ public sealed partial class ProbeMergeTests
         .. beside,
     ];
 
-    // The ladder's scenes, seven the standing is read over and one held out.
+    // The ladder's scenes, eight the standing is read over and one held out.
     private static LadderScene[] LadderScenes()
     {
         var lowFinest = new Level(new(-3.5f, 0.5f, -3.5f), 1, 8, 4, 8, NearTexels, 2);
@@ -301,7 +301,7 @@ public sealed partial class ProbeMergeTests
                 ("ceiling", lowParts[2].Item2.Where(p => !InPillar(p.Item1)).ToArray()),
                 ("pillar", Grid(new(1.25f, 0.5f, 1.75f), Vector3.UnitY, 4, Vector3.UnitZ * 0.5f, 2, -Vector3.UnitX)),
             ], heldOut: true);
-        return [door, lamp, thin, lintel, open, hall, vestibule, window];
+        return [door, lamp, thin, lintel, open, hall, vestibule, ArcadeCourt(), window];
     }
 
     // A paragraph's words in lines of at most width characters.
@@ -329,6 +329,7 @@ public sealed partial class ProbeMergeTests
         Merge.AtRayEnd => "at the ray's end, `MergeAtRayEnd`",
         Merge.ByReachSight => "by reach sight, `MergeByReachSight`",
         Merge.ByMarchedSight => "by marched sight, `MergeByMarchedSight`",
+        Merge.AboutProbe => "about its own probe, `MergeAboutProbe`",
         _ => merge.ToString(),
     };
 

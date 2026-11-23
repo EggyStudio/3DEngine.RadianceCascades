@@ -178,6 +178,27 @@ pointer. One commit an engine, after item 3's first part.
     far cascades' sky share) and what a host needs to hand the kernel. No host is named and nothing
     is taken from one.
 
+11. **A merge that blends about its own probe, and a ladder scene that ranks as a host's device
+    does.** A host read three ways of lighting a ray past its interval in a real scene, a sunlit
+    floor under a roof's edge beside shaded walls, with the bounce at zero and settled. The merge at
+    the ray's end read 0.739 and 1.382 of the reference on a wall where the host's own merge reads
+    0.524 and 1.064, and the wall's upper parts carried the surplus. The host's merge differs in
+    where and how it reads the far probes, and with its march test off it still holds those upper
+    parts, so the place and the read carry it and not the test. The ladder ranked these the other
+    way round on its own scenes, so it does not yet hold the case that decides. Two things follow.
+    First a merge behind the shape, in the form the host asked for. `farLightAbout` takes the near
+    probe's place and blends the far probes about that place and not about the ray's end, and reads
+    each far probe along the way from it toward the point of the near ray nearest that far probe's
+    reach. The two go together, the blend about the probe without that read fell to 0.271 and 0.615.
+    The sight test stays a separate choice on top. Second a ladder scene that holds the case, a
+    floor lit by the sun through an opening with the shadow line of an edge across it, walls in
+    shade lit by that floor alone, and a low part and a high part of the wall read apart, at the
+    host's configuration and the module's, with the bounce at zero and settled. The pass mark for
+    the scene is that it ranks the merge at the ray's end above the reference on the wall's high
+    part as the device did. The Reply gives the ladder's standing with the fourth merge and the new
+    scene, says whether the merge at the ray's end stays the default, and names what a host hands
+    the new merge that it does not hand today.
+
 ## Verdicts
 
 Verdict 1 is settled at 22:56 on 2026-11-21, the build run on `2f0dc8e` green on the three systems,
@@ -263,88 +284,6 @@ session pushes.
     engine's one package. Folders and project file names stay.
 
 ## Replies
-
-The three cascades' loss, read by switching each link of the chain against the finest cascade's
-texels each marched on itself to 32, which read the open box's floor 0.2470 against the dome's
-0.2511. The finest-to-middle link by the rule, the middle's texels marched on themselves, reads
-0.2504, 1.4% over the reference; the middle-to-far link alone reads 0.2116, 14.3% under; both links
-by the rule 0.2317, 6.2% under. The middle cascade ending at 4 hands its rays to the far probes some
-6 units out, 2 under the box's rim, where the far probes about that point stand up to 2 units off
-the ray and their rays meet the rim, so the opening's edge is smeared across the ways about it and
-light moves from the steep texels, which weigh most on the floor, to shallow ones toward the walls.
-It is not the lookup between cascades (16 texels at each), the grids' edges (no texel marched on
-itself) or the slack (a quarter of it reads the same). The same hand-off lets 4.28% of the open
-box's light through the sheet lid in three cascades, which the committed test does not read. Ending
-the middle cascade at 2, twice its spacing, so its rays reach the far cascade 4 out as in the pair,
-reads the open box 0.2548 in three cascades (1.5% over), the lidded box 0 and the sheet-lidded 0.81%
-of the open box's, and leaves the pair at 1.1% over, so a test at 5% holds. Reading each far probe
-toward where its own ray stopped, or toward a point two far spacings along the ray, mended the open
-box and let 4.4 to 9.3% through the sheet lid. A hand-off that lands within a far spacing of an edge
-still smears it, so short ends lessen the loss in other scenes and do not end it. For your word: the
-mend, the three-cascade test's middle end at 2 held to 5% with the sheet-lidded box beside it, and
-the note on ends in `rc_probe_passes` that engines set their ends by.
-
-Decision, from the review, recorded as the probes' readers enter: a hit takes the split sum with its
-cell's own reflectance, its shares from the integrated table, a 32 by 32 Slang constant array the
-tests hold to Materials' `SurfaceResponse.SplitSumIntegrated`, with a floor of 0.045. It is not yet
-built; a hit's light is read through `IProbeField.surfaceLightAt` until it is.
-
-The mend, agreed, in the commit carrying this line: the three-cascade test's middle cascade ends at
-2, twice its spacing, held to 5 percent, reading the open box's floor 0.2548 against the dome's
-0.2511, and reads the box lidded by a sheet beside the lidded one, 0.81 percent of the open box's
-where reaching 4 let through 4.28; the note on ends in `rc_probe_passes` says why, and the README
-states the ends' rule as a convention a binding follows, a cascade's end no farther than twice its
-spacing and past its spacing times the root of three, with its limit, that an edge within a far
-spacing past a hand-off is still smeared.
-
-The passes' four additions a binding asked for, in the commit carrying this line, each held by a
-test in `ProbeMergeTests.Bindings.cs` run failing first. `IProbePlaces.placeOf`, `GridPlaces` its
-default, gives each probe's place, read by the trace, the reach map, the merge's tests of a probe
-inside a mesh and of seeing and the gather, the trilinear weights staying on the grid: probes
-standing on the open box's floor read it 0, and moved a quarter unit up along the field's normal by
-the test's rule read 0.2540 against the dome's 0.2511. `IProbeField.hitLight(place, way, cascade,
-cell)` takes the place of `surfaceLightAt`, a hit's light as the binding shades it, read in the
-march and the march-on alike, with `fieldNormalIn` in `rc_field_read` for the normal a split sum
-needs: a probe 3 units from a sunlit wall read it 0 by emission alone and 0.1574 against 0.1575
-through either. `ISky.skyAlong(way)`, `UniformSky` its default, gives the light of every cascade's
-ray that leaves the field and of the march-on: the open box under a sky varying with the way read
-0.2540 by a uniform sky of its scale and 0.4779 against the sky's integral over the opening, 0.4789.
-`farTexelsLight` gives a near texel the far texels it covers, weighed by their solid angles, where
-the far cascade keeps a whole multiple of the near's texels a side, and the one its middle way falls
-in at any other count: 8 near to 16 far under the varying sky read 10.5% off the texels' own rays at
-worst by the middle texel alone and 1.9% by the covered ones. Shape changes: `mergedLight` takes the
-places and the near texel in place of its way, `lastCascadeLight` the way and the sky, `traceTexel`,
-`reachTexel` and `gatherAt` the cascade's places, `mergeTexel` both cascades' places and the sky,
-and `settleTexel` the sky; the README has rows for `IProbePlaces` and `ISky` and a convention on far
-texel counts.
-
-A finding from the hit's test, for your word: at a near reach of 4 the merge read the sunlit wall
-37% under (0.0989), the hand-off landing 0.4 units before the wall and the far probes' rays passing
-its edge, the smear the ends' rule names, here before a lit wall and not at a rim. The march alone
-(reach 8) and the march-on (reach 2) read it within 0.1%, so the hook holds and the loss is the
-hand-off's; the test holds the hook at those reaches and does not hold a hand-off before a wall.
-
-Not built, as the review asked, three options a binding may set or keep outside the passes, drafted
-in the code's terms.
-
-More than one ray a texel. `ProbeCascade` would gain `rays`, the rays each texel sends, with
-`RaysAt(texels)` as the count a binding takes where it sets none: four from the middles of a texel's
-quarters at 8 a side, one from its middle at 16. `traceTexel`'s index would run over a cascade's
-texels times its rays, and `IProbeRays` would keep each ray at its texel's index times `rays` plus
-the ray's own. `settleTexel` and `mergeTexel` would read each of a texel's rays, merge each from its
-own end with the level above, and keep their mean as the texel's merged light, so `IMergedLight` and
-the gather keep a texel's index. `mergedLight` would take the ray's way in place of the texel's
-middle way and keep `farTexelsLight` over the texel's covered far texels.
-
-A cap on a march's steps. `traceProbeRay` would take a `steps` count at most, 0 for none, carried in
-`ProbeCascade` so each level sets its own. A ray that takes its last step without meeting a surface
-would end as `RayPast` at the distance it reached, not as `RayLeft`. A finer level would then hand
-it to the level above about the point where it stopped, as at its interval's end. The coarsest
-level, with none above it, would take no light for it, since a ray out of steps mostly grazes a
-surface inside the field, and the sky would light a closed room through it. The self-march would
-stop the same way and take, where capped, the merged light of the level above about its stop, or
-none from the coarsest. A `RayCapped` ending beside the three would let a binding count its capped
-rays.
 
 A mesh met by the device's own ray tracing. An interface `IProbeHits` would trace a ray from a place
 along a way between a start and an end and return the `ProbeRay` it ends as, with `FieldHits` as the
@@ -961,3 +900,55 @@ would part the two is frame 1 at `42ed4e13` with the kept rays cleared with the 
 with every probe traced on the first frame. Open, in place of item 10's list, are that run in the
 3DEngine session and AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md, which wait for the
 owner, as LADDER.md's row does. Read first: `ParityReplayTests.cs` and `parity_replay_cpu.slang`.
+
+The clean frame 1 from the 3DEngine session, at `42ed4e13` with the probe traced whole on the first
+frame, replays alike, all 256 texels traced and merged as the device did them, arguments at most
+7.6e-6 apart and the light kept to the bit, on that frame and the next. Its rays carry no light on
+frame 1, and the probe's light comes from texel (1, 3) alone, whose rays march on past their ends
+and meet the floor through the held cells. The 3DEngine session reads the split at frame 1 as
+`df4d0559`'s carried rays, whose spot follows the frame's number, and the settled split as
+repeating, 2.034 to 2.045 at `42ed4e13` against 1.072 to 1.075 at `df4d0559`. The CPU's loop settles
+the vestibule's walls at 1.033 of their trace with `MergeAtRayEnd`, near `df4d0559`'s and far from
+`42ed4e13`'s. A dump of a settled frame replays through `ParityReplayTests` as it stands.
+
+Item 11, in the commit carrying this line, after `151689d`. `MergeAboutProbe`, in
+`rc_reach_sight_merge`, is the fourth merge. Its `farLightAbout(field, probes, places, far, place,
+way, texels, out skyShares, out weights)` takes the shape the host asked for, blending the far
+probes about the near probe's own place, each at its trilinear weight where it stands within the
+field and sees that place by its reach map, and reading each toward the point of the near ray
+nearest that probe's hit along the way. No march past the ray's end leaves a probe out, and the ray
+marches on itself to the march's end where none counts. The new scene, `ArcadeCourt` in
+`ProbeMergeTests.Court.cs`, is a court 8 high open to a black sky, its floor lit in a strip 3 wide
+down its middle with the shadow lines of the walls' tops along it, an arcade under a roof at 3 along
+each long wall with a beam across its front, and the long walls read low within the arcades and high
+above them. It meets the mark at an engine's configuration, the merge at the ray's end reading the
+high wall 2.367 of the trace after one gather and 1.922 settled, against the low wall's 1.163 and
+1.082, which a test holds. It does not part the merges as the device did, since every merge reads
+the high wall 2.37 to 2.73 of the trace after one gather there (`MergeAboutProbe` 2.727,
+`MergeByMarchedSight` 2.573), so on the CPU the surplus lies outside how a merge hands a ray off. At
+the module's configuration the merge at the ray's end reads the high wall 1.212 after one gather and
+0.883 settled, and the blend about the probe parts the two walls most, 0.575 low and 1.264 high
+after one gather. Over the eight scenes of the standing, the mean and the worst part read 0.095 and
+0.487 for `MergeByReachSight`, 0.099 and 0.329 for `MergeAtRayEnd`, 0.130 and 0.720 for
+`MergeAboutProbe` and 0.501 and 1.769 for `MergeByMarchedSight` at the module's configuration, and
+0.072 and 0.653, 0.107 and 0.724, 0.227 and 0.750, and 0.283 and 0.768 in the order of the standing
+at an engine's, the merge at the ray's end first. The merge at the ray's end stands above
+`MergeAboutProbe` at both and above `MergeByReachSight` at an engine's, and no merge stands above
+every other at both, so it stays the default. `MergeAboutProbe` takes 0.0 steps a texel past its
+ray's end on the mean and reads 7.9 and 16.2 far texels a texel, against the merge at the ray's
+end's 6.7 and 14.3. A host hands it nothing it does not hand today, the field, the far probes'
+light, sky shares and reach (`IFarSkyProbes`), their places and the sky, as for `MergeAtRayEnd`, and
+names `MergeAboutProbe merge;` before `mergeTexel` and `gatherTraced`. Where the host's merge reads
+a far probe's reach as the mean of four texels, the module reads the one texel the way toward the
+place falls in (`texelOfWay`).
+
+Handoff, for a fresh session, beside the one above that begins with where the work stands, whose
+account of the library holds. The ladder runs four merges over nine scenes at two configurations,
+eight in the standing and the window held out, and writes `.github/LADDER.md` and the README's table
+where `RC_LADDER` names the file. The court between arcades holds the device's case of a high wall
+read over its trace by the merge at the ray's end, but at an engine's configuration every merge
+reads it over by about the same, so the CPU does not yet rank the merges as the device did, and the
+merge at the ray's end stays the default. `ParityReplayTests` replays a binding's dump of a frame
+through the passes. Open are AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md, which wait
+for the owner, as LADDER.md's row does. Read first `ProbeMergeTests.Court.cs`,
+`ProbeMergeTests.Ladder.cs` and `rc_reach_sight_merge.slang`.

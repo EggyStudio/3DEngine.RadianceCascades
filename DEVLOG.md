@@ -20,6 +20,8 @@ of the trace from roughness 0.3 up and an engine's from 0.5 up.
 
 Commits that day
 
+- `151689d` A binding's log of one probe's trace and merge on its device is run again through the
+  passes on the CPU, every call answered from the log.
 - `11ece81` A rough surface's reflection is read from the merged cascades by a kernel of its own,
   measured on the CPU against the traced lobe by roughness, with a sheet of spheres beside their
   trace.

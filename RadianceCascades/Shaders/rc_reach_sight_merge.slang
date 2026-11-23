@@ -8,7 +8,8 @@
 // along the way, since a probe a spacing off the ray that is read along the ray's own way lends
 // what it sees from where it stands and not what the ray would meet. Where none is left the ray
 // takes its own march, the surface it met or the sky where it left the field, or marches on to
-// marchEnd where it met neither.
+// marchEnd where it met neither. The module holds as well the merge about the near probe's own
+// place (MergeAboutProbe), the same blend and read with no march to leave a far probe out.
 module rc_reach_sight_merge;
 
 __exported import rc_cascade_merge;
@@ -199,5 +200,69 @@ public struct MergeByReachSight : IMerge
         V stage, int3 probe, out bool marched, out float skyShare)
     {
         return reachSightLight(field, probes, places, far, marchEnd, origin, texels, texel, near, sky, steps, marched, skyShare);
+    }
+}
+
+// The far cascade's light over a near texel along way from the far probes about place, the near
+// probe's own place and not where its ray ended, each at its trilinear weight about place and read
+// toward the point of the ray from place nearest its own hit along way (sightedFarLight with no
+// agreement). A far probe that stands inside a mesh or outside the field, or does not see place by
+// its reach map, weighs nothing. In skyShares is the sum of their shares of the sky at the same
+// weights, and in weights the sum of the weights taken, which divides both. The far probes about
+// place stand up to a far spacing off the ray, and read along the ray's own way each would lend
+// what it sees from where it stands and not what the ray would meet, so the blend about place and
+// the read toward the ray go together.
+public float3 farLightAbout<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces>(F field, P probes, Q places, ProbeCascade far, float3 place,
+    float3 way, uint texels, out float skyShares, out float weights)
+{
+    return sightedFarLight(field, probes, places, far, place, way, texels, false, -1.0, skyShares, weights);
+}
+
+// The light a near probe's texel of an octahedron of `texels` along each side brings along its way
+// from origin with what lies past its ray's end blended about origin, with in skyShare the share
+// of the sky in it, as mergedLight takes its inputs. A ray that met a surface takes nothing past it
+// and one that left the field the sky's along the way. One that reached its interval's end, or
+// stopped at its cap short of it, takes the far probes about origin that see origin
+// (farLightAbout), times the share it carries at its end, with no march past its end to test them
+// against. Where none counts the ray marches on itself to marchEnd, marched set, and takes the
+// surface it meets or the sky where it leaves, a march stopped at the far cascade's cap of steps
+// (stepCap) taking nothing past where it stopped. Every step past the ray's end is handed to
+// steps.
+public float3 aboutProbeLight<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces, K : ISkyShare, S : IMarchSteps>(F field, P probes,
+    Q places, ProbeCascade far, float marchEnd, float3 origin, uint texels, uint2 texel, ProbeRay near, K sky, inout S steps,
+    out bool marched, out float skyShare)
+{
+    marched = false;
+    skyShare = 0.0;
+    float3 way = texelWay(texels, texel);
+    if (near.ended != RayPast && near.ended != RayCapped)
+    {
+        skyShare = lastCascadeSkyShare(near, way, sky);
+        return lastCascadeLight(near, way, sky);
+    }
+    float skyShares, weights;
+    float3 sum = farLightAbout(field, probes, places, far, origin, way, texels, skyShares, weights);
+    if (weights > 0.0)
+    {
+        skyShare = skyShares / weights * near.carried;
+        return near.light + sum / weights * near.carried;
+    }
+    marched = true;
+    ProbeRay ray = traceProbeRay(field, origin, way, near.t, marchEnd, far.stepCap, steps);
+    skyShare = lastCascadeSkyShare(ray, way, sky) * near.carried;
+    return near.light + lastCascadeLight(ray, way, sky) * near.carried;
+}
+
+// The merge about the near probe's own place (aboutProbeLight), the ladder's fourth rung, the merge
+// by reach sight with no march past the ray's end to leave out the far probes it disagrees with.
+public struct MergeAboutProbe : IMerge
+{
+    public static const bool readsStage = false;
+
+    public float3 light<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces, K : ISkyShare, S : IMarchSteps, V : IStageValues>(F field,
+        P probes, Q places, ProbeCascade far, float marchEnd, float3 origin, uint texels, uint2 texel, ProbeRay near, K sky, inout S steps,
+        V stage, int3 probe, out bool marched, out float skyShare)
+    {
+        return aboutProbeLight(field, probes, places, far, marchEnd, origin, texels, texel, near, sky, steps, marched, skyShare);
     }
 }
