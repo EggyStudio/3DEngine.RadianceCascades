@@ -133,6 +133,19 @@ library's functions, and the engine keeps its bindings, its threads and its atom
 | `IConePoints` | Reads a point's place, normal, way toward the eye, roughness and the finest level its gather reads, and keeps the light its cone reflects | `readCone` |
 | `IConeRead` | Brings the mean light of the cone a rough surface reflects toward the eye from the levels about it, one read behind one name, which `ConeAtProbes` is the first of | `readCone` |
 
+`stampCell` takes the cascade's cell width, and stamps a box thinner than a cell along an axis of
+its own a cell across there. A march meets a surface within a tenth of a cell of it (`MarchHit`), so
+a moving wall a tenth of a unit thick, stamped at its own thickness, holds a ray only where a cell's
+middle lies in it or within that tenth. Across eight places in a cell, a march passes it at none at
+a cell of 0.125, 3 at 0.25, 5 at 0.5 and at 1, and 7 at 2. Stamped a cell across, it holds at every
+place, and a thin moving mesh reads a cell thick. Its faces stand out from its own by half a cell
+less half its thickness, 0.0125 of a unit at the cell of 0.125 an engine's finest cascade takes
+about the eye, 0.075 at 0.25, 0.2 at 0.5, 0.45 at 1 and 0.95 at 2. So near a thin moving mesh, a ray
+along that axis from a surface beside it meets it up to that much early, a probe within that much of
+its face stands inside it, and a point on its face lies that far inside the field's wall. A box a
+cell thick or more along each axis is stamped as before. `dotnet test RadianceCascades.Tests
+--filter FullyQualifiedName~StampTests` reads it.
+
 The engine's struct is handed to the library's functions by value, so an array it holds is copied
 into each thread's own memory where it is read, which one macOS device reads wrong where every other
 reads right. `IFieldVolume` asks for a cascade's corner and cell by its index and for the cells

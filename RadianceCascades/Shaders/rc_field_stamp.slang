@@ -58,11 +58,12 @@ public interface IStampShapes
     StampShape shape(uint i);
 }
 
-// The cell whose middle is p as the shapes given stamp it over the still cell, the distance held
-// to reach either side, the nearer surface painting it and giving it its face and the share of
-// its diffuse light it sends through, which a still cell keeps as it came. A box nearer than
-// the still surface takes away the plane the still cell kept.
-public FieldCell stampCell<S : IStampShapes>(S shapes, float3 p, float reach, FieldCell still)
+// The cell whose middle is p, of a cascade whose cells are cellWidth across, as the shapes given
+// stamp it over the still cell, the distance held to reach either side, the nearer surface painting
+// it and giving it its face and the share of its diffuse light it sends through, which a still cell
+// keeps as it came. A box nearer than the still surface takes away the plane the still cell kept,
+// and a box thinner than a cell along an axis of its own is stamped a cell across there.
+public FieldCell stampCell<S : IStampShapes>(S shapes, float3 p, float cellWidth, float reach, FieldCell still)
 {
     FieldCell cell = still;
     float nearest = abs(still.distance);
@@ -71,7 +72,13 @@ public FieldCell stampCell<S : IStampShapes>(S shapes, float3 p, float reach, Fi
         StampShape shape = shapes.shape(i);
         float4 h = float4(p, 1.0);
         float3 own = float3(dot(shape.row0, h), dot(shape.row1, h), dot(shape.row2, h)) - shape.centerAndScale.xyz;
-        float3 q = abs(own) - shape.extents.xyz;
+        // A march meets a surface within a tenth of a cell of it (MarchHit), so a box thinner than
+        // a cell would hold only where a cell's middle lies in it or within that tenth, and a ray
+        // would pass a moving wall a tenth of a unit thick between two cells' middles. Held a cell
+        // across along each axis, it holds some cell's middle wherever it stands. A world length
+        // along the way of an axis's row is that length times the row's length in its own space.
+        float3 rows = float3(length(shape.row0.xyz), length(shape.row1.xyz), length(shape.row2.xyz));
+        float3 q = abs(own) - max(shape.extents.xyz, 0.5 * cellWidth * rows);
         float box = (length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0)) * shape.centerAndScale.w;
         cell.distance = min(cell.distance, max(box, -reach));
         if (abs(box) >= min(nearest, reach))

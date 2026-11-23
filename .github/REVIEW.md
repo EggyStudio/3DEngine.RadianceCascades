@@ -893,3 +893,17 @@ for DEVLOG.md and CHEATSHEET.md, which wait for the owner, as LADDER.md's row do
 The owner confirmed AGENTS.md's documents rows on 2026-11-23, and the commit carrying this line
 links DEVLOG.md and CHEATSHEET.md there with the commands that write them and adds a row for
 LADDER.md with its command.
+
+The moving thin wall, in the commit carrying this line. `stampCell` takes the cascade's cell width
+and stamps a box thinner than a cell along an axis of its own a cell across there, held in its own
+space by the length of each axis's row, so a turned or scaled box holds a cell of the world.
+`StampTests` stamps a wall of 0.1 at eight places across a cell at each cascade's cell of an
+engine's field. At its own thickness a march passes it at 0, 3, 5, 5 and 7 of the 8 at cells of
+0.125 to 2. Held, every place holds a cell's middle and the row reads the distance to a wall a cell
+thick. A thin moving mesh's faces then stand out by half a cell less half its thickness, 0.0125 at
+0.125 and 0.075 at 0.25, so near them a ray along that axis meets it up to that much early, a probe
+that near its face stands inside it, and a point on its face lies that far inside the field's wall.
+The engine's call must hand the cell, `stampCell(shapes, p, cellWidth, reach, still)`, its
+`originAndCell.w`, when it moves its pointer. Handoff, for a fresh session. The stamp holds thin
+boxes, and the engine's call takes the new argument when it moves to this commit. Read first:
+`rc_field_stamp.slang`, `StampTests.cs` and the README's paragraph on `stampCell`.

@@ -1,7 +1,7 @@
-// A cascade of 32 cells a side stamped with the shapes given over the still cells given, a thread
-// a cell, each cell taking the least of its still distance and its distance to each shape, and
-// the nearer surface's paint, face and share of light sent through, each still cell sending a
-// quarter.
+// A cascade of 32 cells a side, each as wide as the first of cells, stamped with the shapes given
+// over the still cells given, a thread a cell, each cell taking the least of its still distance and
+// its distance to each shape, and the nearer surface's paint, face and share of light sent through,
+// each still cell sending a quarter.
 import rc_field_stamp;
 
 // The count of shapes first, then each shape's StampFloats floats as FieldShape.WriteStamp writes
@@ -15,9 +15,10 @@ RWStructuredBuffer<float> stampedDistances;
 RWStructuredBuffer<float> stampedPaints;
 RWStructuredBuffer<uint> stampedFaces;
 RWStructuredBuffer<float> stampedThrough;
+// The cascade's cell, then the cell the stamp holds a thin box to, 0 to hold it to its own sides.
+RWStructuredBuffer<float> cells;
 
 static const int Size = 32;
-static const float Cell = 0.25;
 static const float Band = 4.0;
 
 struct GivenShapes : IStampShapes
@@ -44,7 +45,8 @@ struct GivenShapes : IStampShapes
 void test(uint3 id : SV_DispatchThreadID)
 {
     uint index = (id.z * Size + id.y) * Size + id.x;
-    float3 p = float3(-Size * Cell * 0.5) + (float3(id) + 0.5) * Cell;
+    float cell = cells[0];
+    float3 p = float3(-Size * cell * 0.5) + (float3(id) + 0.5) * cell;
     FieldCell still;
     still.distance = stillDistances[index];
     still.sheet = float3(0.0);
@@ -53,7 +55,7 @@ void test(uint3 id : SV_DispatchThreadID)
     still.face = 0u;
     still.through = 0.25;
     GivenShapes given;
-    FieldCell stamped = stampCell(given, p, Band * Cell, still);
+    FieldCell stamped = stampCell(given, p, cells[1], Band * cell, still);
     stampedDistances[index] = stamped.distance;
     stampedPaints[index * 4] = stamped.paint.r;
     stampedPaints[index * 4 + 1] = stamped.paint.g;

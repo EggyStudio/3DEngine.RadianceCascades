@@ -10,6 +10,8 @@ names the item of .github/REVIEW.md or .github/REVIEW-ARCHIVE.md and the commit 
 
 Commits that day
 
+- `ff69c6a` Gathers each point at an engine's configuration from the finest level within half a
+  spacing past its probes, and writes the ladder again with it.
 - `1e53334` Follows the court's surplus on the high wall to the level its points are gathered from,
   and lets the test binding gather a point within half a spacing past the finest level's probes to
   read what that would cost.
