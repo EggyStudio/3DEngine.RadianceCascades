@@ -362,6 +362,22 @@ The conventions the module stands on:
   reads 2.367 of its trace gathered from the level above, whose probes see past the roof's edge onto
   the sunlit floor where the wall meets the roof, and 1.240 from the finest level's edge probes a
   quarter of a unit off, as `ProbeMergeTests.Court.cs` reads it.
+- Where no probe of the level a point is gathered from counts, each standing inside a mesh or not
+  seeing the point by its reach, `gatherSurface` takes the level above's, and goes no further. The
+  floor of a slot 0.6 wide and 2 deep between blocks, whose finest probes about it stand inside the
+  blocks and the ground, as an engine that leaves its probes where they stand has them, read none
+  of its light, and reads 1.513 to 1.546 of its trace from the level above's probes a unit over it,
+  which see more of the sky than the floor does. In a slot 0.2 wide, narrower than the level
+  above's cells, the floor reads 1.260 where that level sees it and stays dark where it does not,
+  since a level further up sees a crevice that narrow only from over it, in the open, and lent two
+  of its four points the open sky. The ground beside the blocks reads 1.017 of its trace either
+  way, as `ProbeMergeTests.Lamp.cs` reads them.
+- A wall's light over its trace comes from where its probes stand. Under a lamp in the ceiling a
+  unit off the wall, at an engine's configuration, the wall's top middle reads 1.507 of its trace
+  after one gather and 1.432 at the steady state. The finest level's probe half a unit before it
+  keeps 1.140 of the light traced along its texels' ways from its place, and those ways take 1.834
+  of what they take from the wall's point behind it, which sees the lamp lower, while the loop
+  gains 0.486 a round where the trace gains 0.489, as `ProbeMergeTests.Lamp.cs` reads it.
 
 The face under the lintel by how many of the four cascades are traced at 2, the rest at 1:
 
@@ -455,7 +471,7 @@ groupshared memory, since a dispatch does not group its threads by probe at ever
   leaves any out, and the ray marches on itself where none counts (`aboutProbeLight`). It is the
   merge by reach sight without that march.
 
-The ladder runs every merge over nine scenes on the CPU, no graphics device, at two configurations,
+The ladder runs every merge over ten scenes on the CPU, no graphics device, at two configurations,
 and reads each part of a scene against the light traced to its points. The module's configuration is
 the tests' chain of four levels in one cascade of the field. An engine's is five levels of 8 probes
 a side, every 8 cells of a field of five cascades of 64 cells from 0.125, the finest two traced at
@@ -479,28 +495,28 @@ under a hundredth. The loops run side by side over half the machine's threads, e
 library of its own.
 
 A merge's distance is the logarithm of a part's light over its traced light at the steady state,
-taken whole, pooled over every part of eight scenes, and its worst part the farthest of them. Its
+taken whole, pooled over every part of nine scenes, and its worst part the farthest of them. Its
 most gain a round is the largest over the scenes of the change a loop's last round makes over the
 change of the round before, the factor a bounce multiplies an error by. The leak is the light a dark
 room takes at the steady state through a wall of one cell beside a lit one, as a share of the lit
 room's, and the cost a texel's steps past its ray's end, the per-probe stage's among them, and its
 reads of the probes above, on the mean over every level's texels. A merge stands above another at a
 configuration where it is nearer on the mean and no worse in its worst part, its leak and its cost,
-and the one standing above every other at every configuration is the default. The ninth scene is
+and the one standing above every other at every configuration is the default. The tenth scene is
 held out of the standing, since no merge is tuned on it. [.github/LADDER.md](.github/LADDER.md)
 holds each scene's parts after one gather and at the steady state, and the vestibule's walls round
 by round.
 
 | Configuration | Merge | Mean distance | Worst part | Leak | Steps a texel | Reads a texel | Most gain a round | Stands above | Held out, mean and worst |
 |---|---|---|---|---|---|---|---|---|---|
-| the module's | by reach sight, `MergeByReachSight` | 0.092 | 0.454 | 0.00000 | 1.0 | 7.2 | 0.501 | none | 0.065 and 0.143 |
-| the module's | at the ray's end, `MergeAtRayEnd` | 0.099 | 0.329 | 0.00000 | 1.1 | 6.7 | 0.501 | about its own probe, by marched sight | 0.030 and 0.041 |
-| the module's | about its own probe, `MergeAboutProbe` | 0.130 | 0.720 | 0.00000 | 0.0 | 7.9 | 0.501 | none | 0.073 and 0.170 |
-| the module's | by marched sight, `MergeByMarchedSight` | 0.501 | 1.769 | 0.00000 | 1.1 | 6.8 | 0.475 | none | 0.270 and 0.412 |
-| an engine's | at the ray's end, `MergeAtRayEnd` | 0.074 | 0.446 | 0.00000 | 0.6 | 14.3 | 0.501 | about its own probe | 0.032 and 0.040 |
-| an engine's | by reach sight, `MergeByReachSight` | 0.088 | 0.367 | 0.00000 | 1.2 | 15.2 | 0.501 | none | 0.041 and 0.055 |
-| an engine's | about its own probe, `MergeAboutProbe` | 0.229 | 0.655 | 0.00000 | 0.0 | 16.2 | 0.501 | none | 0.109 and 0.219 |
-| an engine's | by marched sight, `MergeByMarchedSight` | 0.316 | 0.810 | 0.00000 | 1.3 | 12.9 | 0.497 | none | 0.154 and 0.262 |
+| the module's | at the ray's end, `MergeAtRayEnd` | 0.096 | 0.329 | 0.00000 | 1.0 | 6.5 | 0.501 | by reach sight, about its own probe, by marched sight | 0.030 and 0.041 |
+| the module's | by reach sight, `MergeByReachSight` | 0.103 | 0.454 | 0.00000 | 1.0 | 6.9 | 0.501 | none | 0.065 and 0.143 |
+| the module's | about its own probe, `MergeAboutProbe` | 0.161 | 0.720 | 0.00000 | 0.0 | 7.6 | 0.501 | none | 0.073 and 0.170 |
+| the module's | by marched sight, `MergeByMarchedSight` | 0.430 | 1.769 | 0.00000 | 1.0 | 6.6 | 0.475 | none | 0.270 and 0.412 |
+| an engine's | at the ray's end, `MergeAtRayEnd` | 0.094 | 0.446 | 0.00000 | 0.6 | 14.4 | 0.501 | about its own probe | 0.032 and 0.040 |
+| an engine's | by reach sight, `MergeByReachSight` | 0.095 | 0.367 | 0.00000 | 1.2 | 15.3 | 0.501 | none | 0.041 and 0.055 |
+| an engine's | about its own probe, `MergeAboutProbe` | 0.216 | 0.655 | 0.00000 | 0.0 | 16.2 | 0.501 | none | 0.109 and 0.219 |
+| an engine's | by marched sight, `MergeByMarchedSight` | 0.274 | 0.810 | 0.00000 | 1.3 | 12.8 | 0.497 | none | 0.154 and 0.262 |
 
 No merge stands above every other at every configuration, so the default stays the merge at the ray's end, `MergeAtRayEnd`.
 
@@ -532,18 +548,18 @@ halves of rays differ by, the floor under which no difference is read.
 
 | Configuration | Roughness | Mean difference | Median scene | Worst part | Of it the cone widened | The trace's own noise | Reading less the trace | Leak | Reads a point |
 |---|---|---|---|---|---|---|---|---|---|
-| the module's | 0.1 | 0.703 | 0.336 | 4.785 | 0.457 | 0.000 | +0.163 | 0.00000 | 162 |
-| the module's | 0.2 | 0.552 | 0.220 | 4.092 | 0.302 | 0.004 | +0.140 | 0.00000 | 162 |
-| the module's | 0.3 | 0.362 | 0.134 | 2.770 | 0.081 | 0.006 | +0.150 | 0.00000 | 162 |
-| the module's | 0.5 | 0.205 | 0.069 | 1.899 | 0.000 | 0.010 | -0.016 | 0.00000 | 314 |
-| the module's | 0.7 | 0.140 | 0.060 | 1.349 | 0.000 | 0.012 | -0.031 | 0.00000 | 314 |
-| the module's | 1.0 | 0.114 | 0.049 | 0.986 | 0.000 | 0.017 | -0.029 | 0.00000 | 314 |
-| an engine's | 0.1 | 0.741 | 0.250 | 7.885 | 0.457 | 0.000 | -0.413 | 0.02060 | 167 |
-| an engine's | 0.2 | 0.706 | 0.290 | 7.199 | 0.302 | 0.004 | -0.436 | 0.02060 | 167 |
-| an engine's | 0.3 | 0.635 | 0.341 | 5.820 | 0.081 | 0.006 | -0.426 | 0.02060 | 167 |
-| an engine's | 0.5 | 0.213 | 0.116 | 1.084 | 0.000 | 0.010 | -0.035 | 0.00000 | 94 |
-| an engine's | 0.7 | 0.167 | 0.085 | 1.160 | 0.000 | 0.012 | -0.037 | 0.00000 | 94 |
-| an engine's | 1.0 | 0.149 | 0.068 | 0.988 | 0.000 | 0.017 | -0.025 | 0.00000 | 94 |
+| the module's | 0.1 | 0.625 | 0.284 | 4.785 | 0.436 | 0.000 | +0.167 | 0.00000 | 166 |
+| the module's | 0.2 | 0.493 | 0.200 | 4.092 | 0.294 | 0.004 | +0.140 | 0.00000 | 166 |
+| the module's | 0.3 | 0.335 | 0.160 | 2.770 | 0.079 | 0.007 | +0.133 | 0.00000 | 166 |
+| the module's | 0.5 | 0.212 | 0.094 | 1.899 | 0.000 | 0.011 | -0.017 | 0.00000 | 327 |
+| the module's | 0.7 | 0.159 | 0.082 | 1.349 | 0.000 | 0.012 | -0.021 | 0.00000 | 327 |
+| the module's | 1.0 | 0.144 | 0.059 | 1.036 | 0.000 | 0.017 | -0.008 | 0.00000 | 327 |
+| an engine's | 0.1 | 0.635 | 0.220 | 7.885 | 0.436 | 0.000 | -0.372 | 0.02060 | 172 |
+| an engine's | 0.2 | 0.608 | 0.283 | 7.199 | 0.294 | 0.004 | -0.400 | 0.02060 | 172 |
+| an engine's | 0.3 | 0.567 | 0.273 | 5.820 | 0.079 | 0.007 | -0.406 | 0.02060 | 172 |
+| an engine's | 0.5 | 0.246 | 0.149 | 1.328 | 0.000 | 0.011 | -0.018 | 0.00000 | 96 |
+| an engine's | 0.7 | 0.198 | 0.090 | 1.189 | 0.000 | 0.012 | -0.022 | 0.00000 | 96 |
+| an engine's | 1.0 | 0.191 | 0.075 | 1.393 | 0.000 | 0.017 | +0.001 | 0.00000 | 96 |
 
 The cones read within a tenth of their trace on the median scene from roughness 0.5 up at the module's configuration and from roughness 0.7 up at an engine's, and on the mean over every part at no roughness of the six and at no roughness of the six.
 

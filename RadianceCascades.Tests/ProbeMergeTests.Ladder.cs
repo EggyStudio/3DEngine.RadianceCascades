@@ -175,7 +175,7 @@ public sealed partial class ProbeMergeTests
 
     private static float LampAt(Vector3 p) => MathF.Abs(p.X) < 1 && MathF.Abs(p.Z) < 1 && p.Y is > 7.75f and < 8 ? 5 : 0;
 
-    // The ladder's scenes, eight the standing is read over and one held out.
+    // The ladder's scenes, nine the standing is read over and one held out.
     private static LadderScene[] LadderScenes()
     {
         var lowFinest = new Level(new(-3.5f, 0.5f, -3.5f), 1, 8, 4, 8, NearTexels, 2);
@@ -312,7 +312,7 @@ public sealed partial class ProbeMergeTests
                 ("ceiling", lowParts[2].Item2.Where(p => !InPillar(p.Item1)).ToArray()),
                 ("pillar", Grid(new(1.25f, 0.5f, 1.75f), Vector3.UnitY, 4, Vector3.UnitZ * 0.5f, 2, -Vector3.UnitX)),
             ], heldOut: true);
-        return [door, lamp, thin, lintel, open, hall, vestibule, ArcadeCourt(), window];
+        return [door, lamp, thin, lintel, open, hall, vestibule, ArcadeCourt(), WallUnderALamp(), window];
     }
 
     // A paragraph's words in lines of at most width characters.

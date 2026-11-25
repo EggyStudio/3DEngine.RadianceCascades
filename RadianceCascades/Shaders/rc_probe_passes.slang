@@ -624,13 +624,25 @@ float skyShareTaken<P : IFarSkyProbes>(P probes, int3 probe, uint texels, float3
 public void gatherAt<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces, A : ISurfaceSkyPoints>(F field, P probes, Q places,
     ProbeCascade cascade, A surfaces, uint index)
 {
-    float3 p = surfaces.placeAt(index);
-    float3 n = surfaces.normalAt(index);
+    float3 sum;
+    float skyShares;
+    float weights = gatheredSums(probes, places, cascade, surfaces.placeAt(index), surfaces.normalAt(index), sum, skyShares);
+    surfaces.keepTaken(index, weights > 0.0 ? sum / weights : float3(0.0));
+    surfaces.keepSkyShare(index, weights > 0.0 ? skyShares / weights : 0.0);
+}
+
+// The sums gatherAt takes over cascade's probes about the point at p facing n, their light and
+// their shares of the sky each times its weight, returning the weights' sum, 0 where no probe
+// counts.
+float gatheredSums<P : IFarSkyProbes, Q : IProbePlaces>(P probes, Q places, ProbeCascade cascade, float3 p, float3 n, out float3 sum,
+    out float skyShares)
+{
     int3 base;
     float3 f;
     farProbesAbout(cascade, p, base, f);
-    float3 sum = float3(0.0);
-    float skyShares = 0.0, weights = 0.0;
+    sum = float3(0.0);
+    skyShares = 0.0;
+    float weights = 0.0;
     for (int corner = 0; corner < 8; corner++)
     {
         int3 offset = int3(corner & 1, (corner >> 1) & 1, corner >> 2);
@@ -649,8 +661,7 @@ public void gatherAt<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces, A : I
         skyShares += skyShareTaken(probes, probe, cascade.texels, n) * weight;
         weights += weight;
     }
-    surfaces.keepTaken(index, weights > 0.0 ? sum / weights : float3(0.0));
-    surfaces.keepSkyShare(index, weights > 0.0 ? skyShares / weights : 0.0);
+    return weights;
 }
 
 // How far past a level's edge probes, in its spacing, a surface point is still gathered from that
@@ -677,22 +688,49 @@ public int gatheredLevel<L : IGatherLevels>(L levels, float3 p, float rim)
 }
 
 // Gathers the light the surface point at index takes from the level gatheredLevel picks for it at
-// GatherRim, by gatherAt's weights, and keeps it, a thread a point. A binding gathers each pixel
-// by it, handing its levels, its field and its points, so each engine takes one rule for which
-// probes light a pixel.
+// GatherRim, by gatherAt's weights, and keeps it, a thread a point. Where no probe of that level
+// counts, each standing inside a mesh or not seeing the point by its reach, the point takes the
+// level above's, whose probes stand twice as far apart and so hold a crevice twice as wide. It goes
+// no further, since a level further up holds a crevice narrower than its cells only by probes
+// over it, in the open, whose texels' ways pass the sight check by their slack, an eighth of their
+// spacing, and lend the crevice the open sky, so a point the level above sees by none of its probes
+// stays dark. A binding gathers each pixel by it, handing its levels, its field and
+// its points, so each engine takes one rule for which probes light a pixel.
 public void gatherSurface<F : IProbeField, L : IGatherLevels, A : ISurfacePoints>(F field, L levels, A surfaces, uint index)
 {
-    int level = gatheredLevel(levels, surfaces.placeAt(index), GatherRim);
-    GatherLevelProbes<L> probes = { levels, level };
-    gatherAt(field, probes, probes, levels.cascadeOf(level), surfaces, index);
+    NoSkyLevels<L> sky = { levels };
+    NoSkyPoints<A> points = { surfaces };
+    gatherSurface(field, sky, points, index);
 }
 
 // gatherSurface keeping beside the point's light the share of the sky in it.
 public void gatherSurface<F : IProbeField, L : IGatherSkyLevels, A : ISurfaceSkyPoints>(F field, L levels, A surfaces, uint index)
 {
-    int level = gatheredLevel(levels, surfaces.placeAt(index), GatherRim);
-    GatherSkyLevelProbes<L> probes = { levels, level };
-    gatherAt(field, probes, probes, levels.cascadeOf(level), surfaces, index);
+    float3 p = surfaces.placeAt(index);
+    float3 n = surfaces.normalAt(index);
+    float3 sum = float3(0.0);
+    float skyShares = 0.0, weights = 0.0;
+    int first = gatheredLevel(levels, p, GatherRim);
+    for (int level = first; level <= min(first + 1, levels.levels() - 1) && weights <= 0.0; level++)
+    {
+        GatherSkyLevelProbes<L> probes = { levels, level };
+        weights = gatheredSums(probes, probes, levels.cascadeOf(level), p, n, sum, skyShares);
+    }
+    surfaces.keepTaken(index, weights > 0.0 ? sum / weights : float3(0.0));
+    surfaces.keepSkyShare(index, weights > 0.0 ? skyShares / weights : 0.0);
+}
+
+// Levels whose texels' share of the sky is let go, which the gather that keeps no share reads
+// them through.
+struct NoSkyLevels<L : IGatherLevels> : IGatherSkyLevels
+{
+    L inner;
+    int levels() { return inner.levels(); }
+    ProbeCascade cascadeOf(int level) { return inner.cascadeOf(level); }
+    float3 lightAt(int level, int3 probe, uint2 texel) { return inner.lightAt(level, probe, texel); }
+    float reachAt(int level, int3 probe, uint2 texel) { return inner.reachAt(level, probe, texel); }
+    float skyShareAt(int level, int3 probe, uint2 texel) { return 0.0; }
+    float3 placeOf(int level, int3 probe) { return inner.placeOf(level, probe); }
 }
 
 // Gathers the light the surface point at index takes along its own rays, and keeps it, a thread a

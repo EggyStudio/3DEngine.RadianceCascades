@@ -619,3 +619,56 @@ through it. Each traced texel weighs by its solid angle in the texel read, as `f
 weighs, so the face reads 0.83 of the trace at 2, 0.57 at 1, and 0.64 traced at 16 and read at 8,
 where the even means of a243f3d read 0.94, 0.61 and 0.70, counting the texels by the octahedron's
 corner toward the opening, which see the sky and span the least solid angle, as whole ones.
+
+13. **The pixel's gather written once, its level by the rim rule.** The gather's shared step of the
+    kernel move, proposed by the session on 2026-11-25 and taken under Decision 9. Each engine picks
+    a pixel's cascade by its own rule today, one the finest around the point with no rim, the other
+    the finest holding the point with a fade at its edge, and the rim rule lives in the test
+    kernel's gatherLevel alone. The module gains in rc_probe_passes.slang gatheredLevel, the finest
+    level whose probes stand about the point or within half its spacing past its edge probes, else
+    the coarsest, and gatherSurface, that level with gatherAt's weights, trilinear, a probe inside a
+    surface or not seeing the point weighing nothing, renormalized; no fade until a ladder reading
+    shows one does better. A host hands one struct, IGatherLevels, the level count and each level's
+    ProbeCascade, a level's merged light and reach at a probe and texel, and a probe's place by its
+    own move rule, beside its IProbeField for the sight check and an ISurfacePoints over its pixels,
+    the place from depth, the normal, keep. Tests, points inside the finest probes, a quarter unit
+    past their edge, 0.6 of a spacing past, and outside every level reading levels 0, 0, 1 and the
+    coarsest; the test kernel's gatherLevel replaced by the library's with the rim as an argument
+    for the court's knockouts, the court's high wall under 1.3 and the ladder holding on the
+    library's code. The engines then drop their level choice and probe weighting and each implements
+    IGatherLevels over its images, 3DEngine as its item 313 and the bridge as its 157's first half,
+    so 157's two tables differ by the merge alone, and item 10's cone takes the same level choice.
+    One or two commits, before item 10. Done at `e042398` on 2026-11-25, pushed at 16:36, its run
+    green. rc_probe_passes.slang gains GatherRim at 0.5, gatheredLevel and gatherSurface with its
+    sky form; IGatherLevels and IGatherSkyLevels stand in rc_cascade_merge.slang beside IFarProbes,
+    IConeLevels folded into IGatherLevels since no engine bound it; GatherLevelTests reads the four
+    points at 0, 0, 1 and 2 with the rim and 0, 1, 1 and 2 without, the test kernel's gather goes
+    through gatherSurface, the court's high wall 1.240 as before, 210 tests. A host hands its
+    IProbeField, an ISurfacePoints over its pixels and one IGatherLevels over its cascade images.
+    The bridge's field_stamp.slang still calls stampCell with four arguments and takes the cell
+    width as the third on its pointer move past 774d11d; the engine's call passes it already.
+
+14. **A ray that meets a surface before its interval reads dark in the merge.** From the engine's
+    item 304 at its mark on 2026-11-25, under Decision 9. The engine's own trace marches each ray
+    from its probe and marks one that meets a surface before its interval begins, and its merge
+    reads that ray as dark; the module traces from the interval's start and its merge takes the far
+    texel's light from past that surface, so light crosses a wall that stands between a probe and
+    its interval. At the engine's door with the screen probes off the module's merge reads six parts
+    off the engine's at zero bounce +0.325, -0.092, -0.626, +0.129, -0.185 and +0.108 and settled
+    +0.462, +0.009, -0.677, +0.231, -0.001 and +0.113, the open box at Low 1.289 over its 1.25, the
+    solid slab's floor 0.160 against 0.063 and the half canopy 0.323 against 0.403, the lintel and
+    the still glow passing, the time under the engine's own. Untested by trial there. The module's
+    trace marks a ray blocked between its probe and its interval, and the merge reads it dark, or
+    says in one reading why that is not the cause and what is; a test holds a slab's floor under a
+    solid slab and an open box against their references, and the ladder holds. Then the engine reads
+    304 again at its mark. One commit, before item 10. Done at `d89a34b`, pushed at 18:58 on
+    2026-11-25, its run green. The mark is not the cause, the slab's floor reading 1.562 and 1.693
+    alike with it and without, so it is not kept. Two causes instead. The finest two levels at 8
+    texels a side double a grazing sky in the gather and the merge's far texel, the floor reading
+    1.693 at 8 and 0.915 at 16; and past a far cascade ending at the field's edge the open box's
+    corner probes lent the wall, so a probe weighs nothing where its own hit lies short of the ray's
+    end, the floor reading 1.160. The ladder by reach and sight at the engine's configuration 0.088
+    mean and 0.367 worst from 0.117 and 0.388, the module's 0.092 and 0.454 from 0.095 and 0.487,
+    the door moved 0.014 to 0.026; ProbeMergeTests.Floors.cs holds the slab with the finest two at
+    16 and the open box. No binding changed; a host keeps its finest two cascades at 16 texels a
+    side, four times their merged-light memory, or keeps the excess.

@@ -8,8 +8,16 @@ names the item of .github/REVIEW.md or .github/REVIEW-ARCHIVE.md and the commit 
 
 ## 2026-11-25
 
+Done that day
+
+- Item 13 at `e042398`. The pixel's gather written once, its level by the rim rule.
+- Item 14 at `d89a34b`. A ray that meets a surface before its interval reads dark in the merge.
+
 Commits that day
 
+- `d89a34b` The merge by reach sight leaves out a far probe whose own hit lies short of where the
+  ray ended past a far cascade reaching the field's edge, and a test holds a floor under a solid
+  slab and one in an open box against the sky traced there.
 - `e042398` Gathers a surface point in the library from the level the rim rule picks, over one
   struct of levels an engine hands it, as each pixel is to be gathered.
 

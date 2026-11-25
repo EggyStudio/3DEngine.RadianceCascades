@@ -214,49 +214,6 @@ pointer. One commit an engine, after item 3's first part.
     (the high wall there), and proposes the mend with its cost. No mend is made in this item unless
     it is a fault in a kernel, which is mended with a test.
 
-13. **The pixel's gather written once, its level by the rim rule.** The gather's shared step of the
-    kernel move, proposed by the session on 2026-11-25 and taken under Decision 9. Each engine picks
-    a pixel's cascade by its own rule today, one the finest around the point with no rim, the other
-    the finest holding the point with a fade at its edge, and the rim rule lives in the test
-    kernel's gatherLevel alone. The module gains in rc_probe_passes.slang gatheredLevel, the finest
-    level whose probes stand about the point or within half its spacing past its edge probes, else
-    the coarsest, and gatherSurface, that level with gatherAt's weights, trilinear, a probe inside a
-    surface or not seeing the point weighing nothing, renormalized; no fade until a ladder reading
-    shows one does better. A host hands one struct, IGatherLevels, the level count and each level's
-    ProbeCascade, a level's merged light and reach at a probe and texel, and a probe's place by its
-    own move rule, beside its IProbeField for the sight check and an ISurfacePoints over its pixels,
-    the place from depth, the normal, keep. Tests, points inside the finest probes, a quarter unit
-    past their edge, 0.6 of a spacing past, and outside every level reading levels 0, 0, 1 and the
-    coarsest; the test kernel's gatherLevel replaced by the library's with the rim as an argument
-    for the court's knockouts, the court's high wall under 1.3 and the ladder holding on the
-    library's code. The engines then drop their level choice and probe weighting and each implements
-    IGatherLevels over its images, 3DEngine as its item 313 and the bridge as its 157's first half,
-    so 157's two tables differ by the merge alone, and item 10's cone takes the same level choice.
-    One or two commits, before item 10. First commit `e042398` on 2026-11-25, pushed at 16:36, its
-    run awaited. rc_probe_passes.slang gains GatherRim at 0.5, gatheredLevel and gatherSurface with
-    its sky form; IGatherLevels and IGatherSkyLevels stand in rc_cascade_merge.slang beside
-    IFarProbes, IConeLevels folded into IGatherLevels since no engine bound it; GatherLevelTests
-    reads the four points at 0, 0, 1 and 2 with the rim and 0, 1, 1 and 2 without, the test kernel's
-    gather goes through gatherSurface, the court's high wall 1.240 as before, 210 tests. A host
-    hands its IProbeField, an ISurfacePoints over its pixels and one IGatherLevels over its cascade
-    images. The bridge's field_stamp.slang still calls stampCell with four arguments and takes the
-    cell width as the third on its pointer move past 774d11d; the engine's call passes it already.
-
-14. **A ray that meets a surface before its interval reads dark in the merge.** From the engine's
-    item 304 at its mark on 2026-11-25, under Decision 9. The engine's own trace marches each ray
-    from its probe and marks one that meets a surface before its interval begins, and its merge
-    reads that ray as dark; the module traces from the interval's start and its merge takes the far
-    texel's light from past that surface, so light crosses a wall that stands between a probe and
-    its interval. At the engine's door with the screen probes off the module's merge reads six parts
-    off the engine's at zero bounce +0.325, -0.092, -0.626, +0.129, -0.185 and +0.108 and settled
-    +0.462, +0.009, -0.677, +0.231, -0.001 and +0.113, the open box at Low 1.289 over its 1.25, the
-    solid slab's floor 0.160 against 0.063 and the half canopy 0.323 against 0.403, the lintel and
-    the still glow passing, the time under the engine's own. Untested by trial there. The module's
-    trace marks a ray blocked between its probe and its interval, and the merge reads it dark, or
-    says in one reading why that is not the cause and what is; a test holds a slab's floor under a
-    solid slab and an open box against their references, and the ladder holds. Then the engine reads
-    304 again at its mark. One commit, before item 10.
-
 15. **The surface gather's light over the trace, and the points no probe sees.** From the engine's
     item 313 on 2026-11-25, under Decision 9, after item 14. The gather at the engine's depth
     points, in its sky form over the engine's merged images, reads 1.5 to 1.85 of the traced light
@@ -1020,3 +977,35 @@ merged light's memory, and keeps the excess at 8. Handoff, for a fresh session. 
 that ends at the field's edge, the merge by reach sight leaves out each far probe whose own hit
 lies short of the ray's end, and nothing an engine binds changes. Read first: `sightedFarLight` and
 `reachSightLight` in `rc_reach_sight_merge.slang` and `ProbeMergeTests.Floors.cs`.
+
+Item 15, in the commit carrying this line. The surplus is where the probes stand, not the merge, the
+kept texels or the levels. On a wall under a lamp, a ladder scene now, at the engine's
+configuration by reach sight, the top middle reads 1.507 of its trace after one gather and 1.432 at
+the steady state. The finest level's probe half a unit before it keeps 1.140 of the light traced
+along its texels' ways from its place, and those ways take 1.834 of what they take from the wall's
+point behind it, which sees the lamp lower (`dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~A_Wall_Under_A_Lamp`). Read while working, the part read higher still with the
+finest two levels kept at the 16 texels they trace, lower at the module's configuration, and
+nearer its trace along the point's own rays (`gatherTraced`). The module's loop gains 0.486 a round
+where the trace gains 0.489, so the surplus does not grow from one gather to the steady state. The
+engine's growth from 1.02 at zero bounce to 1.5 to 1.85 settled is the light its hits take from its
+faces (`bouncedPlaced` and `probesHold` in its `lights.slang`), which grow alike, and lies outside
+the module. On a flat wall a model of the sight check over the lamp wall's points, its probes half
+a unit or a tenth off, found every point seen by some probe, and the few the module reads black at
+the wall's top corners at the ray's end are seen by their probes, whose texels' middle ways miss
+the small lamp and read nothing traced from their places too. A point no probe of its level sees,
+each inside a mesh or not seeing it by its reach, now takes the level above's light and goes no
+further (`gatherSurface` and `gatheredSums` in `rc_probe_passes.slang`). The floor of a slot 0.6
+wide, whose finest probes about it all stand inside the blocks and the ground, read nothing and
+reads 1.513 to 1.546 of its trace. In a slot 0.2 wide, narrower than the level above's cells, the
+rule walked to the coarsest lent two of the four points the whole sky from a probe over the
+blocks, so it stops at one level, and those two stay dark while the other two read 1.260
+(`dotnet test RadianceCascades.Tests --filter FullyQualifiedName~A_Point_No_Probe`). By reach
+sight the ladder over ten scenes reads 0.095 on the mean and 0.367 worst at the engine's
+configuration where 0.088 and 0.367 over nine, and 0.103 and 0.454 at the module's where 0.092 and
+0.454, the new scene alone moving them, and at the module's configuration the merge at the ray's
+end now stands above it, the default staying `MergeAtRayEnd`
+(`RC_LADDER=.github/LADDER.md dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~The_Ladder`). Handoff, for a fresh session. The gather falls to the level above
+for a point none of its own level's probes sees, and nothing an engine binds changes. Read first
+`gatherSurface` and `gatheredSums` in `rc_probe_passes.slang` and `ProbeMergeTests.Lamp.cs`.
