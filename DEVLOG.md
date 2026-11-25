@@ -6,6 +6,13 @@ kept under `.github/assets/readings` as WebP files named by their day, each on t
 says, and the notes written beside them as Markdown files named the same way. A line under Done
 names the item of .github/REVIEW.md or .github/REVIEW-ARCHIVE.md and the commit that closed it.
 
+## 2026-11-25
+
+Commits that day
+
+- `e042398` Gathers a surface point in the library from the level the rim rule picks, over one
+  struct of levels an engine hands it, as each pixel is to be gathered.
+
 ## 2026-11-23
 
 Commits that day

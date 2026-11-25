@@ -4,12 +4,14 @@
 // that does not see that place by its reach map (farProbeSees), and each whose own hit along the
 // texel's way lies off where the ray, marched on to the far cascade's end, meets a surface, by
 // HitSpread of the way or two of the field's cells, or that meets a surface where the march meets
-// none. The rest are weighed by place, each read toward the point of the ray nearest its own hit
-// along the way, since a probe a spacing off the ray that is read along the ray's own way lends
-// what it sees from where it stands and not what the ray would meet. Where none is left the ray
-// takes its own march, the surface it met or the sky where it left the field, or marches on to
-// marchEnd where it met neither. The module holds as well the merge about the near probe's own
-// place (MergeAboutProbe), the same blend and read with no march to leave a far probe out.
+// none. Where the far cascade is the coarsest, which the ray does not march across, it leaves out
+// each whose own hit lies short of where the ray ended. The rest are weighed by place, each read
+// toward the point of the ray nearest its own hit along the way, since a probe a spacing off the
+// ray that is read along the ray's own way lends what it sees from where it stands and not what the
+// ray would meet. Where none is left the ray takes its own march, the surface it met or the sky
+// where it left the field, or marches on to marchEnd where it met neither. The module holds as well
+// the merge about the near probe's own place (MergeAboutProbe), the same blend and read with no
+// march to leave a far probe out.
 module rc_reach_sight_merge;
 
 __exported import rc_cascade_merge;
@@ -68,11 +70,16 @@ float3 farTexelsToward<P : IFarSkyProbes>(P probes, ProbeCascade far, int3 probe
 // is set so does one whose own hit along way (reachAt) lies at a point of the ray off occluder,
 // where the ray's march on met a surface, by more than HitSpread of occluder and two of the field's
 // cells there, or short of the far cascade's end where occluder is below zero, the march having met
-// none. Each probe is read toward the point of the ray nearest its own hit (farTexelsToward), and
-// along way where it met none. In skyShares is the sum of their shares of the sky at the same
-// weights, and in weights the sum of the weights taken, which divides both.
+// none. Where it is not set so does one whose own hit lies at a point of the ray short of reached,
+// where the ray's own trace ended with nothing met, since the surface it meets stands beside the
+// ray. A probe in an open box's corner meets the wall beside it along a way the ray from the box's
+// middle leaves by through the open top, and the box's floor read 0.61 of the sky traced there with
+// such probes taken against 1.16 without them. Each probe is read toward the point of the ray
+// nearest its own hit (farTexelsToward), and along way where it met none. In skyShares is the sum
+// of their shares of the sky at the same weights, and in weights the sum of the weights taken,
+// which divides both.
 float3 sightedFarLight<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces>(F field, P probes, Q places, ProbeCascade far, float3 origin,
-    float3 way, uint texels, bool agreeing, float occluder, out float skyShares, out float weights)
+    float3 way, uint texels, bool agreeing, float occluder, float reached, out float skyShares, out float weights)
 {
     int3 base;
     float3 f;
@@ -94,7 +101,7 @@ float3 sightedFarLight<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces>(F f
             continue;
         float reach = probes.reachAt(probe, reachTexel);
         float along = reach >= ReachOpen ? ReachOpen : dot(place + way * reach - origin, way);
-        if (agreeing && (occluder < 0.0 ? along < far.end * 0.999 : abs(along - occluder) > max(HitSpread * occluder, cells)))
+        if (agreeing ? (occluder < 0.0 ? along < far.end * 0.999 : abs(along - occluder) > max(HitSpread * occluder, cells)) : along < reached)
             continue;
         float3 toward = way;
         if (reach < ReachOpen)
@@ -121,8 +128,9 @@ float3 sightedFarLight<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces>(F f
 // the far probes about origin that see origin and agree with the occluder (sightedFarLight), times
 // the share it carries at its end. Where far is the coarsest cascade, its end at marchEnd or past
 // it, the ray does not march first, since that march would run to the field's edge, and takes
-// every far probe that sees origin. Where none is left it takes its own march, the light it took
-// on its way and the surface it met or the sky where it left, and where that march met neither it
+// every far probe that sees origin and meets no surface along the way short of where the ray
+// ended. Where none is left it takes its own march, the light it took on its way and the surface
+// it met or the sky where it left, and where that march met neither it
 // marches on to marchEnd, marched set. Every march takes the far cascade's cap of steps
 // (stepCap), and one that stops at it takes nothing past where it stopped. Every step past the
 // ray's end is handed to steps. The marches are one call in a loop, since a driver inlines an
@@ -156,7 +164,8 @@ public float3 reachSightLight<F : IProbeField, P : IFarSkyProbes, Q : IProbePlac
         {
             blended = true;
             float skyShares, weights;
-            float3 sum = sightedFarLight(field, probes, places, far, origin, way, texels, agreeing, occluder, skyShares, weights);
+            float3 sum = sightedFarLight(field, probes, places, far, origin, way, texels, agreeing, occluder, near.t, skyShares,
+                weights);
             if (weights > 0.0)
             {
                 skyShare = skyShares / weights * carried;
@@ -215,7 +224,7 @@ public struct MergeByReachSight : IMerge
 public float3 farLightAbout<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces>(F field, P probes, Q places, ProbeCascade far, float3 place,
     float3 way, uint texels, out float skyShares, out float weights)
 {
-    return sightedFarLight(field, probes, places, far, place, way, texels, false, -1.0, skyShares, weights);
+    return sightedFarLight(field, probes, places, far, place, way, texels, false, -1.0, -ReachOpen, skyShares, weights);
 }
 
 // The light a near probe's texel of an octahedron of `texels` along each side brings along its way
