@@ -1,6 +1,6 @@
 # The ladder of merges
 
-Measured on 2026-11-23 on the tree of 1e53334 with the changes committed beside it, every merge the
+Measured on 2026-11-25 on the tree of 774d11d with the changes committed beside it, every merge the
 passes take by name (`IMerge`) run over 9 scenes on the CPU at 2 configurations, as `dotnet test
 RadianceCascades.Tests` writes it with `RC_LADDER` naming this file. The module's configuration is
 its tests' chain of four levels in one cascade of the field of 64 cells of 0.25. An engine's is one
@@ -152,7 +152,7 @@ Its two walls' light each round over the first round's, traced and by each merge
 
 ## The cones by roughness
 
-Measured on 2026-11-23 on the tree of 1e53334 with the changes committed beside it, the cone a rough
+Measured on 2026-11-25 on the tree of 774d11d with the changes committed beside it, the cone a rough
 surface reflects read from the cascades by `ConeAtProbes` (`IConeRead`) over 11 scenes, the ladder's
 and two of their own, on the CPU at 2 configurations after one gather, as `dotnet test
 RadianceCascades.Tests` writes it with `RC_LADDER` naming this file. Each point of a scene reflects

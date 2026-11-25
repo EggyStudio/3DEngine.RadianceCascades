@@ -30,6 +30,58 @@ public interface IFarSkyProbes : IFarProbes
     float skyShareAt(int3 probe, uint2 texel);
 }
 
+// The levels of probes a surface point is gathered from and a cone is read from, as a binding keeps
+// them, finest first, each read by its level's place in them.
+public interface IGatherLevels
+{
+    // The count of levels.
+    int levels();
+
+    // A level's probes, its texels along a side those it keeps for a reader, as its gather reads
+    // them (readCascade).
+    ProbeCascade cascadeOf(int level);
+
+    // The light a level's probe's texel brings, merged from every distance past the probe.
+    float3 lightAt(int level, int3 probe, uint2 texel);
+
+    // How far a level's probe's ray went along a texel of its reach map (reachAlong).
+    float reachAt(int level, int3 probe, uint2 texel);
+
+    // Where a level's probe stands.
+    float3 placeOf(int level, int3 probe);
+}
+
+// The levels with the share of the sky in each probe's texel's light (IFarSkyProbes).
+public interface IGatherSkyLevels : IGatherLevels
+{
+    // The share of the sky in a level's probe's texel's light, from 0 to 1.
+    float skyShareAt(int level, int3 probe, uint2 texel);
+}
+
+// One level of the levels as a reader of one cascade's probes takes it, its light, its reach and
+// its probes' places.
+public struct GatherLevelProbes<L : IGatherLevels> : IFarProbes, IProbePlaces
+{
+    public L levels;
+    public int level;
+
+    public float3 lightAt(int3 probe, uint2 texel) { return levels.lightAt(level, probe, texel); }
+    public float reachAt(int3 probe, uint2 texel) { return levels.reachAt(level, probe, texel); }
+    public float3 placeOf(int3 probe) { return levels.placeOf(level, probe); }
+}
+
+// One level of the levels with the share of the sky in its light.
+public struct GatherSkyLevelProbes<L : IGatherSkyLevels> : IFarSkyProbes, IProbePlaces
+{
+    public L levels;
+    public int level;
+
+    public float3 lightAt(int3 probe, uint2 texel) { return levels.lightAt(level, probe, texel); }
+    public float reachAt(int3 probe, uint2 texel) { return levels.reachAt(level, probe, texel); }
+    public float skyShareAt(int3 probe, uint2 texel) { return levels.skyShareAt(level, probe, texel); }
+    public float3 placeOf(int3 probe) { return levels.placeOf(level, probe); }
+}
+
 // Far probes read through IFarProbes alone, their texels' share of the sky none, which the merge
 // and the passes that keep no share read them through, so each has one form that keeps both.
 public struct NoSkyShares<P : IFarProbes> : IFarSkyProbes

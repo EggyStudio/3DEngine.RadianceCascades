@@ -374,23 +374,27 @@ ProbeCascade levelCascade(int level)
 // the level below's merge reads it at, 0 for those it keeps.
 uint firstOf(int level, int which) { return uint(setup[levelAt(level) + which]); }
 
-// The level a surface point at p is gathered from, the finest whose probes stand about it on every
-// side where the setup sets 122, as a binding gathers each pixel from the finest cascade that holds
-// it, and otherwise the finest level.
+// The levels as a surface point's gather takes them, each read at the texels it keeps, with their
+// shares of the sky, their reads counted at slot.
+struct GatherLevels : IGatherSkyLevels
+{
+    uint slot;
+    TracedSkyMeans<LevelProbes> kept(int level) { return meansOf(level, firstOf(level, 14), slot); }
+    int levels() { return int(setup[9]); }
+    ProbeCascade cascadeOf(int level) { return readCascade(levelCascade(level), kept(level).means.perRead); }
+    float3 lightAt(int level, int3 probe, uint2 texel) { return kept(level).lightAt(probe, texel); }
+    float reachAt(int level, int3 probe, uint2 texel) { return kept(level).reachAt(probe, texel); }
+    float skyShareAt(int level, int3 probe, uint2 texel) { return kept(level).skyShareAt(probe, texel); }
+    float3 placeOf(int level, int3 probe) { return placesOf(level).placeOf(probe); }
+};
+
+// The level a surface point at p is gathered from, the finest level where the setup's 122 is 0,
+// and otherwise the library's (gatheredLevel), within GatherRim past a level's edge probes where it
+// is 2 and none past them where it is 1.
 int gatherLevel(float3 p)
 {
-    if (setup[122] < 0.5)
-        return 0;
-    int levels = int(setup[9]);
-    for (int l = 0; l < levels - 1; l++)
-    {
-        ProbeCascade cascade = levelCascade(l);
-        float3 q = (p - cascade.corner) / cascade.spacing;
-        float rim = setup[122] > 1.5 ? 0.5 : 0.0;
-        if (all(q >= -rim) && all(q <= float3(cascade.count - 1) + rim))
-            return l;
-    }
-    return levels - 1;
+    GatherLevels levels = { 0u };
+    return setup[122] < 0.5 ? 0 : gatheredLevel(levels, p, setup[122] > 1.5 ? GatherRim : 0.0);
 }
 
 // Where a level's probes begin in stageValues, the probes of the levels below it before them.
@@ -476,7 +480,7 @@ bool mergeBy<F : IProbeField>(F field, LevelRays rays, TracedSkyMeans<LevelProbe
 
 // The levels as a cone's read takes them, each read at the texels it keeps as its gather reads it,
 // each read of a texel or a reach texel counted at slot of coneFloats.
-struct ConeLevels : IConeLevels
+struct ConeLevels : IGatherLevels
 {
     uint slot;
     int levels() { return int(setup[9]); }
@@ -658,7 +662,14 @@ void test(uint3 id : SV_DispatchThreadID)
     }
     else if (index < uint(setup[Points]))
     {
+        // Where the setup's 122 is 2, each point is gathered as a binding gathers a pixel.
         SurfacePoints surfaces;
+        if (setup[122] > 1.5)
+        {
+            GatherLevels levels = { uint(setup[124]) + index };
+            gatherSurface(field, levels, surfaces, index);
+            return;
+        }
         int g = gatherLevel(surfaces.placeAt(index));
         TracedSkyMeans<LevelProbes> finest = meansOf(g, firstOf(g, 14), uint(setup[124]) + index);
         gatherAt(field, finest, placesOf(g), readCascade(levelCascade(g), finest.means.perRead), surfaces, index);

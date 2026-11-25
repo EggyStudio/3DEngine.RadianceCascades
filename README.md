@@ -124,12 +124,13 @@ library's functions, and the engine keeps its bindings, its threads and its atom
 | `IProbeStage` | Works out one value for a probe of a cascade from its place and the far cascade's probes, once a probe for every texel of it to read, which `FarSightLines` gives as the lines of sight to the eight far probes about it | `stageProbe` |
 | `IStageKeep` | Keeps each probe's value of the per-probe stage, one uint a probe | `stageProbe` |
 | `IStageValues` | Reads a probe's value of the per-probe stage back for a merge that reads it, which `NoStageValues` gives as none | `mergeTexel` |
-| `ISurfacePoints` | Reads a surface point's place and normal and keeps the light it takes | `gatherAt`, `gatherTraced` |
-| `ISurfaceSkyPoints` | Keeps, beyond `ISurfacePoints`, the share of the sky in the light a surface point takes | `gatherAt`, `gatherTraced` |
+| `ISurfacePoints` | Reads a surface point's place and normal and keeps the light it takes | `gatherSurface`, `gatherAt`, `gatherTraced` |
+| `ISurfaceSkyPoints` | Keeps, beyond `ISurfacePoints`, the share of the sky in the light a surface point takes | `gatherSurface`, `gatherAt`, `gatherTraced` |
 | `IHeldLight` | Keeps and reads the light each side of the surface nearest each of the field's cells within a cell and a tenth of a surface sends, its own apart from its probes' light, one side for a solid's cell and two for a sheet's (`heldSide`), and gives the share of the probes' light a hit takes, which the merge reads at a hit through `HeldHitLight` in place of the engine's shading | `holdCellLight`, `holdListedCell`, `HeldHitLight` |
 | `IHeldShading` | Shades a held cell's surface, its own light and its probes' apart, which `WholeShading` gives from `IProbeField.hitLight` as its own alone | `holdCellLight`, `holdListedCell` |
 | `IHeldList` | Keeps the list of the field's cells whose light is held, a cell added as `listHeldCell` finds it, the count of cells listed and each listed cell, which `holdListedCell` holds a thread a cell | `listHeldCell`, `holdListedCell` |
-| `IConeLevels` | Reads the levels a cone is read from, finest first, each level's cascade at the texels it keeps, a probe's merged light at a texel, its reach toward a way and its place | `coneLevel`, `ConeAtProbes` |
+| `IGatherLevels` | Reads the levels a surface point is gathered from and a cone is read from, finest first, each level's cascade at the texels it keeps, a probe's merged light at a texel, its reach toward a way and its place, which `GatherLevelProbes` reads as one level's `IFarProbes` and `IProbePlaces` | `gatheredLevel`, `gatherSurface`, `coneLevel`, `ConeAtProbes` |
+| `IGatherSkyLevels` | Reads, beyond `IGatherLevels`, the share of the sky in a level's probe's texel's light, which `GatherSkyLevelProbes` reads as one level's `IFarSkyProbes` | `gatherSurface` |
 | `IConePoints` | Reads a point's place, normal, way toward the eye, roughness and the finest level its gather reads, and keeps the light its cone reflects | `readCone` |
 | `IConeRead` | Brings the mean light of the cone a rough surface reflects toward the eye from the levels about it, one read behind one name, which `ConeAtProbes` is the first of | `readCone` |
 
@@ -350,15 +351,17 @@ The conventions the module stands on:
   holds the slab, for 128 rays a point at 16 texels a side and 1,000 to 1,600 steps. A ray that
   leaves the field takes the sky, so a slab reaching past the coarsest cascade reads open past its
   edge, and against the whole slab the floor reads 1.68 and 1.39 times its light.
-- A binding that gathers each point from the finest level about it holds by that level a point
-  that lies within half its spacing past its edge probes, the level's own cells, its edge probes
-  taking it alone, and hands to the level above only a point past that rim. A wall's points a
-  quarter of a unit past the finest level's last probes would otherwise go to the level above, whose
-  probes stand a spacing off the wall and see what the wall does not. In a court lit in a strip
-  between arcades at an engine's configuration, the high wall over the arcades' roof reads 2.367 of
-  its trace gathered from the level above, whose probes see past the roof's edge onto the sunlit
-  floor where the wall meets the roof, and 1.240 from the finest level's edge probes a quarter of a
-  unit off, as `ProbeMergeTests.Court.cs` reads it.
+- A binding gathers each pixel with `gatherSurface`, handing it its levels (`IGatherLevels`), its
+  field and its points, so each engine takes one rule for which probes light a pixel.
+  `gatheredLevel` holds by a level a point that lies within half its spacing past its edge probes
+  (`GatherRim`), the level's own cells, its edge probes taking it alone, and hands to the level
+  above only a point past that rim, and `gatherSurface` gathers it there by `gatherAt`'s weights. A
+  wall's points a quarter of a unit past the finest level's last probes would otherwise go to the
+  level above, whose probes stand a spacing off the wall and see what the wall does not. In a court
+  lit in a strip between arcades at an engine's configuration, the high wall over the arcades' roof
+  reads 2.367 of its trace gathered from the level above, whose probes see past the roof's edge onto
+  the sunlit floor where the wall meets the roof, and 1.240 from the finest level's edge probes a
+  quarter of a unit off, as `ProbeMergeTests.Court.cs` reads it.
 
 The face under the lintel by how many of the four cascades are traced at 2, the rest at 1:
 
@@ -501,19 +504,19 @@ No merge stands above every other at every configuration, so the default stays t
 
 ## Rough reflections
 
-A rough surface reflects the light of a cone of ways about the mirror of the way toward the eye,
-and a probe's merged texels are that light by way, so `rc_cone_read` reads the cone from the probes
-and traces nothing, whole each frame with no history. `readCone` takes a point's place, normal, way
-toward the eye and roughness through `IConePoints` and the levels through `IConeLevels`, and keeps
-the lobe's mean light, the light a mirror would reflect blurred by the lobe of a GGX surface whose
-alpha is the roughness squared, which the binding scales by its own reflectance as a split sum
-does. The read stands behind `IConeRead`, so a second way of reading the cone stands beside the
-first and is read against it as the merges are. The first, `ConeAtProbes`, reads the finest level
-from the one the point gathers from up whose kept texels are as narrow as the cone, a lobe no
-narrower than half a texel's width, at the probes about the point weighed as the gather weighs
-them, so a wall hides what lies behind it. A binding hands it what its gather reads, each level's
-merged light at the texels it keeps, its reach maps and its probes' places, and for each point the
-way toward the eye, the roughness and the level its gather reads.
+A rough surface reflects the light of a cone of ways about the mirror of the way toward the eye, and
+a probe's merged texels are that light by way, so `rc_cone_read` reads the cone from the probes and
+traces nothing, whole each frame with no history. `readCone` takes a point's place, normal, way
+toward the eye and roughness through `IConePoints` and the levels through `IGatherLevels`, as the
+gather takes them, and keeps the lobe's mean light, the light a mirror would reflect blurred by the
+lobe of a GGX surface whose alpha is the roughness squared, which the binding scales by its own
+reflectance as a split sum does. The read stands behind `IConeRead`, so a second way of reading the
+cone stands beside the first and is read against it as the merges are. The first, `ConeAtProbes`,
+reads the finest level from the one the point gathers from up whose kept texels are as narrow as the
+cone, a lobe no narrower than half a texel's width, at the probes about the point weighed as the
+gather weighs them, so a wall hides what lies behind it. A binding hands it what its gather reads,
+each level's merged light at the texels it keeps, its reach maps and its probes' places, and for
+each point the way toward the eye, the roughness and the level its gather reads.
 
 The ladder reads the cones on the CPU over its scenes and two of their own, a low room lit by a
 small bright light and a red wall beside a gray floor, at six roughnesses after one gather, against

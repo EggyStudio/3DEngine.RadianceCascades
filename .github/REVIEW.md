@@ -33,7 +33,9 @@ The documents first, then the rest as the other projects have it, then the engin
 module. Items 1 and 2 are the game's session's, being free while the game waits on the engine's
 package; item 3 is the session's that owns the code today; item 4 is each engine's session's. Among
 the six this module comes last, after the GI items of 3DEngine's Decision 75, since the cascades
-change daily until then.
+change daily until then. By the direction of 2026-11-25 the cascades come before everything else in
+both engines, and this module's next item is the gather's shared step the bridge waits on, proposed
+by the session and written here; item 10 follows the probe passes.
 
 1. **The documents, one commit.** AGENTS.md on the game's shape (one paragraph saying what the
     module is and that no engine is referenced, N 2.1; the documents table with STYLE, COMMITS,
@@ -212,6 +214,26 @@ pointer. One commit an engine, after item 3's first part.
     (the high wall there), and proposes the mend with its cost. No mend is made in this item unless
     it is a fault in a kernel, which is mended with a test.
 
+13. **The pixel's gather written once, its level by the rim rule.** The gather's shared step of the
+    kernel move, proposed by the session on 2026-11-25 and taken under Decision 9. Each engine picks
+    a pixel's cascade by its own rule today, one the finest around the point with no rim, the other
+    the finest holding the point with a fade at its edge, and the rim rule lives in the test
+    kernel's gatherLevel alone. The module gains in rc_probe_passes.slang gatheredLevel, the finest
+    level whose probes stand about the point or within half its spacing past its edge probes, else
+    the coarsest, and gatherSurface, that level with gatherAt's weights, trilinear, a probe inside a
+    surface or not seeing the point weighing nothing, renormalized; no fade until a ladder reading
+    shows one does better. A host hands one struct, IGatherLevels, the level count and each level's
+    ProbeCascade, a level's merged light and reach at a probe and texel, and a probe's place by its
+    own move rule, beside its IProbeField for the sight check and an ISurfacePoints over its pixels,
+    the place from depth, the normal, keep. Tests, points inside the finest probes, a quarter unit
+    past their edge, 0.6 of a spacing past, and outside every level reading levels 0, 0, 1 and the
+    coarsest; the test kernel's gatherLevel replaced by the library's with the rim as an argument
+    for the court's knockouts, the court's high wall under 1.3 and the ladder holding on the
+    library's code. The engines then drop their level choice and probe weighting and each implements
+    IGatherLevels over its images, 3DEngine as its item 313 and the bridge as its 157's first half,
+    so 157's two tables differ by the merge alone, and item 10's cone takes the same level choice.
+    One or two commits, before item 10.
+
 ## Verdicts
 
 Verdict 1 is settled at 22:56 on 2026-11-21, the build run on `2f0dc8e` green on the three systems,
@@ -295,6 +317,13 @@ session pushes.
     when the time is right and on the owner's word, for a reader who takes the module alone. The
     engines keep taking the module as a git submodule, compiled with them and carried inside each
     engine's one package. Folders and project file names stay.
+
+9. **The radiance cascades before everything else, until they work.** The direction of 2026-11-25,
+    given after the machine's restart. This module's next item is the gather's shared step the
+    bridge's item 157 waits on, proposed by the session in a few lines and written here, with what
+    each engine hands it and the test that holds it; item 10 follows the engine's probe passes. The
+    engine runs 313, 304, 316 and 311, the bridge 162, 150 and 157; the other modules and the game
+    stay idle until the cascades work.
 
 ## Replies
 
@@ -907,3 +936,22 @@ The engine's call must hand the cell, `stampCell(shapes, p, cellWidth, reach, st
 `originAndCell.w`, when it moves its pointer. Handoff, for a fresh session. The stamp holds thin
 boxes, and the engine's call takes the new argument when it moves to this commit. Read first:
 `rc_field_stamp.slang`, `StampTests.cs` and the README's paragraph on `stampCell`.
+
+Item 13, in the commit carrying this line. `rc_probe_passes.slang` gains `GatherRim` (0.5),
+`gatheredLevel(levels, p, rim)` and `gatherSurface(field, levels, surfaces, index)` in two forms,
+the second keeping the share of the sky. `IGatherLevels` and `IGatherSkyLevels` sit in
+`rc_cascade_merge.slang` beside `IFarProbes`, with `GatherLevelProbes` and `GatherSkyLevelProbes`
+reading one level of them as a cascade's probes, so the cone read takes the same struct:
+`IConeLevels` and `ConeLevelProbes` are gone for them, no engine having bound them.
+`GatherLevelTests` reads the four points at levels 0, 0, 1 and 2 at the library's rim and 0, 1, 1
+and 2 with none. The test kernel's gather calls `gatherSurface` at an engine's configuration and the
+library's `gatheredLevel` for its knockouts, and the court and the ladder read as before, the high
+wall 1.240 and LADDER.md the same but its date. An engine hands `gatherSurface` its field
+(`IProbeField`), its pixels (`ISurfacePoints`, the place from depth and the normal, keeping the
+light) and one struct over its cascade images (`IGatherLevels`). That struct gives the level count,
+each level's `ProbeCascade` at the texels it keeps, a probe texel's merged light and reach, and a
+probe's place by its own move rule, in place of `finestAround` and `probesAround` in one engine's
+`gi_screen.slang` and the finest-cascade choice in the other's `gi_light.slang`. Handoff, for a
+fresh session. The gather's level and weights are the library's; item 10 follows the engines' probe
+passes. Read first: `gatherSurface` in `rc_probe_passes.slang`, `IGatherLevels` in
+`rc_cascade_merge.slang` and `GatherLevelTests.cs`.

@@ -10,26 +10,6 @@ module rc_cone_read;
 
 __exported import rc_cascade_merge;
 
-// The levels a cone is read from, as a binding keeps them, finest first.
-public interface IConeLevels
-{
-    // The count of levels.
-    int levels();
-
-    // A level's probes, its texels along a side those it keeps for a reader, as its gather reads
-    // them (readCascade).
-    ProbeCascade cascadeOf(int level);
-
-    // The light a level's probe's texel brings, merged from every distance past the probe.
-    float3 lightAt(int level, int3 probe, uint2 texel);
-
-    // How far a level's probe's ray went along a texel of its reach map (reachAlong).
-    float reachAt(int level, int3 probe, uint2 texel);
-
-    // Where a level's probe stands.
-    float3 placeOf(int level, int3 probe);
-}
-
 // The points whose cones are read, a thread a point.
 public interface IConePoints
 {
@@ -45,7 +25,7 @@ public interface IConePoints
     // Its surface's roughness, from 0 to 1, whose square is the lobe's alpha.
     float roughnessAt(uint index);
 
-    // The finest level whose probes stand about it, which its gather reads.
+    // The level its gather reads, as gatheredLevel picks it at GatherRim.
     int levelAt(uint index);
 
     // Keeps the light its cone reflects.
@@ -57,7 +37,7 @@ public interface IConePoints
 // from the levels about p, the finest of which its gather reads.
 public interface IConeRead
 {
-    float3 light<L : IConeLevels>(L levels, int finest, float3 p, float3 n, float3 v, float roughness);
+    float3 light<L : IGatherLevels>(L levels, int finest, float3 p, float3 n, float3 v, float roughness);
 }
 
 // The share of the lobe's weight under which a texel is not read. The weight is taken at the
@@ -91,7 +71,7 @@ public float coneLeastAlpha(uint texels)
 // as the cone (coneLeastAlpha), and where none is, the first of those with the most texels, the
 // narrowest a cone can be read at. A coarser level's probes stand farther apart, so a cone is read
 // no coarser than its width asks.
-public int coneLevel<L : IConeLevels>(L levels, int finest, float alpha)
+public int coneLevel<L : IGatherLevels>(L levels, int finest, float alpha)
 {
     int best = finest;
     uint most = levels.cascadeOf(finest).texels;
@@ -118,16 +98,6 @@ public float coneCornerWeight(float3 f, int3 offset)
     return lerps.x * lerps.y * lerps.z;
 }
 
-// A level of the cone's levels as the probes' sight reads it (farProbeSees).
-public struct ConeLevelProbes<L : IConeLevels> : IFarProbes
-{
-    public L levels;
-    public int level;
-
-    public float3 lightAt(int3 probe, uint2 texel) { return levels.lightAt(level, probe, texel); }
-    public float reachAt(int3 probe, uint2 texel) { return levels.reachAt(level, probe, texel); }
-}
-
 // The cone read at the probes about p. The level is the one the cone's width chooses (coneLevel),
 // and the lobe is no narrower than that level's texels (coneLeastAlpha). Each probe is weighed by
 // its trilinear weight on the level's grid, and by nothing where it stands inside a mesh or does
@@ -138,13 +108,13 @@ public struct ConeLevelProbes<L : IConeLevels> : IFarProbes
 // spacing off p takes the light at the probe's place, as the gather does.
 public struct ConeAtProbes : IConeRead
 {
-    public float3 light<L : IConeLevels>(L levels, int finest, float3 p, float3 n, float3 v, float roughness)
+    public float3 light<L : IGatherLevels>(L levels, int finest, float3 p, float3 n, float3 v, float roughness)
     {
         float alpha = roughness * roughness;
         int level = coneLevel(levels, finest, alpha);
         ProbeCascade cascade = levels.cascadeOf(level);
         float read = max(alpha, coneLeastAlpha(cascade.texels));
-        ConeLevelProbes<L> probes = { levels, level };
+        GatherLevelProbes<L> probes = { levels, level };
         int3 base;
         float3 f;
         farProbesAbout(cascade, p, base, f);
@@ -197,7 +167,7 @@ public struct ConeAtProbes : IConeRead
 
 // Reads the cone the point at index reflects by the read a binding names (IConeRead) and keeps
 // it, a thread a point.
-public void readCone<C : IConeRead, L : IConeLevels, A : IConePoints>(C cone, L levels, A points, uint index)
+public void readCone<C : IConeRead, L : IGatherLevels, A : IConePoints>(C cone, L levels, A points, uint index)
 {
     points.keepReflected(index, cone.light(levels, points.levelAt(index), points.placeAt(index), points.normalAt(index), points.viewAt(index),
         points.roughnessAt(index)));

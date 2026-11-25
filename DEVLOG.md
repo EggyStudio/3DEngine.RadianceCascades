@@ -10,6 +10,8 @@ names the item of .github/REVIEW.md or .github/REVIEW-ARCHIVE.md and the commit 
 
 Commits that day
 
+- `774d11d` Stamps a moving box thinner than a cell along an axis a cell across there, so a march
+  meets a thin moving wall wherever it stands.
 - `ff69c6a` Gathers each point at an engine's configuration from the finest level within half a
   spacing past its probes, and writes the ladder again with it.
 - `1e53334` Follows the court's surplus on the high wall to the level its points are gathered from,

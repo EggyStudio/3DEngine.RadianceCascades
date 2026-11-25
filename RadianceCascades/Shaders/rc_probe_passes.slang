@@ -653,6 +653,48 @@ public void gatherAt<F : IProbeField, P : IFarSkyProbes, Q : IProbePlaces, A : I
     surfaces.keepSkyShare(index, weights > 0.0 ? skyShares / weights : 0.0);
 }
 
+// How far past a level's edge probes, in its spacing, a surface point is still gathered from that
+// level (gatheredLevel). A wall a quarter of a unit past the finest level's last probes would
+// otherwise be gathered from the level above, whose probes stand a spacing off it and see what the
+// wall does not, as a court lit in a strip reads its high wall 2.367 of its trace without the rim
+// and 1.240 with it. Half a spacing is the level's own cells, its edge probes the nearest to any
+// point within it.
+public static const float GatherRim = 0.5;
+
+// The level a surface point at p is gathered from, the finest whose probes stand about it on every
+// side or within rim of its spacing past its edge probes, and the coarsest where none does.
+public int gatheredLevel<L : IGatherLevels>(L levels, float3 p, float rim)
+{
+    int count = levels.levels();
+    for (int level = 0; level < count - 1; level++)
+    {
+        ProbeCascade cascade = levels.cascadeOf(level);
+        float3 q = (p - cascade.corner) / cascade.spacing;
+        if (all(q >= -rim) && all(q <= float3(cascade.count - 1) + rim))
+            return level;
+    }
+    return count - 1;
+}
+
+// Gathers the light the surface point at index takes from the level gatheredLevel picks for it at
+// GatherRim, by gatherAt's weights, and keeps it, a thread a point. A binding gathers each pixel
+// by it, handing its levels, its field and its points, so each engine takes one rule for which
+// probes light a pixel.
+public void gatherSurface<F : IProbeField, L : IGatherLevels, A : ISurfacePoints>(F field, L levels, A surfaces, uint index)
+{
+    int level = gatheredLevel(levels, surfaces.placeAt(index), GatherRim);
+    GatherLevelProbes<L> probes = { levels, level };
+    gatherAt(field, probes, probes, levels.cascadeOf(level), surfaces, index);
+}
+
+// gatherSurface keeping beside the point's light the share of the sky in it.
+public void gatherSurface<F : IProbeField, L : IGatherSkyLevels, A : ISurfaceSkyPoints>(F field, L levels, A surfaces, uint index)
+{
+    int level = gatheredLevel(levels, surfaces.placeAt(index), GatherRim);
+    GatherSkyLevelProbes<L> probes = { levels, level };
+    gatherAt(field, probes, probes, levels.cascadeOf(level), surfaces, index);
+}
+
 // Gathers the light the surface point at index takes along its own rays, and keeps it, a thread a
 // point, for a surface whose probes stand off it. The point sends a ray along each way of an
 // octahedron of cascade's texels a side that faces its normal, from a cell of the field's finest
