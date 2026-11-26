@@ -504,22 +504,11 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
             {
                 var (side, ways) = (4 << c, SplitStoreShape.BaseWays << 2 * c);
                 var (x, y, z) = CellOf(p);
-                var q = new Vector3(x, y, z) * 0.5f;
-                var low = new Vector3(MathF.Floor(q.X), MathF.Floor(q.Y), MathF.Floor(q.Z));
-                var f = q - low;
                 var corners = new List<(float Weight, int Entry)>();
-                for (int k = 0; k < 8 && c + 1 < Shape.Cascades; k++)
-                {
-                    var o = new Vector3(k & 1, k >> 1 & 1, k >> 2);
-                    var l = Vector3.Lerp(Vector3.One - f, f, o);
-                    var corner = low + o;
-                    if (l.X * l.Y * l.Z <= 0)
-                        continue;
-                    if (standing.TryGetValue((p.Level, c + 1, ((int)corner.X, (int)corner.Y, (int)corner.Z)), out var e))
-                        corners.Add((l.X * l.Y * l.Z, e));
-                    else
-                        missing++;
-                }
+                if (c + 1 < Shape.Cascades && standing.TryGetValue((p.Level, c + 1, ((x + 1) >> 1, (y + 1) >> 1, (z + 1) >> 1)), out var above))
+                    corners.Add((1, above));
+                else if (c + 1 < Shape.Cascades)
+                    missing++;
                 var result = new Vector4[ways];
                 for (int w = 0; w < ways; w++)
                 {
@@ -587,9 +576,8 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
     {
         // Each probe's own light set along every way, a fifth of them reached by no ray, the merge
         // gives each way its own light and, by the share it lets through, the mean of the four ways
-        // above it at each probe of the cascade above about it that stands, by their trilinear
-        // weights over those standing and those ways that hold light, as the rule read on the CPU
-        // gives it.
+        // above it that hold light at the probe of the cascade above at half its cell rounded up,
+        // the one its rays' next parts are added to, as the rule read on the CPU gives it.
         var points = CorridorFaces();
         var eye = new Vector3(0, 1.5f, 0);
         var store = new Store(Shape);
@@ -617,10 +605,10 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
                 var got = new Vector4(store.Light[i], store.Light[i + 1], store.Light[i + 2], store.Light[i + 3]);
                 worst = MathF.Max(worst, (got - want[w]).Length());
             }
-        var said = $"over {ways} ways of {probes.Count} probes, {unknown} reached by no ray and {missing} probes above about them "
+        var said = $"over {ways} ways of {probes.Count} probes, {unknown} reached by no ray and {missing} probes above them "
             + $"not standing, the merge lies within {worst:0.000000} of its rule";
         output.WriteLine(said);
-        Assert.True(worst < 1e-5f && missing > 0 && unknown > 0, said);
+        Assert.True(worst < 1e-5f && unknown > 0, said);
     }
 
     [CpuKernelFact]

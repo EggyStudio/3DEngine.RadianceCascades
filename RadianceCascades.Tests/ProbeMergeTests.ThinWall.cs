@@ -68,4 +68,33 @@ public sealed partial class ProbeMergeTests
         output.WriteLine(said);
         Assert.True(most <= 0.001f, said);
     }
+
+    // The split store over the same rooms as the ladder lays them, the lit room's points, the dark
+    // room's and the places of the bounce's cells seen for the frames of a ladder's round from the
+    // eye the ladder reads it from, at the module's configuration. The probes of the levels the
+    // dark room's points read stand a unit and two apart, four and eight times the wall, so a
+    // probe in the lit face's plane holds the rays of the places off that face, and a probe of the
+    // cascade above holds the far parts of the rays of points past the wall as well. A point adds
+    // its rays to the nearest probe it sees and gathers from the probes it sees, and the merge
+    // takes the light above a way from the one probe its rays go on into, so the dark room's
+    // points take none of the lit room's light and the lit room's points read their trace.
+    [CpuKernelFact]
+    public void No_Light_Passes_A_Wall_Of_One_Cell_Into_The_Dark_Room_On_The_Split_Probes()
+    {
+        var scene = LadderScenes().Single(s => s.Dark is not null);
+        var (points, lit) = LadderPoints(scene);
+        var transport = TransportOf(scene.Bounce!, points);
+        (Vector3, Vector3)[] all = [.. points.Select(p => (scene.Bounce!.From(p.Item1), p.Item2)), .. transport.Places];
+        var store = new SplitRun(CorridorSplitShape, all, scene.Setting.CellLight!, scene.Setting.SkyLight);
+        store.Field(scene.Eye, [new(Corner, Cell)], scene.Cells);
+        store.Seen(SplitRun.Floats(all));
+        store.Frames(LadderSplitFrames);
+        var light = store.Gather();
+        var traced = points[..lit].Average(p => scene.Traced(p.Item1, p.Item2));
+        var (litLight, darkLight) = (light[..lit].Average(), light[lit..points.Length].Max());
+        var said = $"the dark room's points take {darkLight / litLight:0.00000} of the lit room's light at most, "
+            + $"the lit room's {litLight / traced:0.000} of its trace";
+        output.WriteLine(said);
+        Assert.True(darkLight <= 0.001f * litLight && MathF.Abs(litLight / traced - 1) < 0.1f, said);
+    }
 }

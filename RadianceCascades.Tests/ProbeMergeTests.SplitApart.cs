@@ -94,13 +94,18 @@ public sealed partial class ProbeMergeTests
     {
         // The point on the wall at the lamp's edge, the eye held still, the levels of spacing 2
         // and 4. Fed by every face the eye sees, each level reads the light of the faces its
-        // probes about the point stand for. The finer's stand within 2 of it and read it within a
-        // twentieth of the trace. The coarser's spread over 4 to 8 along the corridor, the faces
-        // past the overlap's start alone feeding them, and read it half the trace, which the test
-        // holds as its reading until the coarser level's probes stand nearer. Fed by the point's
-        // own rays alone each level holds none but its rays, which start from one place whichever
-        // level takes them (splitRayOrigin), so both read within a twentieth of the trace and of
-        // each other, the levels' intervals, ways and merge giving the point its light.
+        // probes about the point that it sees stand for, those before the wall, since those
+        // behind its face stand inside it. The finer's stand within 2 of it and read it within a
+        // quarter of the trace and above it, since the merge takes the light above a way of a
+        // probe at an odd cell along an axis from the rays of a patch a cell of its own past it
+        // along that axis, which here lies toward the lamp in the roof, as the walk's test has
+        // it. The coarser's spread over 4 to 8 along the corridor, the faces past the overlap's
+        // start alone feeding them, and read it over a third of the trace, which the test holds
+        // as its reading until the coarser level's probes stand nearer. Fed by the point's own
+        // rays alone each level holds none but its rays, which start from one place whichever
+        // level takes them (splitRayOrigin) and go to the nearest probe the point sees
+        // (splitSeenCell), so both read within a twentieth of the trace and of each other, the
+        // levels' intervals, ways and merge giving the point its light.
         var failed = new List<string>();
         var cascades = new ConcurrentDictionary<Vector4, float[]>();
         var eye = new Vector3(CorridorApartEye, 1.5f, 0);
@@ -116,7 +121,7 @@ public sealed partial class ProbeMergeTests
                 + $"{own.Own / own.Traced:0.000} and {own.Next / own.Traced:0.000}";
             output.WriteLine(said);
             if (!(MathF.Abs(own.Own / own.Traced - 1) < 0.05f && MathF.Abs(own.Next / own.Traced - 1) < 0.05f
-                && MathF.Abs(own.Next / own.Own - 1) < 0.05f && MathF.Abs(every.Own / every.Traced - 1) < 0.05f && every.Next / every.Traced > 0.5f))
+                && MathF.Abs(own.Next / own.Own - 1) < 0.05f && MathF.Abs(every.Own / every.Traced - 1) < 0.25f && every.Next / every.Traced > 0.35f))
                 failed.Add(said);
             if (Environment.GetEnvironmentVariable("RC_SPLIT_APART") == "1")
                 CorridorApartWritten(configuration, cascades);

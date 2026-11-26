@@ -128,11 +128,11 @@ void test(uint3 id : SV_DispatchThreadID)
     else if (pass == 1u)
         keepSplitProbes(store, frame, shape, index);
     else if (pass == 2u && index < uint(setup[12]))
-        askSeenProbes(seen, store, frame, shape, index);
+        askSeenProbes(seen, hits, store, frame, shape, index);
     else if (pass == 3u)
         askCascadeProbes(store, frame, shape, uint(setup[11]), index);
     else if (pass == 4u && index < uint(setup[12]))
-        gatherSurface(store, kept, frame, shape, seen, index);
+        gatherSurface(store, kept, hits, frame, shape, seen, index);
     else if (pass == 5u && index == 0u)
     {
         // The layout, which the tests hold the library's sizes to.
@@ -141,12 +141,15 @@ void test(uint3 id : SV_DispatchThreadID)
     }
     else if (pass == 6u && index < uint(setup[12]))
     {
-        // Each point's level, its share of the next, and the entries of its nearest probes of both.
+        // Each point's level, its share of the next, and the entries of the probes of both it adds
+        // its rays to.
         float next;
         float3 p = seen.placeAt(index);
+        float3 origin = splitRayOrigin(frame, shape, p, seen.normalAt(index));
         uint level = splitLevelAt(frame, shape, p, next);
-        uint entry = findSplitProbe(store, shape, splitKey(level, 0u, splitNearestCell(shape, level, 0u, p)));
-        uint above = level + 1u < shape.levels ? findSplitProbe(store, shape, splitKey(level + 1u, 0u, splitNearestCell(shape, level + 1u, 0u, p))) : SplitNone;
+        uint entry = findSplitProbe(store, shape, splitKey(level, 0u, splitSeenCell(hits, shape, level, p, origin)));
+        uint above = level + 1u < shape.levels ? findSplitProbe(store, shape, splitKey(level + 1u, 0u, splitSeenCell(hits, shape, level + 1u, p, origin)))
+            : SplitNone;
         taken[index] = float4(float(level), next, entry == SplitNone ? -1.0 : float(entry), above == SplitNone ? -1.0 : float(above));
     }
     else if (pass == 7u && index < splitEntries(shape))
@@ -195,7 +198,7 @@ void test(uint3 id : SV_DispatchThreadID)
             ProbeRay whole = hits.along(splitRayOrigin(frame, shape, p, n), way, 0.0, far);
             float3 light = whole.light + (whole.ended == RayLeft ? whole.carried * sky.skyAlong(way) : float3(0.0));
             taken[at] = float4(light, float(whole.ended));
-            int3 cell = splitNearestCell(shape, l, 0u, p);
+            int3 cell = splitSeenCell(hits, shape, l, p, splitRayOrigin(frame, shape, p, n));
             for (uint c = 0u; c < shape.cascades; c++)
             {
                 uint entry = findSplitProbe(store, shape, splitKey(l, c, cell));

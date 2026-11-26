@@ -447,18 +447,20 @@ public void keepSplitProbes<W : IStoreUints>(W uints, SplitFrame frame, SplitSto
     uints.store(splitFreeAt(shape) + splitPoolFirst(shape, cascade) + free, entry);
 }
 
-// Asks for the probe nearest the point at index of its level and, over the overlap, of the next,
-// a thread a point after keepSplitProbes, for a point the eye sees.
-public void askSeenProbes<P : IVisiblePoints, W : IStoreUints>(P points, W uints, SplitFrame frame, SplitStore shape, uint index)
+// Asks for the probe of its level the point at index adds its rays to (splitSeenCell) and, over
+// the overlap, that of the next, a thread a point after keepSplitProbes, for a point the eye sees.
+public void askSeenProbes<P : IVisiblePoints, H : IRayHits, W : IStoreUints>(P points, H hits, W uints, SplitFrame frame, SplitStore shape,
+    uint index)
 {
     if (!points.seenAt(index) || !splitHolds(frame, shape, points.placeAt(index)))
         return;
     float3 p = points.placeAt(index);
+    float3 origin = splitRayOrigin(frame, shape, p, points.normalAt(index));
     float next;
     uint level = splitLevelAt(frame, shape, p, next);
-    askSplitProbe(uints, frame, shape, splitKey(level, 0u, splitNearestCell(shape, level, 0u, p)));
+    askSplitProbe(uints, frame, shape, splitKey(level, 0u, splitSeenCell(hits, shape, level, p, origin)));
     if (next > 0.0)
-        askSplitProbe(uints, frame, shape, splitKey(level + 1u, 0u, splitNearestCell(shape, level + 1u, 0u, p)));
+        askSplitProbe(uints, frame, shape, splitKey(level + 1u, 0u, splitSeenCell(hits, shape, level + 1u, p, origin)));
 }
 
 // Asks for the probe of the cascade above nearest each probe of cascade asked for in the frame, a
@@ -478,15 +480,66 @@ public void askCascadeProbes<W : IStoreUints>(W uints, SplitFrame frame, SplitSt
     askSplitProbe(uints, frame, shape, splitKey(splitLevelOf(key), cascade + 1u, (cell + 1) >> 1));
 }
 
-// The light the point at p facing n takes from level's finest probes about it, each standing
-// probe's merged light along its ways weighed by the cosine of each way off n over their sum, a way
-// merged to none (mergeSplitCascade) left out and the cosines taken over those kept, and by its
-// trilinear weight over the weights of the probes standing that hold a way facing n, with the
-// weights' sum in weights, 0 where none of the eight does.
-public float3 splitLevelLight<W : IStoreUints, L : IStoreLight>(W uints, L light, SplitStore shape, uint level, float3 p, float3 n,
-    out float weights)
+// How much of the probe at place a point whose rays start at origin sees, all of it where its
+// march toward the place meets no surface short of it by more than half of slack, none where it
+// meets one short of it by slack or more, and a share rising evenly between. A probe of a level
+// stands up to a spacing from a point along each axis, past a wall thinner than that, where it
+// holds the rays of the points on the wall's far side nearest it, so a point that read it would
+// take the light of the room beyond. A probe on the plane of the face the point lies before is
+// met at its place, within half the slack. A share that fell from all to none at one distance
+// would move a probe's whole weight in or out of the gather as the march's end crossed it,
+// which at a far level's slack a step of the eye or of the field's cells moves it across.
+public float splitProbeSight<H : IRayHits>(H hits, float3 origin, float3 place, float slack)
 {
-    float3 q = p / splitSpacing(shape, level, 0u);
+    float3 toward = place - origin;
+    float distance = length(toward);
+    if (distance <= slack)
+        return 1.0;
+    ProbeRay ray = hits.along(origin, toward / distance, 0.0, distance);
+    if (ray.ended == RayPast || ray.ended == RayLeft)
+        return 1.0;
+    return ray.ended == RayMet ? saturate(2.0 * (ray.t - distance + slack) / slack) : 0.0;
+}
+
+// The cell of level's probe of the finest cascade a point at p whose rays start at origin asks for
+// and adds its rays to, the nearest of the eight about it the point sees at least half of
+// (splitProbeSight), or the nearest of all where it sees none so. The nearest of all stands behind
+// the face a point lies on for half the points of a face, and past a wall thinner than its spacing,
+// where the gather, which takes only the probes a point sees, would not read the point's own rays.
+public int3 splitSeenCell<H : IRayHits>(H hits, SplitStore shape, uint level, float3 p, float3 origin)
+{
+    float spacing = splitSpacing(shape, level, 0u);
+    float slack = SeeingSlack * spacing;
+    int3 nearest = splitNearestCell(shape, level, 0u, p);
+    if (splitProbeSight(hits, origin, float3(nearest) * spacing, slack) >= 0.5)
+        return nearest;
+    int3 base = int3(floor(p / spacing));
+    int3 best = nearest;
+    float least = 1e30;
+    for (int corner = 0; corner < 8; corner++)
+    {
+        int3 cell = base + int3(corner & 1, (corner >> 1) & 1, corner >> 2);
+        float distance = length(float3(cell) * spacing - p);
+        if (all(cell == nearest) || distance >= least || splitProbeSight(hits, origin, float3(cell) * spacing, slack) < 0.5)
+            continue;
+        best = cell;
+        least = distance;
+    }
+    return best;
+}
+
+// The light the point at p facing n takes from level's finest probes about it, each standing
+// probe by its merged light along its ways weighed by the cosine of each way off n over their
+// sum, a way merged to none (mergeSplitCascade) left out and the cosines taken over those kept,
+// and by its trilinear weight times the share of it the point sees from origin
+// (splitProbeSight, by SeeingSlack of the level's spacing) over the sum of those weights of the
+// probes standing and seen that hold a way facing n, with the sum in weights, 0 where none of the
+// eight does.
+public float3 splitLevelLight<W : IStoreUints, L : IStoreLight, H : IRayHits>(W uints, L light, H hits, SplitStore shape, uint level,
+    float3 p, float3 n, float3 origin, out float weights)
+{
+    float spacing = splitSpacing(shape, level, 0u);
+    float3 q = p / spacing;
     int3 base = int3(floor(q));
     float3 f = q - float3(base);
     float3 sum = float3(0.0);
@@ -498,6 +551,9 @@ public float3 splitLevelLight<W : IStoreUints, L : IStoreLight>(W uints, L light
         float weight = lerps.x * lerps.y * lerps.z;
         uint entry = findSplitProbe(uints, shape, splitKey(level, 0u, base + offset));
         if (weight <= 0.0 || entry == SplitNone)
+            continue;
+        weight *= splitProbeSight(hits, origin, float3(base + offset) * spacing, SeeingSlack * spacing);
+        if (weight <= 0.0)
             continue;
         float3 taken = float3(0.0);
         float facing = 0.0;
@@ -521,12 +577,15 @@ public float3 splitLevelLight<W : IStoreUints, L : IStoreLight>(W uints, L light
 
 // Gathers the light the point at index takes from the store's finest probes, a thread a point,
 // from the level splitLevelAt picks for it and over the overlap from the next, blended by its
-// share, each level's light from the probes standing about the point (splitLevelLight), and from
-// the one level alone where the other has none standing about it. A point the store does not hold
-// (splitHolds) takes none. The light kept is pi times the cosine-weighted mean, the irradiance, as
-// the dense passes' gather keeps it, so a binding reads the same light whichever layout it takes.
-public void gatherSurface<W : IStoreUints, L : IStoreLight, A : ISurfacePoints>(W uints, L light, SplitFrame frame, SplitStore shape,
-    A surfaces, uint index)
+// share, each level's light from the probes standing about the point that it sees from where its
+// rays start (splitLevelLight), and from the one level alone where the other has none it sees. A
+// point that sees none of either takes none, as does a point the store does not hold
+// (splitHolds), though the probe its own rays go to (splitSeenCell) is one it sees. The light kept
+// is pi times the cosine-weighted mean, the irradiance, as the dense passes' gather keeps it, so a
+// binding reads the same light whichever layout it takes. A binding hands it the hits its rays are
+// traced by (IRayHits), the same as traceSeenRays takes.
+public void gatherSurface<W : IStoreUints, L : IStoreLight, H : IRayHits, A : ISurfacePoints>(W uints, L light, H hits, SplitFrame frame,
+    SplitStore shape, A surfaces, uint index)
 {
     float3 p = surfaces.placeAt(index);
     if (!splitHolds(frame, shape, p))
@@ -535,12 +594,13 @@ public void gatherSurface<W : IStoreUints, L : IStoreLight, A : ISurfacePoints>(
         return;
     }
     float3 n = surfaces.normalAt(index);
+    float3 origin = splitRayOrigin(frame, shape, p, n);
     float next, weights, nextWeights = 0.0;
     uint level = splitLevelAt(frame, shape, p, next);
-    float3 taken = splitLevelLight(uints, light, shape, level, p, n, weights);
+    float3 taken = splitLevelLight(uints, light, hits, shape, level, p, n, origin, weights);
     float3 nextTaken = float3(0.0);
     if (next > 0.0)
-        nextTaken = splitLevelLight(uints, light, shape, level + 1u, p, n, nextWeights);
+        nextTaken = splitLevelLight(uints, light, hits, shape, level + 1u, p, n, origin, nextWeights);
     float share = nextWeights <= 0.0 ? 0.0 : weights <= 0.0 ? 1.0 : next;
     surfaces.keepTaken(index, lerp(taken, nextTaken, share) * 3.14159265);
 }
@@ -685,17 +745,17 @@ void addSplitLight<W : IStoreUints>(W uints, SplitStore shape, uint entry, uint 
     uints.add(at + 4u, 1u);
 }
 
-// Traces the ray of a seen point at p from origin along way through level's cascades' intervals
-// one after another, each part from where the last ended, and adds each part to the probe of its
-// cascade the point's nearest probe of the level leads up to (askCascadeProbes), at the way it
-// falls in. A part that meets a surface adds the light the surface sends back and lets none
+// Traces the ray of a seen point at p from origin along way through level's cascades' intervals one
+// after another, each part from where the last ended, and adds each part to the probe of its
+// cascade the point's probe of the level (splitSeenCell) leads up to (askCascadeProbes), at the way
+// it falls in. A part that meets a surface adds the light the surface sends back and lets none
 // through, one that leaves the world adds the sky's light past what it crossed, and the ray ends
 // there, so a cascade's probe takes only the rays that reach its interval. A part whose march was
 // capped is added to nothing, and the ray ends.
 void traceSplitLevel<H : IRayHits, K : ISky, W : IStoreUints>(H hits, K sky, W uints, SplitStore shape, uint level, float3 p,
     float3 origin, float3 way)
 {
-    int3 cell = splitNearestCell(shape, level, 0u, p);
+    int3 cell = splitSeenCell(hits, shape, level, p, origin);
     float start = 0.0;
     for (uint cascade = 0u; cascade < shape.cascades; cascade++)
     {
@@ -778,42 +838,34 @@ public void keepSplitLight<W : IStoreUints, L : IStoreLight>(W uints, L light, S
 }
 
 // The light merged above the way of cascade of the probe of key, the mean of the four ways of the
-// cascade above that its texel holds, at twice its place along each side of its half, at each probe
-// of that cascade about it standing, weighed by that probe's trilinear weight. A way merged to none
-// is left out and the weights are taken over those kept, w holds the share let through to the sky,
-// and w is -1 where none is kept.
+// cascade above that its texel holds, at twice its place along each side of its half, at the probe
+// of that cascade its rays' next parts are added to (traceSplitLevel), the one at half its cell
+// rounded up. A way merged to none is left out and the mean is taken over those kept, w holds the
+// share let through to the sky, and w is -1 where none is kept or that probe does not stand. That
+// probe holds the next parts of the rays whose parts this probe holds, so the light a way lets
+// through goes on as its own rays went on. The eight probes of the cascade above about it, weighed
+// by their trilinear weights, also held the rays of points a spacing of theirs away, past a wall
+// thinner than that spacing or in another part of a room lit otherwise, and so lent a way light its
+// rays never met.
 float4 splitAboveLight<W : IStoreUints, L : IStoreLight>(W uints, L light, SplitFrame frame, SplitStore shape, uint key,
     uint cascade, uint way)
 {
     uint side = 4u << cascade;
     uint above = 2u * side;
     uint first = (way / (side * side)) * above * above + 2u * ((way / side) % side) * above + 2u * (way % side);
-    float3 q = float3(splitCellOf(frame, shape, key)) * 0.5;
-    int3 base = int3(floor(q));
-    float3 f = q - float3(base);
+    uint entry = findSplitProbe(uints, shape, splitKey(splitLevelOf(key), cascade + 1u, (splitCellOf(frame, shape, key) + 1) >> 1));
     float4 sum = float4(0.0);
-    float weights = 0.0;
-    for (int corner = 0; corner < 8; corner++)
+    float kept = 0.0;
+    for (uint k = 0u; entry != SplitNone && k < 4u; k++)
     {
-        int3 offset = int3(corner & 1, (corner >> 1) & 1, corner >> 2);
-        float3 lerps = lerp(1.0 - f, f, float3(offset));
-        float weight = lerps.x * lerps.y * lerps.z;
-        if (weight <= 0.0)
-            continue;
-        uint entry = findSplitProbe(uints, shape, splitKey(splitLevelOf(key), cascade + 1u, base + offset));
-        if (entry == SplitNone)
-            continue;
-        for (uint k = 0u; k < 4u; k++)
+        float4 merged = light.lightAt(splitLightAt(shape, entry, first + (k & 1u) + (k >> 1u) * above, true));
+        if (merged.w >= 0.0)
         {
-            float4 merged = light.lightAt(splitLightAt(shape, entry, first + (k & 1u) + (k >> 1u) * above, true));
-            if (merged.w >= 0.0)
-            {
-                sum += merged * weight;
-                weights += weight;
-            }
+            sum += merged;
+            kept += 1.0;
         }
     }
-    return weights > 0.0 ? sum / weights : float4(0.0, 0.0, 0.0, -1.0);
+    return kept > 0.0 ? sum / kept : float4(0.0, 0.0, 0.0, -1.0);
 }
 
 // Merges each way of cascade's probes into their merged light, a thread a way, once for each

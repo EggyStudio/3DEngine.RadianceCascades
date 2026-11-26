@@ -318,7 +318,40 @@ pointer. One commit an engine, after item 3's first part.
     and 0.329 and 0.094 and 0.446, and the split leaks 0.167 through the one-cell wall where the
     dense grid leaks none. Read as the footprint once more, and set to be read as two faces of a
     thin wall sharing one base probe whose rays deposit contradicting values into the same
-    direction, blocked from one side and open from the other, averaged by count.
+    direction, blocked from one side and open from the other, averaged by count. Fifth commit,
+    second part, `0d3f67d`, the ladder's split rows, pushed at 10:58 on 2026-11-26, its run awaited.
+    Every ladder scene runs on the split store at both configurations and the whole walk is in the
+    corridor's table; the split gather keeps pi times its mean, so a host hands the irradiance as
+    the dense gather does, keepTaken's comment right and the kernel the fault, a binding that
+    multiplied by pi dropping that at this pin. The split is nearer on the wall under a lamp, 0.058
+    against 0.086, and the held-out room, 0.019 against 0.030, and on the corridor walk's worst,
+    0.330 and 0.429 against 3.702 and 3.534; further on the mean, 0.165 against 0.096, and leaking
+    0.167 through the one-cell wall. The thin wall's deposits are read next at the probes the dark
+    room gathers from, the shared-face reading first, then face-keyed base probes on the wall and
+    the ladder if it holds. 239 tests. The thin wall read on 2026-11-26 at noon, not two faces
+    sharing a probe. The dark wall's points sit at level 2 with a spacing of 1, four times the wall,
+    and their corner probes at the lit face's plane hold the lit side's rays alone, through 0.72 to
+    1.0 and merged 0.999, the dark side placing no probe there and two of the four corners on its
+    own side holding no ray along the point's ways, so the gather drops them and the lit corners
+    take two thirds of the weight; the leak is 0.117 with every place seen and 0.011 with the
+    scene's points alone, and contradicting deposits by count show at the floor's corner alone, both
+    floors facing up, so a face key would separate neither case. Ruled, the gather takes a corner
+    probe only where the point sees its place through the field, as the dense gather's sight check
+    does, which adds the rays' hits to gatherSurface's hand; read on the one-cell wall and the whole
+    split ladder, committed with its test and the hand's change said for the bindings. The sight
+    check alone leaves the thin wall at 0.088; three changes together end it, the gather weighing
+    each corner by a soft sight share, a point asking for and depositing into the nearest probe it
+    sees, and the merge reading only the parent its rays go on into in place of the eight trilinear
+    parents, each needed; the split ladder then reads 0.080 mean and 0.405 worst at the module's
+    configuration and 0.080 and 0.402 at the engine's against the dense grid's 0.096 and 0.329 and
+    0.094 and 0.446, the leak 0 and no black points. The cost is the walk's worst step, 0.575 and
+    0.602 against bounds 0.38 and 0.37, the 99th parts 0.252 and 0.238, falling at level changes on
+    the wall below the lamp where an odd child ties between two parents and the single parent takes
+    the upper one, the finer level reading a point at 1.5 of its trace. Ruled, committed with the
+    dark room's split test and the walk's bounds at the readings with the regression named, and the
+    symmetric cure next, a sight share per parent in the merge by a march a way or a pass a probe,
+    since the step on movement is the first measure; the hand gains the rays' hits on askSeenProbes
+    and gatherSurface for both bindings.
 
 ## Verdicts
 
@@ -708,3 +741,54 @@ coarser probes' footprint the corridor showed, a probe holding the mean of rays 
 different light, and the leak is the same footprint across a wall thinner than a probe's spacing.
 The closed box's points alone stay far, its lamp of 2 a side seen through ways of the finest
 cascade's 32.
+
+Item 18, the thin wall's leak, in the commit carrying this line. The split gather weighs each
+probe about a point by its trilinear weight times the share of it the point sees from where its
+rays start (`splitProbeSight`), all of it where the march toward its place meets no surface short
+of it by more than half of `SeeingSlack` of the level's spacing and none where it meets one short
+by the whole. A point asks for and adds its rays to the nearest of the eight probes about it that
+it sees at least half of (`splitSeenCell`), or the nearest of all where it sees none so, and the
+merge takes the light above a way from the one probe of the cascade above its rays go on into, at
+half its cell rounded up, in place of the eight about it by their trilinear weights. The hand's
+change, for both bindings, is the rays' hits on two passes, the same `IRayHits` `traceSeenRays`
+takes, `FieldHits` over the field's march. `askSeenProbes` takes them after its points,
+`askSeenProbes(points, hits, uints, frame, shape, index)`, and `gatherSurface` after its light,
+`gatherSurface(uints, light, hits, frame, shape, surfaces, index)`. `mergeSplitCascade` and the
+other passes keep their hands.
+
+The readings. Over the ladder's ten scenes the split store reads a part 0.080 from its trace on the
+mean and 0.405 at worst at the module's configuration and 0.080 and 0.402 at an engine's, against
+0.096 and 0.329 and 0.094 and 0.446 by the merge at the ray's end on the dense grid, where it read
+0.165 and 0.530 and 0.166 and 0.550, and the dark room takes none of the lit room's light through
+the wall of one cell, where it took 0.167, and no lit point reads black. It is nearer than the
+dense grid under the lintel at the module's, 0.102 against 0.295, in the vestibule there, 0.038
+against 0.093, and on the wall under a lamp at an engine's, 0.086 against 0.168, and farthest in
+the closed box with one lamp, 0.380 on the mean against 0.167 (`RC_LADDER=.github/LADDER.md dotnet
+test RadianceCascades.Tests --filter FullyQualifiedName~The_Ladder`, 21 minutes on the desk). The
+dark room's split test holds it, the dark room's points taking 0.00000 of the lit room's light at
+most and the lit room's 0.946 of its trace (`dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~On_The_Split_Probes`).
+
+Each of the three is needed, by a reading not committed. The sight alone leaves the dark room
+0.088 of the lit room's light, with the trilinear merge kept beside the other two it takes 0.103,
+and with no sight 0.095. A point adding its rays to its nearest probe left the corridor's wall
+point at the lamp's edge reading none of them, its nearest probe standing inside the wall behind
+its face. A sight that fell from all to none at one distance stepped a point on the corridor's
+far wall 1.686 of its mean at an engine's configuration, a probe inside the roof slab half a unit
+past the ceiling, at a slack of 0.5, moving in and out of the gather as a step of the eye moved
+the march's end across it. The soft share takes that step to 0.602.
+
+The cost is the corridor walk's worst step. Over the whole walk a point steps 0.495 of its mean at
+worst and 0.229 at the 99th part at the module's configuration and 0.859 and 0.251 at an engine's,
+where it stepped 0.330 and 0.179 and 0.429 and 0.207, the dense levels' 3.558 and 1.299 still
+above it, and over the build's short walk 0.630 and 0.254 and 0.604 and 0.217
+(`RC_LADDER=.github/LADDER.md dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~On_The_Split_Probes`). It steps at level changes on the corridor's wall under
+the lamp. The merge's one probe above a way stands at half its cell rounded up, so a probe at an
+odd cell along an axis takes the light of the rays of a patch a cell of its own past it along that
+axis, which there lies toward the lamp, and the finer level reads such a point up to half again its
+trace where the coarser reads it near the trace. The walk's bounds stand at these readings and the
+test's comment names the cause, and the lamp's edge point fed by every face reads 1.227 and 1.157
+of its trace at its own level, from the probes before the wall alone, its bound moved to a quarter.
+The symmetric cure, a sight share for each probe above about a probe in the merge, comes next, and
+the walk's bounds come back down with it.

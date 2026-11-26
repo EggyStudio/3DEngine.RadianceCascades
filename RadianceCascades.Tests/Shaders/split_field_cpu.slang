@@ -186,7 +186,7 @@ void test(uint3 id : SV_DispatchThreadID)
     else if (pass == 1u)
         keepSplitProbes(store, frame, shape, index);
     else if (pass == 2u && index < uint(setup[12]))
-        askSeenProbes(points, store, frame, shape, index);
+        askSeenProbes(points, hits, store, frame, shape, index);
     else if (pass == 3u)
         askCascadeProbes(store, frame, shape, cascade, index);
     else if (pass == 4u && index < uint(setup[12]))
@@ -196,7 +196,7 @@ void test(uint3 id : SV_DispatchThreadID)
     else if (pass == 6u)
         mergeSplitCascade(store, kept, sky, frame, shape, cascade, index);
     else if (pass == 7u && index < uint(setup[13]))
-        gatherSurface(store, kept, frame, shape, surfaces, index);
+        gatherSurface(store, kept, hits, frame, shape, surfaces, index);
     else if (pass == 8u && index < uint(setup[13]))
     {
         // Each point's light from its level and from the next over the overlap, and the weights
@@ -204,8 +204,10 @@ void test(uint3 id : SV_DispatchThreadID)
         float3 p = surfaces.placeAt(index);
         float next, weights, nextWeights = 0.0;
         uint level = splitLevelAt(frame, shape, p, next);
-        float3 own = splitLevelLight(store, kept, shape, level, p, surfaces.normalAt(index), weights);
-        float3 above = next > 0.0 ? splitLevelLight(store, kept, shape, level + 1u, p, surfaces.normalAt(index), nextWeights) : float3(0.0);
+        float3 n = surfaces.normalAt(index);
+        float3 origin = splitRayOrigin(frame, shape, p, n);
+        float3 own = splitLevelLight(store, kept, hits, shape, level, p, n, origin, weights);
+        float3 above = next > 0.0 ? splitLevelLight(store, kept, hits, shape, level + 1u, p, n, origin, nextWeights) : float3(0.0);
         taken[index] = float4(own.x, above.x, weights, nextWeights);
     }
     else if (pass == 9u && index < 2u * 8u * SplitBaseWays)

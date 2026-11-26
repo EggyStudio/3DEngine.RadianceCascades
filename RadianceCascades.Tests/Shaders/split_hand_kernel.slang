@@ -69,13 +69,13 @@ float4 handed<P : IVisiblePoints, H : IRayHits, W : IStoreUints, L : IStoreLight
     seen.keepTaken(index, ray.light);
     clearSplitTable(store, shape, index);
     keepSplitProbes(store, frame, shape, index);
-    askSeenProbes(seen, store, frame, shape, index);
+    askSeenProbes(seen, hits, store, frame, shape, index);
     askCascadeProbes(store, frame, shape, 0u, index);
     OneSky sky;
     traceSeenRays(seen, hits, sky, store, frame, shape, index);
     keepSplitLight(store, kept, frame, shape, index);
     mergeSplitCascade(store, kept, sky, frame, shape, 0u, index);
-    gatherSurface(store, kept, frame, shape, seen, index);
+    gatherSurface(store, kept, hits, frame, shape, seen, index);
     return float4(place - frame.eye, float(shape.levels + shape.cascades));
 }
 

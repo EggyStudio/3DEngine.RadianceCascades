@@ -160,8 +160,12 @@ FullyQualifiedName~SlangTests`).
 Each frame an engine runs the store's passes in order, a dispatch each. `clearSplitTable` empties
 the table, a thread a slot. `keepSplitProbes` puts back in it each probe a seen point asked for
 within the store's age that stands within its level's reach of the eye, a thread an entry, and
-frees the others. `askSeenProbes` asks for each seen point's nearest probe of its level, and of the
-next over the last tenth of the level's reach, a thread a point. `askCascadeProbes` asks for the
+frees the others. `askSeenProbes` asks for the probe of its level each seen point adds its rays
+to, the nearest of the eight about it that it sees from where its rays start, or the nearest of
+all where it sees none (`splitSeenCell`), and for that of the next over the last tenth of the
+level's reach, a thread a point. The nearest of all stands behind the face a point lies on for
+half the points of a face, and past a wall thinner than its spacing, where the gather would not
+read the point's own rays. `askCascadeProbes` asks for the
 nearest probe of the cascade above for each probe of a cascade asked for in the frame, once for each
 cascade but the coarsest. `traceSeenRays` sends each seen point one ray a frame, a thread a point,
 its way stepping along a low-discrepancy sequence of the plane from an offset of the point's own,
@@ -172,7 +176,7 @@ the finest spacing (`splitRayOrigin`), so its start grows with the distance as t
 do and a point over an overlap starts both levels' rays at one place. The ray is traced through its
 level's cascades' intervals one after another, the finest 1.6 of the level's spacings long and each
 above reaching four times as far past the one below, and each part is added to the probe of its
-cascade that the point's nearest probe leads up to, at the way it falls in, as its light, the share
+cascade that the point's probe leads up to, at the way it falls in, as its light, the share
 it lets through and a count of one, until a part meets a surface or leaves the world. A point over
 the overlap of two levels traces the same way again from the same start by the next level's
 intervals. `keepSplitLight` keeps each way's light from those sums, a thread a way, the mean of what
@@ -181,12 +185,17 @@ it held over the rays it is the mean of and of the frame's rays, those counted u
 as its rays come and then follows a change of light over 256 of them, and empties the sums, the
 count of rays its light is the mean of kept above the frame's in the bits past `SplitCountBits`. `mergeSplitCascade` merges each cascade's ways from the
 coarsest down, a thread a way, each way's own light and, by the share it lets through, the mean of
-the four ways above that its texel holds at each probe of the cascade above about it that stands,
-by their trilinear weights over those standing, and the sky's above the coarsest. A way no ray
+the four ways above that its texel holds at the probe of the cascade above its rays' next parts
+are added to, the one at half its cell rounded up, and the sky's above the coarsest. The eight
+probes above about it, by their trilinear weights, would lend a way the light of rays its own
+never met, those of points past a wall thinner than their spacing among them. A way no ray
 reached merges to none and is left out of the ways below and of the gather, since letting all its
 light through would let the sky into a closed room. `gatherSurface` over the store's buffers
 gathers a point's light from the finest probes about it, each standing probe weighed by its
-trilinear weight over those standing that hold a way facing the point, and blends the next level in by the point's share over the overlap. A point's level is the base-two
+trilinear weight and by the share of it the point sees from where its rays start
+(`splitProbeSight`), all of it where the march toward its place meets no surface short of it by
+more than half of `SeeingSlack` of the spacing and none where it meets one short by the whole,
+over those standing and seen that hold a way facing the point, and blends the next level in by the point's share over the overlap. A point's level is the base-two
 logarithm of its greatest distance along an axis from the eye over the finest level's reach, and a
 probe keeps its entry while seen points ask for it, so the light it keeps stays with it as the eye
 moves. A probe's ways are the middles of the texels of a square of 4 a side for each half of the
@@ -204,44 +213,47 @@ point, and over 16 quarter steps of the eye 8,852 probes kept their entries, 368
 moved. Over a line of points from the eye out past every level's reach, each level's probes holding
 twice the light of the one below, the gathered light steps at most 0.050 of itself between points a
 hundredth of a unit apart. In the corridor lit as the merge's tests light it, 20,997 rays of 18,985
-seen points add 29,000 parts to the probes, 6,909 reaching the second cascade and 239 the coarsest,
+seen points add 29,294 parts to the probes, 7,184 reaching the second cascade and 242 the coarsest,
 each sum the same as the rays traced whole and split where they ended give, and over 4,096 frames a
 point's rays take the share of each eighth of their half's height within 0.004 of it. Under a sky
 of 1 with nothing to meet the corridor's points gather pi, its irradiance, as the dense passes'
 gather keeps a surface's light, and in a closed room whose walls all send 0.3 its 3,328 points
 gather pi times that light, each within a millionth, where letting the ways no ray
-reached through would put 4,442 of the finest cascade's 6,528 ways a hundredth off it, the
+reached through would put 3,673 of the finest cascade's 6,336 ways a hundredth off it, the
 brightest at the sky's 1 (`dotnet test
 RadianceCascades.Tests --filter FullyQualifiedName~SplitStoreTests`). Walked along the corridor as
 the dense levels are, 4 frames at each quarter step after 256 at the first eye, a fixed point's
-light on the split probes steps 0.429 of its mean at worst and 0.207 at the 99th part at an
-engine's configuration, against the dense levels' 3.558 and 1.299, and 0.330 and 0.179 at the
-module's, the rays' noise alone moving it between readings with the eye still 0.088 and 0.081 at an
-engine's and 0.077 and 0.059 at the module's. It steps most where its level steps to the next, the
-two levels reading it 0.706 to 2.195 of each other from the 5th part to the 95th at an engine's
+light on the split probes steps 0.859 of its mean at worst and 0.251 at the 99th part at an
+engine's configuration, against the dense levels' 3.558 and 1.299, and 0.495 and 0.229 at the
+module's, the rays' noise alone moving it between readings with the eye still 0.078 and 0.065 at an
+engine's and 0.065 and 0.055 at the module's. It steps most where its level steps to the next, the
+two levels reading it 0.532 to 1.894 of each other from the 5th part to the 95th at an engine's
 configuration, since a coarser level's probes stand for the rays of a wider patch about the
 corridor's lamp and gap, the walls' beside the floor's, over an overlap narrower than a quarter
-step below the fourth level (`RC_LADDER=.github/LADDER.md dotnet test RadianceCascades.Tests
+step below the fourth level, and since the merge takes the light above a way of a probe at an odd
+cell along an axis from the rays of a patch a cell of its own past it along that axis, which on
+the wall under the lamp lies toward the lamp (`RC_LADDER=.github/LADDER.md dotnet test RadianceCascades.Tests
 --filter FullyQualifiedName~On_The_Split_Probes`, the whole walk running where `RC_LADDER` is set
 and the build's run walking its first 2 units at an engine's configuration from 64 warm frames). At
 the wall's point at the lamp's edge, 2.5 high, with the eye 7.5 from it along the corridor where the
 levels of spacing 2 and 4 meet, the point traced takes 0.5006 at an engine's configuration and
-0.5467 at the module's. Fed by every face the eye sees its own level reads 1.016 and 0.988 of that
-and the next 0.515 and 0.611, and fed by its own rays alone the two read 0.983 and 0.988 at an
+0.5467 at the module's. Fed by every face the eye sees its own level reads 1.227 and 1.157 of that
+and the next 0.383 and 0.491, from the probes before the wall alone, since those behind its face
+stand inside it where the point does not see them, and fed by its own rays alone the two read 0.983 and 0.988 at an
 engine's and 0.983 and 1.006 at the module's (`dotnet test RadianceCascades.Tests --filter
 FullyQualifiedName~At_The_Lamps_Edge`).
 
 Over the ladder's ten scenes, each round of the bounce run by a store anew that sees the scene's
-points and the places of its bounce's cells for 64 frames, the split store reads a part 0.165 from
-its trace on the mean and 0.530 at worst at the module's configuration and 0.166 and 0.550 at an
+points and the places of its bounce's cells for 64 frames, the split store reads a part 0.080 from
+its trace on the mean and 0.405 at worst at the module's configuration and 0.080 and 0.402 at an
 engine's, against 0.096 and 0.329 and 0.094 and 0.446 by the merge at the ray's end on the dense
-grid, and the dark room beside the lit one takes 0.167 of the lit room's light through their wall of
-one cell, where on the dense grid it takes none. It reads nearer than the dense grid on the wall
-under a lamp, 0.058 from its trace on the mean against 0.086 at the module's configuration and 0.054
-against 0.168 at an engine's, and farthest in the closed box with one lamp, whose floor and walls
-take 0.652 and 0.589 of their trace at the module's, under the lintel, 1.250 to 1.687, in the
-vestibule, 1.216 to 1.379, and on the arcades' high wall, 1.470 (`RC_LADDER=.github/LADDER.md dotnet
-test RadianceCascades.Tests --filter FullyQualifiedName~The_Ladder`).
+grid, and the dark room beside the lit one takes none of the lit room's light through their wall of
+one cell, as on the dense grid. It reads nearer than the dense grid under the lintel at the
+module's configuration, 0.102 from its trace on the mean against 0.295, in the vestibule there,
+0.038 against 0.093, and on the wall under a lamp at an engine's, 0.086 against 0.168, and farthest
+in the closed box with one lamp, whose floor and walls take 0.667 and 0.702 of their trace at the
+module's, 0.380 from it on the mean against the dense grid's 0.167 (`RC_LADDER=.github/LADDER.md
+dotnet test RadianceCascades.Tests --filter FullyQualifiedName~The_Ladder`).
 
 `stampCell` takes the cascade's cell width, and stamps a box thinner than a cell along an axis of
 its own a cell across there. A march meets a surface within a tenth of a cell of it (`MarchHit`), so
