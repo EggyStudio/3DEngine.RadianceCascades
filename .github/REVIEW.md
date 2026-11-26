@@ -214,19 +214,6 @@ pointer. One commit an engine, after item 3's first part.
     (the high wall there), and proposes the mend with its cost. No mend is made in this item unless
     it is a fault in a kernel, which is mended with a test.
 
-16. **The engine's door at the mark, read again on items 14 and 15.** From the engine's 304 on
-    2026-11-26 with the pin at 39d0a8a and the finest levels at 16 texels a side. The six parts over
-    the reference at zero 0.85, 0.41, 3.34, 0.33, 0.14 and 5.35 against the engine's own 0.73, 0.85,
-    3.88, 0.29, 0.38 and 4.38, settled 1.62, 1.18, 4.19, 0.97, 1.18 and 6.71 against 1.30, 1.47,
-    4.82, 0.78, 1.17 and 5.83; the open box at Low 1.373 against 1.25, the solid slab's floor 0.126
-    against 0.063, the half canopy 0.310 against 0.403, and the lintel's sky 0.1079 against at most
-    0.0882 where it passed at 774d11d, the same four misses at 8 texels a side, so the lintel's miss
-    came with items 14 or 15 and the texel count moved the slab by 0.007 and not from 1.69 to 0.92
-    as the module's slab did. The module's slab and the engine's differ, so this item builds the
-    engine's slab, lintel, open box and half canopy as ladder scenes at the engine's configuration
-    from the figures it hands, finds what its mend of 14 did not reach and what 15 broke at the
-    lintel, and mends it with a test; then the engine reads 304 again. One or two commits.
-
 17. **A fixed point's light holds still as the field moves.** The direction of 2026-11-26 through
     the engine's item 317. On the ladder, a corridor of fixed walls under a sun and a lamp with the
     field and its cascades stepped along it in small steps over several cells of every level, so
@@ -247,7 +234,39 @@ pointer. One commit an engine, after item 3's first part.
     jumping from level n's gather to n+1's in one frame where the levels read differently near
     walls; second, the fade bands of the field cascade a ray reads following the eye, so a hit can
     move by a coarse cell. First to take, a blend across each level's edge band in the gather as the
-    sparse method's overlap does, once the corridor shows that swing.
+    sparse method's overlap does, once the corridor shows that swing. The corridor read on
+    2026-11-26 at the engine's configuration by reach and sight, the eye walked in quarter steps,
+    the swing 3.59 worst and 2.47 at the 99th part against the 2% bound. Three causes, the levels
+    disagreeing at the switch, level 2 reading a point at a median 4.07 times level 1 since none of
+    its probes stands in the corridor's air of 2.5 width and level 1 reading 0.60 to 2.97 times
+    level 0 near the lamp; the rim, a point half a spacing past a level's edge probes off by up to
+    0.64; and a tenth of the samples dark, no probe of the point's level or the one above seeing it.
+    Inside a level the light is steady, 5% at the 99th part, and with the levels held still and the
+    field alone moving the swing is 0.33 and 0.136, the cascade a ray reads changing. A blend across
+    each level's edge band was tried, about the snapped probes and about the eye, and neither brings
+    the swing near the bound, since a blend cannot close what two levels read apart. Ruled, no band
+    mend; the commit holds the scene on the ladder, the reading and a test of the step jump at
+    today's figure as the baseline that item 18 has to bring under 2%, which then becomes the test's
+    bound; the eye as a member of a host's hand comes with 18's interface.
+
+18. **Split radiance cascades, sparse probes with ray splitting.** The direction of 2026-11-26
+    (Decision 10), after item 17's corridor reading, which is the baseline this design has to beat
+    on the same number. The module's placement, store and trace path follow the published split
+    method. Probes stand only where surfaces are seen, each visible point inserting its nearest base
+    probe and each probe its nearest probe of the next cascade, persisted in a store keyed by
+    position and level so a camera's move changes nothing a probe holds; levels by the base-two
+    logarithm of the Chebyshev distance from the camera, each level's start shortened to 0.9 and
+    blended over the overlap; rays start at the visible surface points and are split by hit distance
+    into the cascades' intervals, deposited as radiance, transmittance and a count into the nearest
+    probe and direction and averaged by count; branching 4 and length scaling 4, the base interval
+    about 1.6 spacings, 32 directions at the base; directions from a low-discrepancy sequence by an
+    equal-area mapping, jittered over time; the merge as before over the probes that exist with
+    renormalized trilinear weights; the gather through the existing gatherSurface. Built on the CPU
+    ladder first, every ladder scene and the corridor read under it beside the dense grid, then the
+    door's mark of the engine's 304 read on it once. What a host hands changes, the visible points
+    with depth and normal, the rays' hits and the store's memory, so the interface is written out as
+    item 7 was before the engines rebind; the dense grid stays selectable until both engines read
+    nearer on it. Several commits, each with its figures.
 
 ## Verdicts
 
@@ -339,6 +358,13 @@ session pushes.
     each engine hands it and the test that holds it; item 10 follows the engine's probe passes. The
     engine runs 313, 304, 316 and 311, the bridge 162, 150 and 157; the other modules and the game
     stay idle until the cascades work.
+
+10. **The module adopts split radiance cascades.** The direction of 2026-11-26, on the published
+    sparse method and its demonstration. After item 17's corridor reading the module replaces its
+    dense grid about the eye with sparse persisted probes near the visible surfaces and rays split
+    by hit distance from the surface points, item 18, measured on the corridor's number and the
+    engine's door before the engines rebind; the dense grid's remaining misses are not chased
+    further, and the screen cascades stay as they are on top of whichever world probes exist.
 
 ## Replies
 
@@ -1063,3 +1089,29 @@ far probes as a cascade ending within the march does, and nothing an engine bind
 engine's slab needs a field reaching past its floor, and its open box at Low a reading of the
 engine's own gather. Read first `reachSightLight` in `rc_reach_sight_merge.slang` and
 `ProbeMergeTests.Floors.cs`.
+
+Item 17, in the commit carrying this line. The corridor joins the ladder in
+`ProbeMergeTests.Corridor.cs`, a corridor along x 2.5 wide and 3.5 high inside under a sun through a
+gap in its roof and a lamp in the roof beside it, its points on the floor and on the wall at -z from
+-6 to 6. The eye walks it in quarter steps, from -8 to 8 at the engine's configuration with each
+field cascade and its level snapped to the level's spacing about the eye, and from -4 to 4 at the
+module's with its levels snapped about the eye in the field's one cascade, which holds still, each
+point gathered by `gatherSurface` within `GatherRim`. The ladder writes its section, The corridor
+walked, at both configurations by each merge. By reach sight at the engine's configuration the
+swing reads 3.594 worst and 2.466 at the 99th part and the step 3.558 and 1.299, the other merges'
+swings 3.496 to 4.870 worst and 2.297 to 2.934 at the 99th part, and the module's 3.141 to 3.637 and
+2.635 to 3.299. With the levels held still and the field alone moving over -8 to 8 the swing reads
+0.631 and 0.246, where the walk kept out of the tree read 0.33 and 0.136 over -4 to 4, and with the
+field held still 3.633 and 2.437, so the levels carry the swing (`RC_LADDER=.github/LADDER.md dotnet
+test RadianceCascades.Tests --filter FullyQualifiedName~The_Ladder`). The three causes named in the
+item were read from that walk's figures by level, which no committed command reads. A test holds the
+step at the engine's configuration by reach sight under 3.6 at worst and 1.31 at the 99th part, the
+dense levels' reading, in place of the 2% bound item 18 is to meet, and takes 44 seconds (`dotnet
+test RadianceCascades.Tests --filter FullyQualifiedName~A_Corridors_Fixed_Point`). The ladder with
+the corridor runs 10 minutes 45 seconds, past the GPU gate's shared bound of ten, so it ran under
+`--minutes 30`, and the suite comes to about 9 minutes against that bound. No library code changes.
+Handoff, for a fresh session. The corridor's walk is `CorridorWalk` and `CorridorSwings`, its
+layouts `SnappedEngineField` and `CorridorModuleLevels`, and item 18's sparse probes are read on it
+beside the dense grid as one more layout, the test's bound going to 2% once they meet it. Read first
+`ProbeMergeTests.Corridor.cs` and the corridor's section of the ladder's test in
+`ProbeMergeTests.Ladder.cs`.

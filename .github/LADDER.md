@@ -1,6 +1,6 @@
 # The ladder of merges
 
-Measured on 2026-11-26 on the tree of 39d0a8a with the changes committed beside it, every merge the
+Measured on 2026-11-26 on the tree of 676c5f5 with the changes committed beside it, every merge the
 passes take by name (`IMerge`) run over 10 scenes on the CPU at 2 configurations, as `dotnet test
 RadianceCascades.Tests` writes it with `RC_LADDER` naming this file. The module's configuration is
 its tests' chain of four levels in one cascade of the field of 64 cells of 0.25. An engine's is one
@@ -158,6 +158,31 @@ Its two walls' light each round over the first round's, traced and by each merge
 | an engine's | by reach sight, `MergeByReachSight` | 1.000 | 1.483 | 1.709 | 1.812 | 1.857 | 1.877 | 1.886 |
 | an engine's | by marched sight, `MergeByMarchedSight` | 1.000 | 1.549 | 1.818 | 1.939 | 1.992 | 2.016 | 2.026 |
 | an engine's | about its own probe, `MergeAboutProbe` | 1.000 | 1.524 | 1.776 | 1.892 | 1.944 | 1.967 | 1.978 |
+
+## The corridor walked
+
+A corridor along x, 2.5 wide and 3.5 high inside, its walls fixed, under a sun through a gap 2 wide
+across its roof and a lamp in the roof beside it, its points on the floor and on one wall from -6 to
+6. The eye walks along it in quarter steps, from -8 to 8 at an engine's configuration, the field's
+cascades and the levels snapped to their spacing about it, and from -4 to 4 at the module's, its
+levels snapped about it in the field's one cascade, which holds still. Each point is gathered from
+the finest level about it within half its spacing past its edge probes. The swing is each point's
+light at every eye over its mean over the walk, taken whole, and the step each step's change over
+that mean, each the worst and the 99th part. At an engine's configuration by reach sight the walk is
+read again with the levels and then the field held still about its middle.
+
+| Configuration | Merge | Held still | Worst swing | Swing at the 99th part | Worst step | Step at the 99th part |
+|---|---|---|---|---|---|---|
+| the module's | at the ray's end, `MergeAtRayEnd` | nothing | 3.141 | 2.938 | 3.702 | 0.503 |
+| the module's | by reach sight, `MergeByReachSight` | nothing | 3.141 | 2.884 | 3.702 | 0.558 |
+| the module's | by marched sight, `MergeByMarchedSight` | nothing | 3.637 | 3.299 | 4.304 | 0.656 |
+| the module's | about its own probe, `MergeAboutProbe` | nothing | 3.141 | 2.635 | 3.702 | 0.620 |
+| an engine's | at the ray's end, `MergeAtRayEnd` | nothing | 3.496 | 2.297 | 3.534 | 1.305 |
+| an engine's | by reach sight, `MergeByReachSight` | nothing | 3.594 | 2.466 | 3.558 | 1.299 |
+| an engine's | by marched sight, `MergeByMarchedSight` | nothing | 4.870 | 2.934 | 5.190 | 1.348 |
+| an engine's | about its own probe, `MergeAboutProbe` | nothing | 3.653 | 2.628 | 3.617 | 1.377 |
+| an engine's | by reach sight, `MergeByReachSight` | the levels | 0.631 | 0.246 | 0.692 | 0.084 |
+| an engine's | by reach sight, `MergeByReachSight` | the field | 3.633 | 2.437 | 3.601 | 1.311 |
 
 ## The cones by roughness
 

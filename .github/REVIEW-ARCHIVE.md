@@ -693,3 +693,26 @@ corner toward the opening, which see the sky and span the least solid angle, as 
     a 0.2 slot. Ten ladder scenes, by reach and sight the engine's configuration 0.095 mean and the
     module's 0.103, the worst parts unchanged; the default stays the merge at the ray's end. Nothing
     an engine binds changed; 213 tests.
+
+16. **The engine's door at the mark, read again on items 14 and 15.** From the engine's 304 on
+    2026-11-26 with the pin at 39d0a8a and the finest levels at 16 texels a side. The six parts over
+    the reference at zero 0.85, 0.41, 3.34, 0.33, 0.14 and 5.35 against the engine's own 0.73, 0.85,
+    3.88, 0.29, 0.38 and 4.38, settled 1.62, 1.18, 4.19, 0.97, 1.18 and 6.71 against 1.30, 1.47,
+    4.82, 0.78, 1.17 and 5.83; the open box at Low 1.373 against 1.25, the solid slab's floor 0.126
+    against 0.063, the half canopy 0.310 against 0.403, and the lintel's sky 0.1079 against at most
+    0.0882 where it passed at 774d11d, the same four misses at 8 texels a side, so the lintel's miss
+    came with items 14 or 15 and the texel count moved the slab by 0.007 and not from 1.69 to 0.92
+    as the module's slab did. The module's slab and the engine's differ, so this item builds the
+    engine's slab, lintel, open box and half canopy as ladder scenes at the engine's configuration
+    from the figures it hands, finds what its mend of 14 did not reach and what 15 broke at the
+    lintel, and mends it with a test; then the engine reads 304 again. One or two commits. Done at
+    `676c5f5`, pushed at 05:42 on 2026-11-26, its run green; the door's mark is read once on the
+    split design (Decision 10). The lintel broke on 14's rule leaving out far probes whose hit lay
+    short of the ray's end; the rule is gone, and a ray whose far cascade ends at the field's edge
+    marches on to twice where it ended and then takes far probes as an agreeing cascade does, a
+    probe under a slab holding it (+x 1.199 of its trace where 1.73). On the engine's scenes the
+    lintel's sky reads 0.0705 against 0.0802 and passes, the solid slab 0.141 where 0.126, the box
+    at Low 1.373 against 1.25 as before 14 (1.289 at 774d11d), so that surplus is not the merge's
+    and stays open; the slab's remainder is its ways leaving the 19.2 field before they meet the
+    floor, 0.555 against 0.280 traced, the engine's field size and not the merge. The ladder's means
+    as before, 214 tests. The engine reads 304 again on it.

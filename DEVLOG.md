@@ -6,6 +6,18 @@ kept under `.github/assets/readings` as WebP files named by their day, each on t
 says, and the notes written beside them as Markdown files named the same way. A line under Done
 names the item of .github/REVIEW.md or .github/REVIEW-ARCHIVE.md and the commit that closed it.
 
+## 2026-11-26
+
+Done that day
+
+- Item 16 at `676c5f5`. The engine's door at the mark, read again on items 14 and 15.
+
+Commits that day
+
+- `676c5f5` The merge by reach sight marches a ray whose far cascade ends at the field's edge on to
+  twice where it ended in place of leaving out the far probes whose hits lie short of that end,
+  which mends the lintel an engine reads, with a test of a probe under a slab.
+
 ## 2026-11-25
 
 Done that day

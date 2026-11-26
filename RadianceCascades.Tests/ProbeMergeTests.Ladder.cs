@@ -97,7 +97,10 @@ public sealed partial class ProbeMergeTests
     // texel at 8 give. Every ray begins at its probe and ends at four times the spacing, but the
     // last two's at the field's diagonal (EngineEnd), and each is capped at 64 steps but the
     // last's.
-    private static Level[] EngineLevels(Vector3 center) => EngineField(center).Select((f, c) =>
+    private static Level[] EngineLevels(Vector3 center) => EngineLevels(EngineField(center));
+
+    // An engine's levels in its field's cascades, as EngineLevels lays them about a center.
+    private static Level[] EngineLevels(Vector4[] field) => field.Select((f, c) =>
     {
         var spacing = 8 * f.W;
         return new Level(new Vector3(f.X, f.Y, f.Z) + new Vector3(spacing / 2), spacing, 8, 8, 8, 16, c < 3 ? 4 * spacing : EngineEnd, c < 2 ? 8 : 0);
@@ -543,6 +546,38 @@ public sealed partial class ProbeMergeTests
         file.AppendLine($"| every one | traced | {RoundByRound(traced[vestibule.Name].EachRound.Select(round => ByPart(vestibule, round)).ToList())} |");
         foreach (var r in vestibuleRows)
             file.AppendLine($"| {ConfigurationName(r.Configuration)} | {MergeName(r.Merge)} | {RoundByRound(r.EachRound)} |");
+        // The corridor walked at each configuration by each merge, and at an engine's by reach
+        // sight with its levels and then its field held still.
+        (Configuration Configuration, Merge Merge, Still Still)[] walked =
+        [
+            .. configurations.SelectMany(c => merges.Select(m => (c, m, Still.None))),
+            (Configuration.Engine, Merge.ByReachSight, Still.Levels), (Configuration.Engine, Merge.ByReachSight, Still.Field),
+        ];
+        var walks = walked.Select(w => (w.Configuration, w.Merge, w.Still, Swings: CorridorSwings(CorridorWalk(w.Configuration, w.Merge, CorridorEyes(w.Configuration), w.Still))))
+            .ToArray();
+        file.AppendLine();
+        file.AppendLine("## The corridor walked");
+        file.AppendLine();
+        foreach (var line in Wrapped(
+            "A corridor along x, 2.5 wide and 3.5 high inside, its walls fixed, under a sun through a gap 2 wide across its roof and a lamp "
+            + "in the roof beside it, its points on the floor and on one wall from -6 to 6. The eye walks along it in quarter steps, from -8 to "
+            + "8 at an engine's configuration, the field's cascades and the levels snapped to their spacing about it, and from -4 to 4 at the "
+            + "module's, its levels snapped about it in the field's one cascade, which holds still. Each point is gathered from the finest level "
+            + "about it within half its spacing past its edge probes. The swing is each point's light at every eye over its mean over the walk, "
+            + "taken whole, and the step each step's change over that mean, each the worst and the 99th part. At an engine's configuration by "
+            + "reach sight the walk is read again with the levels and then the field held still about its middle."))
+            file.AppendLine(line);
+        file.AppendLine();
+        file.AppendLine("| Configuration | Merge | Held still | Worst swing | Swing at the 99th part | Worst step | Step at the 99th part |");
+        file.AppendLine("|---|---|---|---|---|---|---|");
+        foreach (var w in walks)
+        {
+            var held = w.Still switch { Still.Field => "the field", Still.Levels => "the levels", _ => "nothing" };
+            var row = $"| {ConfigurationName(w.Configuration)} | {MergeName(w.Merge)} | {held} | {Invariant(w.Swings.Worst, "0.000")} | "
+                + $"{Invariant(w.Swings.Part, "0.000")} | {Invariant(w.Swings.WorstStep, "0.000")} | {Invariant(w.Swings.StepPart, "0.000")} |";
+            file.AppendLine(row);
+            output.WriteLine(row);
+        }
         // The cones' section, which their own reading writes, is kept as it stands.
         File.WriteAllText(path, file.ToString() + KeptConeSection(path));
 

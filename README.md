@@ -520,6 +520,15 @@ by round.
 
 No merge stands above every other at every configuration, so the default stays the merge at the ray's end, `MergeAtRayEnd`.
 
+The ladder walks a corridor too, its walls fixed, 2.5 wide under a sun through a gap in its roof
+and a lamp in the roof beside it. The field and its levels step along it with the eye in quarter
+steps over several cells of every level, so each level's edge crosses the points on its floor and
+one wall. Each point's gathered light at every eye is read against its own mean over the walk, at
+both configurations by each merge, and [.github/LADDER.md](.github/LADDER.md) holds the worst and
+the 99th part of those swings and of each step's change. A point moves little inside a level's
+region, its probes keeping their places, and most where the region steps past it, since the levels
+read it far apart and the coarser ones have no probe in the corridor's air.
+
 ## Rough reflections
 
 A rough surface reflects the light of a cone of ways about the mirror of the way toward the eye, and
