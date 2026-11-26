@@ -282,7 +282,21 @@ pointer. One commit an engine, after item 3's first part.
     points gather 1. 234 tests. Fifth commit ruled, the corridor walk first as one more layout with
     rays through the field's hits, many seen faces and a fixed run of frames at each eye, the
     per-way average a running mean with the count capped a way where a tenth of a ray a frame is too
-    noisy for the 2% bound; the ladder's split rows in the commit after.
+    noisy for the 2% bound; the ladder's split rows in the commit after. Fifth commit, first part,
+    `5dec8d3`, the corridor walked on the split probes, pushed at 09:05 on 2026-11-26 after the run
+    of `3c43c5e` went green, its run awaited. A cap of 256 rays a way with the count in the sums,
+    256 warm frames and four at each quarter step; with the eye still the capped mean moves a point
+    0.010 to 0.022 at the 99th part where a tenth of a ray moved it 0.156. The step at the engine's
+    configuration 0.429 worst and 0.202 at the 99th part against the dense grid's 3.558 and 1.299,
+    at the module's 0.319 and 0.164, the test holding that reading; the 2% bound does not hold yet.
+    The cause is the level switch, two levels reading a point 0.665 to 1.948 of each other and the
+    0.9 overlap narrower than a quarter step; more frames an eye did not help, a start of 0.5 gave
+    0.213 and 0.102 at 1.8 times the ray time, keying probes by face nothing. Ruled, the 0.9 start
+    stays as the published method has it and the bound stays 2% as the aim with the test at the
+    reading; the next part reads why two levels read the same point up to twice apart, the coarser
+    level's probes' places, their directions' coverage and the sky share each set against the trace
+    at that point, and mends the cause rather than widening the blend; the ladder's split rows after
+    that.
 
 ## Verdicts
 
@@ -550,7 +564,7 @@ few tens of rays short of the cap.
 
 The walk. At an engine's configuration a point steps 0.429 of its mean at worst and 0.202 at the
 99th part, against the dense levels' 3.558 and 1.299, and at the module's 0.319 and 0.164 (`dotnet
-test RadianceCascades.Tests --filter FullyQualifiedName~On_The_Split_Probes`, 2.1 minutes, 235 tests
+test RadianceCascades.Tests --filter FullyQualifiedName~On_The_Split_Probes`, 2.1 minutes, 238 tests
 in the suite). The 2% bound does not hold, and the test holds the step at its reading, under 0.45
 and 0.21 at an engine's and 0.33 and 0.17 at the module's. Every step above 0.12 at the module's
 falls where the point's greatest distance from the eye crosses 2 or 4, a level's reach. The overlap,
@@ -574,3 +588,46 @@ bound stays at 2%, which needs the levels to read nearer than a blend brings the
 reading becomes the bound. `splitLevelLight` is public so the test reads each level's light at a
 point. The ladder's split rows come in the next commit. Read first for it `CorridorSplitWalk` in
 `ProbeMergeTests.Split.cs` and `split_field_cpu.slang`.
+
+Item 18, its sixth commit, in the commit carrying this line. The reading is at the wall's point at
+the lamp's edge, 2.5 high, with the eye 7.5 from it along the corridor, where the walk read its two
+levels most apart, the levels of spacing 2 and 4 meeting there. Every way facing the point held
+rays at both levels, and the sky gave none of its traced light at an engine's configuration and
+0.089 of it at the module's, whose field ends 8 from the corridor's middle. Each level's rays
+started a quarter of that level's spacing off the surface, so the coarser's rays of a point over
+the overlap started a unit off the wall where the finer's started half a unit off. At the module's
+the finer read 1.329 of the trace and the coarser 0.577, the coarser 0.434 of the finer. Fed by the
+point's own rays alone they read 1.034 and 0.849. With the sky out the coarser read 0.335 of the
+finer, with the lamp out 1.437, and with the floor under the gap out 0.436. The finer's over-read
+came from the faces feeding its probes, the wall's top faces starting half a unit off into the
+roof's lamp cells, and the coarser's under-read in part from its own start and in part from its
+probes, which spread 4 to 8 units about a lamp 1.5 across. These came from a variant of the reading
+with each level's own start, not committed.
+
+The mend. A seen point's rays start a quarter of the finest level's spacing off the surface for
+each of the finest level's reaches the point lies from the eye (`splitRayOrigin`), so the start
+grows with the distance as the spacings do and both levels' rays of a point over the overlap start
+at one place. At the point the finer reads 1.016 of the trace at an engine's configuration and
+0.988 at the module's, the coarser 0.515 and 0.611, and fed by its own rays alone the two read
+0.983 and 0.988 at an engine's and 0.983 and 1.006 at the module's (`dotnet test
+RadianceCascades.Tests --filter FullyQualifiedName~At_The_Lamps_Edge`). The test holds the own
+rays' readings within a twentieth of the trace and of each other, the finer's from every face
+within a twentieth, and the coarser's above half.
+
+The walk. A point steps 0.429 at worst and 0.207 at the 99th part at an engine's configuration and
+0.330 and 0.179 at the module's, and with the eye still 0.088 and 0.081 and 0.077 and 0.059, each a
+little above the reading under each level's own start, since a point near a level's inner end
+starts lower. The test holds them under 0.45, 0.22, 0.095 and 0.085 at an engine's and 0.35, 0.19,
+0.085 and 0.065 at the module's. The levels read 0.706 to 2.195 of each other from the 5th part to
+the 95th at an engine's and 0.743 to 1.570 at the module's (`dotnet test RadianceCascades.Tests
+--filter FullyQualifiedName~On_The_Split_Probes`). The points they read most apart are the floor's
+under the gap at an engine's, the coarser reading 2.479 of the finer, and the floor's near the
+field's end at the module's, 1.748 (`RC_SPLIT_APART=1 dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~At_The_Lamps_Edge`). At the floor's point under the gap the coarser's probe is
+fed by the floor's and both walls' faces over 2.4 units, and the point's own rays alone read 0.897
+and 1.054 of the trace, so what is left is the coarser probes' footprint.
+
+Asked. Whether the levels take eight probes a reach, `Reach` 2 at a spacing of a quarter, at four
+times the slots, 16,384. A variant of the walk not committed read the levels 0.727 to 1.173 of each
+other from the 5th part to the 95th at an engine's configuration, the step 0.522 at worst and 0.175
+at the 99th part, and the still swing 0.040 and 0.030. The ladder's split rows follow this commit.

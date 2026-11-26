@@ -610,8 +610,9 @@ public uint splitWayOf(uint cascade, float3 way)
 // above reaching four times as far past where the one below ends.
 public static const float SplitBaseInterval = 1.6;
 
-// How far off the surface along its normal a seen point's ray starts, as a share of its level's
-// spacing, so its first step does not meet the surface it leaves.
+// How far off the surface along its normal a seen point's ray starts, as a share of the finest
+// level's spacing for each of the finest level's reaches the point lies from the eye, so its first
+// step does not meet the surface it leaves.
 public static const float SplitLift = 0.25;
 
 // How many parts of one a ray's light and its share let through are added to the store's sums as,
@@ -655,11 +656,19 @@ public float3 splitRayWay(float3 n, uint index, uint frame)
     return normalize(local.x * t + local.y * bt + local.z * n);
 }
 
-// Where the ray of a seen point at p facing n of level starts, SplitLift of its spacing off the
-// surface.
-public float3 splitRayOrigin(SplitStore shape, uint level, float3 p, float3 n)
+// Where the ray of a seen point at p facing n starts, SplitLift of the finest level's spacing off
+// the surface within the finest level's reach of the eye and past it that share times the point's
+// greatest distance along an axis over that reach. The start grows with the distance as the
+// levels' spacings and the field's cells do, from the share of its level's spacing a point takes
+// at the level's far end, and over the overlap a point's rays of both levels start at one place.
+// A start by the level's spacing would put the next level's start twice as far off, a unit off a
+// wall at the fourth level, where its rays cross half a corridor before they begin or begin on
+// the roof beside a wall's top, and the two levels would read the point apart by what they see
+// from there.
+public float3 splitRayOrigin(SplitFrame frame, SplitStore shape, float3 p, float3 n)
 {
-    return p + n * (SplitLift * splitSpacing(shape, level, 0u));
+    float3 d3 = abs(p - frame.eye);
+    return p + n * (SplitLift * shape.spacing * max(max(d3.x, max(d3.y, d3.z)) / shape.reach, 1.0));
 }
 
 // Adds a part of a ray to the sums of entry's probe along its way, its light, the share it lets
@@ -708,7 +717,8 @@ void traceSplitLevel<H : IRayHits, K : ISky, W : IStoreUints>(H hits, K sky, W u
 
 // Sends the seen point at index its frame's ray (splitRayWay) and adds its parts to the probes of
 // its level, a thread a point after askCascadeProbes, and to those of the next over the overlap,
-// the same way traced again by the next level's longer intervals, so a point there costs two rays.
+// the same way traced again from the same start by the next level's longer intervals, so a point
+// there costs two rays.
 public void traceSeenRays<P : IVisiblePoints, H : IRayHits, K : ISky, W : IStoreUints>(P points, H hits, K sky, W uints,
     SplitFrame frame, SplitStore shape, uint index)
 {
@@ -719,9 +729,10 @@ public void traceSeenRays<P : IVisiblePoints, H : IRayHits, K : ISky, W : IStore
     float next;
     uint level = splitLevelAt(frame, shape, p, next);
     float3 way = splitRayWay(n, index, frame.frame);
-    traceSplitLevel(hits, sky, uints, shape, level, p, splitRayOrigin(shape, level, p, n), way);
+    float3 origin = splitRayOrigin(frame, shape, p, n);
+    traceSplitLevel(hits, sky, uints, shape, level, p, origin, way);
     if (next > 0.0)
-        traceSplitLevel(hits, sky, uints, shape, level + 1u, p, splitRayOrigin(shape, level + 1u, p, n), way);
+        traceSplitLevel(hits, sky, uints, shape, level + 1u, p, origin, way);
 }
 
 // Keeps each way's light from the frame's sums, a thread a way of every probe's own light after

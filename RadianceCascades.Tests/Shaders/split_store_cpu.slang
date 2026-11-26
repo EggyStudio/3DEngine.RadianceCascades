@@ -192,7 +192,7 @@ void test(uint3 id : SV_DispatchThreadID)
             uint at = index * 10u + j * 5u;
             uint l = level + j;
             float far = splitIntervalEnd(shape, l, shape.cascades - 1u);
-            ProbeRay whole = hits.along(splitRayOrigin(shape, l, p, n), way, 0.0, far);
+            ProbeRay whole = hits.along(splitRayOrigin(frame, shape, p, n), way, 0.0, far);
             float3 light = whole.light + (whole.ended == RayLeft ? whole.carried * sky.skyAlong(way) : float3(0.0));
             taken[at] = float4(light, float(whole.ended));
             int3 cell = splitNearestCell(shape, l, 0u, p);

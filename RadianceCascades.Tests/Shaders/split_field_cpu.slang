@@ -14,7 +14,8 @@ RWStructuredBuffer<float> cells;
 // seen points and of points gathered at 12 and 13, the field's cells along a side at 14 and the
 // count of its cascades at 15, each one's least corner and cell from 16, four floats each, the
 // sky's light at 48, the least corner, the cell and the cells along a side of the grid cellLight
-// holds from 49, and the cap of steps a ray's part takes at 54, none where 0.
+// holds from 49, the cap of steps a ray's part takes at 54, none where 0, and the level and the
+// gathered point whose probes' ways pass 9 reads at 55 and 56.
 RWStructuredBuffer<float> setup;
 
 // The light of each cell of the grid the setup gives from 49, x fastest.
@@ -184,5 +185,25 @@ void test(uint3 id : SV_DispatchThreadID)
         float3 own = splitLevelLight(store, kept, shape, level, p, surfaces.normalAt(index), weights);
         float3 above = next > 0.0 ? splitLevelLight(store, kept, shape, level + 1u, p, surfaces.normalAt(index), nextWeights) : float3(0.0);
         taken[index] = float4(own.x, above.x, weights, nextWeights);
+    }
+    else if (pass == 9u && index < 2u * 8u * SplitBaseWays)
+    {
+        // The ways of the eight probes about the gathered point at 56 of the level at 55 and of
+        // the next, a thread a way, each its merged light and share let through, then its own
+        // light and share, the rays its kept light is the mean of and 1 where its probe stands.
+        uint level = uint(setup[55]) + index / (8u * SplitBaseWays);
+        uint corner = (index / SplitBaseWays) % 8u, way = index % SplitBaseWays;
+        float3 q = surfaces.placeAt(uint(setup[56])) / splitSpacing(shape, level, 0u);
+        int3 cell = int3(floor(q)) + int3(int(corner & 1u), int((corner >> 1) & 1u), int(corner >> 2));
+        uint entry = findSplitProbe(store, shape, splitKey(level, 0u, cell));
+        taken[2u * index] = float4(0.0, -1.0, 0.0, -1.0);
+        taken[2u * index + 1u] = float4(0.0);
+        if (entry != SplitNone)
+        {
+            uint at = splitLightAt(shape, entry, way, false);
+            float4 own = kept.lightAt(at);
+            taken[2u * index] = kept.lightAt(splitLightAt(shape, entry, way, true));
+            taken[2u * index + 1u] = float4(own.x, own.w, float(store.load(splitSumsAt(shape) + 5u * at + 4u) >> SplitCountBits), 1.0);
+        }
     }
 }
