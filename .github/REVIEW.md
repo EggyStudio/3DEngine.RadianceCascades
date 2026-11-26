@@ -247,7 +247,13 @@ pointer. One commit an engine, after item 3's first part.
     the swing near the bound, since a blend cannot close what two levels read apart. Ruled, no band
     mend; the commit holds the scene on the ladder, the reading and a test of the step jump at
     today's figure as the baseline that item 18 has to bring under 2%, which then becomes the test's
-    bound; the eye as a member of a host's hand comes with 18's interface.
+    bound; the eye as a member of a host's hand comes with 18's interface. Done at `edc5520`, pushed
+    at 06:39 on 2026-11-26, its run awaited. The corridor is on the ladder in
+    ProbeMergeTests.Corridor.cs and LADDER.md reads it at both configurations by every merge; at the
+    engine's by reach and sight the swing 3.594 worst and 2.466 at the 99th part, the step 3.558 and
+    1.299, with the levels held still 0.631 and 0.246 and with the field held still 3.633 and 2.437,
+    so the levels carry it; the test holds the step under 3.6 and 1.31 as the baseline until item 18
+    moves it to 2%. The ladder runs 10 m 45 s, past the shared lock's ten-minute bound.
 
 18. **Split radiance cascades, sparse probes with ray splitting.** The direction of 2026-11-26
     (Decision 10), after item 17's corridor reading, which is the baseline this design has to beat
@@ -266,7 +272,18 @@ pointer. One commit an engine, after item 3's first part.
     door's mark of the engine's 304 read on it once. What a host hands changes, the visible points
     with depth and normal, the rays' hits and the store's memory, so the interface is written out as
     item 7 was before the engines rebind; the dense grid stays selectable until both engines read
-    nearer on it. Several commits, each with its figures.
+    nearer on it. Several commits, each with its figures. Six commits as the session proposed on
+    2026-11-26, taken. The host's interface written out as item 7 was, the visible points with depth
+    and normal, the eye, the rays' hits and the store's memory, no behavior change; the sparse probe
+    store on the CPU keyed by position and level and persisted, each visible point inserting its
+    nearest base probe and each probe its nearest of the next cascade, levels by the base-two
+    logarithm of the Chebyshev distance with the 0.9 start and the blend over the overlap in
+    gatherSurface, a layout selector keeping the dense grid; rays from the surface points split by
+    hit distance and deposited by count with transmittance, low-discrepancy equal-area directions
+    jittered over time, 32 at the base, branching and length scaling 4, the base interval 1.6
+    spacings; the merge over the probes that exist with renormalized trilinear weights; the ladder
+    and the corridor read under it beside the dense grid, the test's bound moving to 2% when it
+    holds; and the engine's door read once.
 
 ## Verdicts
 
@@ -1115,3 +1132,59 @@ layouts `SnappedEngineField` and `CorridorModuleLevels`, and item 18's sparse pr
 beside the dense grid as one more layout, the test's bound going to 2% once they meet it. Read first
 `ProbeMergeTests.Corridor.cs` and the corridor's section of the ladder's test in
 `ProbeMergeTests.Ladder.cs`.
+
+Item 18, its first commit, in the commit carrying this line. The split cascades' hand is written out
+in `rc_split.slang`, which no kernel runs yet, with a row of the README's table for each of its four
+interfaces, `IVisiblePoints`, `IRayHits`, `IStoreUints` and `IStoreLight`, and a paragraph for its
+two structs, `SplitFrame`, the eye and the frame's count, and `SplitStore`, the store's shape.
+`split_hand_kernel.slang` among the tests' kernels gives every interface over buffers and compiles
+to SPIR-V, WGSL, HLSL and Metal with no warning (`dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~SlangTests`, the Slang, README and source tests 67 passing in 32 seconds). The
+uints take 32-bit atomics alone, held as `RWStructuredBuffer<Atomic<uint>>`, since a plain buffer's
+uint taken by InterlockedAdd compiled to WGSL's atomicAdd on a plain u32, which WGSL does not allow,
+and neither engine enables 64-bit or float atomics. No library behaviour changes. The ladder opens
+no device, its kernels built by slangc for the CPU, so it and the suite run with no GPU lock from
+this commit on (N 7.9).
+
+Each engine's hand as it stands, read in place. For `IVisiblePoints`, 3DEngine's `WindowPoints`
+(3DEngine/Shaders/gi_surface.slang:217) reads a pixel's place from the window's depth through the
+unjittered inverse view projection (:228) and its normal from the depth's neighbors, a thread a
+pixel at full size, and lacks only `seenAt`, which its gather's test for no depth gives.
+BevyCSharp's one ISurfacePoints, `OneFace`
+(BevyCSharp/GlobalIllumination/Kernels/gi_ambient.slang:213), is a probe's face, and its screen
+probes read a tile's place from the prepass depth and its normal from the depth's neighbors
+(gi_screen.slang:154), the prepass normals unread
+(native/bevy_csharp/src/render/bcs_pass.slang:454), so it lacks the hand over its pixels. For
+`SplitFrame`, 3DEngine's eye is `ScreenView.eye` (3DEngine/Shaders/screenmarch.slang:55) and its
+frame only `_frame % 16` in `view.jitter.z`
+(3DEngine/GlobalIllumination/GlobalIlluminationRenderer.cs:446), the whole count sitting in
+`GiLights.counts.y`, which its gather does not bind. BevyCSharp's world passes take the eye as
+`FieldInfo.eye` (native/bevy_csharp/src/render/bcs_field.slang:41) and the frame as
+`GiLights.counts.y` (bcs_gi.slang:65). Each hands the whole count, since a turn of sixteen frames
+repeats its ways.
+
+For `IRayHits`, neither engine traces a probe's ray through the module's march. 3DEngine marches the
+field and shades a hit in its own kernel (shadeProbeHitN, 3DEngine/Shaders/gi_trace.slang:523), and
+has hardware rays (meshHit, 3DEngine/Shaders/meshrays.slang:43), so it gives the hits over either.
+BevyCSharp marches its own `traceField` and shades by `shadeProbeHit`
+(native/bevy_csharp/src/render/bcs_gi.slang:686), its hardware rays used only by its traced
+reference, so it gives them over that march and that shading. `FieldHits` serves an engine whose
+field shades a hit through IProbeField's hitLight, which neither engine's does, 3DEngine's
+`UnreadField` and BevyCSharp's `NoField` giving none. For `IStoreUints` and `IStoreLight`, neither
+engine has a store, its levels being 3D images a cascade
+(3DEngine/GlobalIllumination/GlobalIlluminationStages.cs:195,
+BevyCSharp/GlobalIllumination/WorldProbes.cs:318). 3DEngine takes a uint atomically by
+InterlockedMin on a plain buffer (3DEngine/Shaders/field_splat.slang:195), which holds for its
+SPIR-V alone (3DEngine/Graphics/Shaders/SlangCompiler.cs:39), and BevyCSharp through `Atomic<uint>`
+(BevyCSharp/GlobalIllumination/Kernels/field_splat.slang:68), since it compiles to WGSL, which is
+the form the hand takes for both.
+
+What each engine changes to give the hand, a file each. In 3DEngine, gi_surface.slang gives `seenAt`
+on WindowPoints, GlobalIlluminationRenderer.cs hands the eye and the whole frame count to the split
+passes, gi_trace.slang gives `IRayHits` over its march or its hardware rays and shadeProbeHitN, and
+GlobalIlluminationStages.cs makes the store's two buffers at the sizes the second commit gives and
+dispatches the split passes beside the dense ones. In BevyCSharp, a struct over the prepass depth
+and normals beside gi_screen.slang's reading gives `IVisiblePoints` a pixel, bcs_gi.slang gives
+`IRayHits` over traceField and shadeProbeHit, bcs_field.slang or the lights' block hands the eye and
+the frame's count, and WorldProbes.cs makes the two buffers and dispatches the split passes. Read
+first for the second commit `rc_split.slang` and the README's paragraph beside the table.

@@ -11,9 +11,13 @@ names the item of .github/REVIEW.md or .github/REVIEW-ARCHIVE.md and the commit 
 Done that day
 
 - Item 16 at `676c5f5`. The engine's door at the mark, read again on items 14 and 15.
+- Item 17 at `edc5520`. A fixed point's light holds still as the field moves.
 
 Commits that day
 
+- `edc5520` The ladder walks a corridor of fixed walls with the field and its levels stepped along
+  it with the eye, reading how far each fixed point's light moves over the walk, and a test holds
+  the change between steps at what the dense levels read.
 - `676c5f5` The merge by reach sight marches a ray whose far cascade ends at the field's edge on to
   twice where it ended in place of leaving out the far probes whose hits lie short of that end,
   which mends the lintel an engine reads, with a test of a probe under a slab.
