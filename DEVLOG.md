@@ -15,6 +15,9 @@ Done that day
 
 Commits that day
 
+- `b3862c6` The split cascades' hand is written out in Slang ahead of their passes, the seen points,
+  a part of a ray's trace, the store's uints and light, the eye and the frame's count, and a test
+  kernel gives it over buffers on every target with 32-bit atomics alone.
 - `edc5520` The ladder walks a corridor of fixed walls with the field and its levels stepped along
   it with the eye, reading how far each fixed point's light moves over the walk, and a test holds
   the change between steps at what the dense levels read.

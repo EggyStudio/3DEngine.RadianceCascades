@@ -1,6 +1,7 @@
 // The split cascades' hand implemented over buffers as an engine would, each function of its
-// interfaces called once, so a compile of this kernel holds that the hand is given on every target
-// the tests compile to with 32-bit atomics on a buffer alone. Its entry is test, as every kernel's
+// interfaces called once and each pass of the store run over it, so a compile of this kernel holds
+// that the hand is given and the store kept on every target the tests compile to with 32-bit
+// atomics on a buffer alone. Its entry is test, as every kernel's
 // of the tests is, since the compile names it and Metal reserves main.
 import rc_split;
 
@@ -61,6 +62,11 @@ float4 handed<P : IVisiblePoints, H : IRayHits, W : IStoreUints, L : IStoreLight
     store.store(shape.slots + slot % shape.slots, store.add(index, 1u) + store.load(index));
     kept.keepLight(index, kept.lightAt(index) + float4(ray.light, ray.carried));
     seen.keepTaken(index, ray.light);
+    clearSplitTable(store, shape, index);
+    keepSplitProbes(store, frame, shape, index);
+    askSeenProbes(seen, store, frame, shape, index);
+    askCascadeProbes(store, frame, shape, 0u, index);
+    gatherSurface(store, kept, frame, shape, seen, index);
     return float4(place - frame.eye, float(shape.levels + shape.cascades));
 }
 
@@ -80,5 +86,7 @@ void test(uint3 id : SV_DispatchThreadID)
     shape.spacing = 0.25;
     shape.levels = 4u;
     shape.cascades = 4u;
+    shape.reach = 1.0;
+    shape.age = 32u;
     written[id.x] = handed(seen, hits, store, kept, frame, shape, id.x);
 }

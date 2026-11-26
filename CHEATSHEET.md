@@ -177,4 +177,22 @@ ReadOnlySpan<uint> Kept { get; }                         // The places whose lig
 int Count { get; }                                       // How many places the lights the last frame wrote take, up to the last taken, as the head's count holds it, and where the count is given when the block carries the lights alone
 void Move(double x, double y, double z);                 // Knows every light by its middle moved by a whole step the program moved its world by, worked in doubles, so each light keeps its place through the move
 void Forget();                                           // Lets every place go, for a frame that writes no glow light
+
+record SplitStoreShape                                   // The shape of the split cascades' store, which an engine hands its passes as the Slang SplitStore and lays out its two buffers by, each setting at a default an engine may leave
+int BaseWays = 32;                                       // The ways of a probe of the finest cascade, as the Slang SplitBaseWays
+SplitStoreShape();
+int Slots { get; init; }                                 // The entries of the finest cascade's pool, a power of two at least as large as the coarsest cascade's ways over the finest's, 16384 by default
+float Spacing { get; init; }                             // The spacing of the finest level's probes in the engine's world unit, 0.25 by default
+int Levels { get; init; }                                // The count of levels, each spaced twice the one below and reaching twice as far from the eye, from 1 to 7, 5 by default
+int Cascades { get; init; }                              // The count of cascades of each level, each with four times the ways of the one below, from 1 to 4, 4 by default
+float Reach { get; init; }                               // How far the finest level reaches from the eye along each axis, at most 128 spacings, 1 by default, which is 4 spacings as a dense level reaches
+int Age { get; init; }                                   // How many frames a probe no seen point asks for is kept before its entry is freed, 32 by default
+int Entries { get; }                                     // The entries of every pool
+int Uints { get; }                                       // The uints the store lays out, its counts, its table, its pools and its free lists, which the engine's buffer of uints holds
+int Lights { get; }                                      // The float4 of light the store lays out, its probes' own light and the light merged from above, which the engine's buffer of light holds
+int PoolProbes(int cascade);                             // The entries of a cascade's pool, the slots over four for each cascade below it
+
+enum ProbeLayout                                         // Which probes light the surfaces the eye sees, the dense levels by default, which an engine keeps until the split cascades read its scenes nearer their trace
+Dense = 0,                                               // Levels of probes on a grid about the eye, every probe of each level standing whether a surface is near it or not, gathered through the levels an engine hands as IGatherLevels
+Split = 1,                                               // The split cascades' probes, kept only near the surfaces the eye sees in a store laid out by SplitStoreShape, gathered through gatherSurface of rc_split
 ```

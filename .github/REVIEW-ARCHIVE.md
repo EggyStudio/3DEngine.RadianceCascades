@@ -716,3 +716,76 @@ corner toward the opening, which see the sky and span the least solid angle, as 
     and stays open; the slab's remainder is its ways leaving the 19.2 field before they meet the
     floor, 0.555 against 0.280 traced, the engine's field size and not the merge. The ladder's means
     as before, 214 tests. The engine reads 304 again on it.
+
+17. **A fixed point's light holds still as the field moves.** The direction of 2026-11-26 through
+    the engine's item 317. On the ladder, a corridor of fixed walls under a sun and a lamp with the
+    field and its cascades stepped along it in small steps over several cells of every level, so
+    every edge crosses a set of fixed surface points; each point's gathered light over the walk
+    against its own mean, the number the worst swing and the 99th part, under 2% as the first bound,
+    at both configurations and with each merge. The scene joins the ladder and a test holds it.
+    Where it swings, the edge and level are named and the placement or the merge mended with the
+    test; the engine's figures from 317 come here as they are read. One commit, before 16's second
+    commit if 16 is not done. Read against the sparse method on 2026-11-26. Ours is a dense grid a
+    level about the eye with probes in air and inside walls, each tracing from where it stands, the
+    host moving one off a surface and the gather skipping one inside a mesh; theirs keeps only the
+    probes nearest the visible surface points, persisted, with rays started at the surface points
+    and split by hit distance into each cascade's probe and direction. Ours lacks the sparse set,
+    the ray splitting, the time-jittered low-discrepancy directions, the irradiance texture a probe
+    and the temporal blend. Under movement each probe keeps its world place, the spacing being eight
+    cells and the snap eight, and a level's region moves a whole spacing at a time. The likeliest
+    mover of a fixed point is the gather's hard switch of level at a level's edge, the point's light
+    jumping from level n's gather to n+1's in one frame where the levels read differently near
+    walls; second, the fade bands of the field cascade a ray reads following the eye, so a hit can
+    move by a coarse cell. First to take, a blend across each level's edge band in the gather as the
+    sparse method's overlap does, once the corridor shows that swing. The corridor read on
+    2026-11-26 at the engine's configuration by reach and sight, the eye walked in quarter steps,
+    the swing 3.59 worst and 2.47 at the 99th part against the 2% bound. Three causes, the levels
+    disagreeing at the switch, level 2 reading a point at a median 4.07 times level 1 since none of
+    its probes stands in the corridor's air of 2.5 width and level 1 reading 0.60 to 2.97 times
+    level 0 near the lamp; the rim, a point half a spacing past a level's edge probes off by up to
+    0.64; and a tenth of the samples dark, no probe of the point's level or the one above seeing it.
+    Inside a level the light is steady, 5% at the 99th part, and with the levels held still and the
+    field alone moving the swing is 0.33 and 0.136, the cascade a ray reads changing. A blend across
+    each level's edge band was tried, about the snapped probes and about the eye, and neither brings
+    the swing near the bound, since a blend cannot close what two levels read apart. Ruled, no band
+    mend; the commit holds the scene on the ladder, the reading and a test of the step jump at
+    today's figure as the baseline that item 18 has to bring under 2%, which then becomes the test's
+    bound; the eye as a member of a host's hand comes with 18's interface. Done at `edc5520`, pushed
+    at 06:39 on 2026-11-26, its run green. The corridor is on the ladder in
+    ProbeMergeTests.Corridor.cs and LADDER.md reads it at both configurations by every merge; at the
+    engine's by reach and sight the swing 3.594 worst and 2.466 at the 99th part, the step 3.558 and
+    1.299, with the levels held still 0.631 and 0.246 and with the field held still 3.633 and 2.437,
+    so the levels carry it; the test holds the step under 3.6 and 1.31 as the baseline until item 18
+    moves it to 2%. The ladder runs 10 m 45 s, past the shared lock's ten-minute bound.
+
+## Decisions
+
+1. **The repository's birth.** The owner made this repository on 2026-10-31 at 12:05 among six,
+Modeling, Vegetation, Levels, Landscape, Tools beside it, after the ideas recorded as 3DEngine's
+Decision 78 and BevyCSharp's Decision 71, to hold the cascades' CPU side, their layout, the probes'
+placement, the field's build and the merge's rules, and the Slang shaders as one library both
+engines use rather than one implementation an engine. The owner set the order the same day, the
+documents first, then the rest as the other projects have it, then the engines taking the module,
+and said the modules may be tried at once beside the engine's global illumination work (3DEngine
+Decision 79).
+
+2. **A git submodule, not a package.** The owner chose on 2026-10-31 that the engines take the
+module as a git submodule built as a project of their own, since a package's upload, wait, test and
+pack is slower to iterate than a commit. A change is committed here first; the reviewing session
+pushes this repository before the engine's commit that moves its pointer; the workflows check
+submodules out. The game keeps using the engine through the engine's package.
+
+3. **The module knows no engine.** N 2.1. The module references no engine, package or bridge; what
+it needs of a renderer, a world, a scheduler or a file system it takes through interfaces it
+declares, which each engine implements where it binds the module. A type of an engine's in this
+repository is a fault.
+
+4. **The repository's terms are the owner's.** The repository was made by the owner with its terms
+   file in place, which stands as the owner set it and is spoken of nowhere else.
+
+5. **Who writes here.** The game's session writes items 1 and 2 for the six modules, being free
+while the game waits on the engine's package; the session that owns the code today moves it (item
+3), BevyCSharp's for Vegetation and Levels, 3DEngine's for Modeling and the cascades, the reviewing
+session's scripts going into Tools; each engine's session binds the module (item 4). Every session
+reads REVIEW.md's head, its items and the Replies before a batch, as N 7.7 says, and the reviewing
+session pushes.

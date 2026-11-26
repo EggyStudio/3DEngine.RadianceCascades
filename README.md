@@ -133,26 +133,54 @@ library's functions, and the engine keeps its bindings, its threads and its atom
 | `IGatherSkyLevels` | Reads, beyond `IGatherLevels`, the share of the sky in a level's probe's texel's light, which `GatherSkyLevelProbes` reads as one level's `IFarSkyProbes` | `gatherSurface` |
 | `IConePoints` | Reads a point's place, normal, way toward the eye, roughness and the finest level its gather reads, and keeps the light its cone reflects | `readCone` |
 | `IConeRead` | Brings the mean light of the cone a rough surface reflects toward the eye from the levels about it, one read behind one name, which `ConeAtProbes` is the first of | `readCone` |
-| `IVisiblePoints` | Reads, beyond `ISurfacePoints`, whether a pixel sees a surface, false where its depth is the far plane's, for the split cascades, which no kernel runs yet | the split cascades' passes |
+| `IVisiblePoints` | Reads, beyond `ISurfacePoints`, whether a pixel sees a surface, false where its depth is the far plane's, by which a seen point asks the split cascades' store for its probes | the split cascades' passes |
 | `IRayHits` | Traces a part of a ray from a seen point between a start and an end, how it ended, where, the share of light carried and the light it met, which `FieldHits` gives from the field's march | the split cascades' passes |
-| `IStoreUints` | Reads, writes, adds to and compares and exchanges the store's uints, an atomic add and an atomic compare and exchange on a GPU, in which the passes keep the probes' keys, the frame each was last asked for, their rays' sums and the count standing at each level | the split cascades' passes |
+| `IStoreUints` | Reads, writes, adds to and compares and exchanges the store's uints, an atomic add and an atomic compare and exchange on a GPU, in which the passes keep the table from each probe's key to its entry, each entry's key and the frames it was taken and last asked for, the free entries, their rays' sums and the count standing in each cascade | the split cascades' passes |
 | `IStoreLight` | Reads and keeps the store's light, each probe's light along each of its ways with the share let through, kept from frame to frame, and the light merged from the cascades above | the split cascades' passes |
 
-The split cascades keep probes only near the surfaces the eye sees, and their declarations in
-`rc_split.slang` are written out ahead of the passes that are to read them. A seen point inserts
+The split cascades keep probes only near the surfaces the eye sees, and `rc_split.slang` holds
+what an engine hands their passes, the passes that keep their store and the gather from it. A seen
+point inserts
 the nearest probe of its level into a store keyed by place and level and traces its own rays, whose
 parts are added to the nearest probe of each cascade by how far along the ray they lie, so a probe
 keeps its place and its light while the eye moves. Beside the four interfaces above an engine hands
 those passes two structs by value, as it hands a `ProbeCascade`. `SplitFrame` holds the eye's
 place, which a seen point's level is read from, and the frame's count, which the ways of a seen
 point's rays turn by. `SplitStore` holds the store's shape, the most probes it holds, the finest
-level's spacing, the count of levels and the count of cascades above a level's probes. The store's
+level's spacing, the count of levels, the count of cascades above a level's probes, how far the
+finest level reaches from the eye and how many frames a probe no point asks for is kept. The store's
 uints take 32-bit atomics alone, which every target the module compiles to has, and a probe's light
 is added to them as a whole number, since an atomic add of a float is not on every target. An engine
 keeps them as a buffer of atomics, `RWStructuredBuffer<Atomic<uint>>` in Slang, since WGSL changes a
 uint atomically only in an array of atomics. `split_hand_kernel.slang` among the tests' kernels
-gives each interface over buffers so, and compiles to SPIR-V, WGSL, HLSL and Metal (`dotnet test
-RadianceCascades.Tests --filter FullyQualifiedName~SlangTests`).
+gives each interface over buffers so and runs the store's passes over them, and compiles to
+SPIR-V, WGSL, HLSL and Metal (`dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~SlangTests`).
+
+Each frame an engine runs the store's passes in order, a dispatch each. `clearSplitTable` empties
+the table, a thread a slot. `keepSplitProbes` puts back in it each probe a seen point asked for
+within the store's age that stands within its level's reach of the eye, a thread an entry, and
+frees the others. `askSeenProbes` asks for each seen point's nearest probe of its level, and of the
+next over the last tenth of the level's reach, a thread a point. `askCascadeProbes` asks for the
+nearest probe of the cascade above for each probe of a cascade asked for in the frame, once for each
+cascade but the coarsest. `gatherSurface` over the store's buffers gathers a point's light from the
+finest probes about it, each standing probe weighed by its trilinear weight over those standing,
+and blends the next level in by the point's share over the overlap. A point's level is the base-two
+logarithm of its greatest distance along an axis from the eye over the finest level's reach, and a
+probe keeps its entry while seen points ask for it, so the light it keeps stays with it as the eye
+moves. A probe's ways are the middles of the texels of a square of 4 a side for each half of the
+sphere at the finest cascade, twice as many a side for each cascade above, laid on the half so each
+stands for an equal share of the sphere. `SplitStoreShape` gives the store's shape at its defaults
+and the uints and the float4 of light an engine's two buffers hold, and `ProbeLayout` picks between
+the dense levels, its default, and the split cascades. No pass yet adds a ray's light to the
+store's probes, so the gather reads what an engine keeps in their merged light. On the CPU over the
+inside faces of a corridor from an eye in it, the store holds 322 probes of the finest cascade
+where a dense grid of its four levels stands 2,048, each within 0.866 of its spacing of a seen
+point, and over 16 quarter steps of the eye 8,852 probes kept their entries, 368 were taken and none
+moved. Over a line of points from the eye out past every level's reach, each level's probes holding
+twice the light of the one below, the gathered light steps at most 0.050 of itself between points a
+hundredth of a unit apart (`dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~SplitStoreTests`).
 
 `stampCell` takes the cascade's cell width, and stamps a box thinner than a cell along an axis of
 its own a cell across there. A march meets a surface within a tenth of a cell of it (`MarchHit`), so
