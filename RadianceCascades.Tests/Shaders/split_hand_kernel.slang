@@ -74,6 +74,7 @@ float4 handed<P : IVisiblePoints, H : IRayHits, W : IStoreUints, L : IStoreLight
     OneSky sky;
     traceSeenRays(seen, hits, sky, store, frame, shape, index);
     keepSplitLight(store, kept, frame, shape, index);
+    mergeSplitCascade(store, kept, sky, frame, shape, 0u, index);
     gatherSurface(store, kept, frame, shape, seen, index);
     return float4(place - frame.eye, float(shape.levels + shape.cascades));
 }

@@ -113,7 +113,7 @@ library's functions, and the engine keeps its bindings, its threads and its atom
 | `IFarProbes` | Reads a far probe's light at a texel and how far its ray toward each way of its reach map went, the merged light and reach maps of the level above a merge's or of the finest level a gather's, which `TracedMeans` reads at fewer texels than traced | `mergedLight`, `farTexelsLight`, `farProbeSees`, `mergeTexel`, `gatherAt`, `gatherTraced` |
 | `IFarSkyProbes` | Reads, beyond `IFarProbes`, the share of the sky in a far probe's texel's light, what it would be under a sky of 1 with every surface unlit, which `TracedSkyMeans` reads at fewer texels than traced | `mergedLight`, `farTexelsLight`, `mergeTexel`, `gatherAt`, `gatherTraced` |
 | `IProbePlaces` | Reads where a cascade's probe stands, by the engine's own rule where it moves a probe off a surface, which `GridPlaces` gives as the grid's place | `traceTexel`, `reachTexel`, `mergedLight`, `mergeTexel`, `gatherAt`, `gatherTraced` |
-| `ISky` | Reads the sky's light along a way, for a ray that leaves the field, which `UniformSky` gives as one light | `lastCascadeLight`, `mergedLight`, `settleTexel`, `mergeTexel`, `gatherTraced`, `traceSeenRays` |
+| `ISky` | Reads the sky's light along a way, for a ray that leaves the field, which `UniformSky` gives as one light | `lastCascadeLight`, `mergedLight`, `settleTexel`, `mergeTexel`, `gatherTraced`, `traceSeenRays`, `mergeSplitCascade` |
 | `ISkyShare` | Reads, beyond `ISky`, the share of a sky of 1 a ray leaving the field along a way takes, 1 for a sky lent whole, which `WholeShare` and `UniformSky` give | `lastCascadeSkyShare`, `mergedLight`, `settleTexel`, `mergeTexel`, `gatherTraced` |
 | `IProbeLight` | Reads a probe's merged light at each of its texels | `lightTaken` |
 | `IProbeRays` | Keeps the ray each texel of a cascade traced, how it ended, where, the share of light it carries and the light it met, and reads it back | `traceTexel`, `settleTexel`, `mergeTexel` |
@@ -173,9 +173,14 @@ to, at the way it falls in, as its light, the share it lets through and a count 
 part meets a surface or leaves the world. A point over the overlap of two levels traces the same
 way again by the next level's intervals. `keepSplitLight` keeps each way's light from those sums,
 a thread a way, the mean of its rays where it held none, moved toward that mean by a tenth for each
-ray where it held some, and empties them. `gatherSurface` over the store's buffers gathers a point's light from the
-finest probes about it, each standing probe weighed by its trilinear weight over those standing,
-and blends the next level in by the point's share over the overlap. A point's level is the base-two
+ray where it held some, and empties them. `mergeSplitCascade` merges each cascade's ways from the
+coarsest down, a thread a way, each way's own light and, by the share it lets through, the mean of
+the four ways above that its texel holds at each probe of the cascade above about it that stands,
+by their trilinear weights over those standing, and the sky's above the coarsest. A way no ray
+reached merges to none and is left out of the ways below and of the gather, since letting all its
+light through would let the sky into a closed room. `gatherSurface` over the store's buffers
+gathers a point's light from the finest probes about it, each standing probe weighed by its
+trilinear weight over those standing that hold a way facing the point, and blends the next level in by the point's share over the overlap. A point's level is the base-two
 logarithm of its greatest distance along an axis from the eye over the finest level's reach, and a
 probe keeps its entry while seen points ask for it, so the light it keeps stays with it as the eye
 moves. A probe's ways are the middles of the texels of a square of 4 a side for each half of the
@@ -186,8 +191,7 @@ the dense levels, its default, and the split cascades. A point farther along an 
 than 254 of the coarsest level's spacings is not held by the store (`splitHolds`), since a probe's
 key holds nine bits of its cell along each axis, and asks for no probe, sends no ray and gathers no
 light, so an engine gives its pixel the far light it gives the sky, or raises the store's levels or
-its spacing until the coarsest level holds its scene. No pass yet merges each cascade's light into
-the one below, so the gather reads what an engine keeps in their merged light. On the CPU over the
+its spacing until the coarsest level holds its scene. On the CPU over the
 inside faces of a corridor from an eye in it, the store holds 322 probes of the finest cascade
 where a dense grid of its four levels stands 2,048, each within 0.866 of its spacing of a seen
 point, and over 16 quarter steps of the eye 8,852 probes kept their entries, 368 were taken and none
@@ -196,7 +200,11 @@ twice the light of the one below, the gathered light steps at most 0.050 of itse
 hundredth of a unit apart. In the corridor lit as the merge's tests light it, 20,997 rays of 18,985
 seen points add 29,000 parts to the probes, 6,909 reaching the second cascade and 239 the coarsest,
 each sum the same as the rays traced whole and split where they ended give, and over 4,096 frames a
-point's rays take the share of each eighth of their half's height within 0.004 of it (`dotnet test
+point's rays take the share of each eighth of their half's height within 0.004 of it. Under a sky
+of 1 with nothing to meet the corridor's points gather 1, and in a closed room whose walls all send
+0.3 its 3,328 points gather that light, each within a millionth, where letting the ways no ray
+reached through would put 4,442 of the finest cascade's 6,528 ways a hundredth off it, the
+brightest at the sky's 1 (`dotnet test
 RadianceCascades.Tests --filter FullyQualifiedName~SplitStoreTests`).
 
 `stampCell` takes the cascade's cell width, and stamps a box thinner than a cell along an axis of

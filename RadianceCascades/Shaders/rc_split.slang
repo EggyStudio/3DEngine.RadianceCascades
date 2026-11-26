@@ -477,18 +477,16 @@ public void askCascadeProbes<W : IStoreUints>(W uints, SplitFrame frame, SplitSt
 }
 
 // The light the point at p facing n takes from level's finest probes about it, each standing
-// probe's merged light along its ways weighed by the cosine of each way off n over their sum, and
-// by its trilinear weight over the weights of the probes standing, with the weights' sum in
-// weights, 0 where none of the eight stands.
+// probe's merged light along its ways weighed by the cosine of each way off n over their sum, a way
+// merged to none (mergeSplitCascade) left out and the cosines taken over those kept, and by its
+// trilinear weight over the weights of the probes standing that hold a way facing n, with the
+// weights' sum in weights, 0 where none of the eight does.
 float3 splitLevelLight<W : IStoreUints, L : IStoreLight>(W uints, L light, SplitStore shape, uint level, float3 p, float3 n,
     out float weights)
 {
     float3 q = p / splitSpacing(shape, level, 0u);
     int3 base = int3(floor(q));
     float3 f = q - float3(base);
-    float facing = 0.0;
-    for (uint way = 0u; way < SplitBaseWays; way++)
-        facing += max(dot(n, splitWay(0u, way)), 0.0);
     float3 sum = float3(0.0);
     weights = 0.0;
     for (int corner = 0; corner < 8; corner++)
@@ -500,9 +498,20 @@ float3 splitLevelLight<W : IStoreUints, L : IStoreLight>(W uints, L light, Split
         if (weight <= 0.0 || entry == SplitNone)
             continue;
         float3 taken = float3(0.0);
+        float facing = 0.0;
         for (uint way = 0u; way < SplitBaseWays; way++)
-            taken += light.lightAt(splitLightAt(shape, entry, way, true)).xyz * max(dot(n, splitWay(0u, way)), 0.0);
-        sum += taken / max(facing, 1e-6) * weight;
+        {
+            float4 merged = light.lightAt(splitLightAt(shape, entry, way, true));
+            float cosine = max(dot(n, splitWay(0u, way)), 0.0);
+            if (merged.w >= 0.0)
+            {
+                taken += merged.xyz * cosine;
+                facing += cosine;
+            }
+        }
+        if (facing <= 0.0)
+            continue;
+        sum += taken / facing * weight;
         weights += weight;
     }
     return weights > 0.0 ? sum / weights : float3(0.0);
@@ -740,4 +749,70 @@ public void keepSplitLight<W : IStoreUints, L : IStoreLight>(W uints, L light, S
             uints.store(sums + k, 0u);
     }
     light.keepLight(index, kept);
+}
+
+// The light merged above the way of cascade of the probe of key, the mean of the four ways of the
+// cascade above that its texel holds, at twice its place along each side of its half, at each probe
+// of that cascade about it standing, weighed by that probe's trilinear weight. A way merged to none
+// is left out and the weights are taken over those kept, w holds the share let through to the sky,
+// and w is -1 where none is kept.
+float4 splitAboveLight<W : IStoreUints, L : IStoreLight>(W uints, L light, SplitFrame frame, SplitStore shape, uint key,
+    uint cascade, uint way)
+{
+    uint side = 4u << cascade;
+    uint above = 2u * side;
+    uint first = (way / (side * side)) * above * above + 2u * ((way / side) % side) * above + 2u * (way % side);
+    float3 q = float3(splitCellOf(frame, shape, key)) * 0.5;
+    int3 base = int3(floor(q));
+    float3 f = q - float3(base);
+    float4 sum = float4(0.0);
+    float weights = 0.0;
+    for (int corner = 0; corner < 8; corner++)
+    {
+        int3 offset = int3(corner & 1, (corner >> 1) & 1, corner >> 2);
+        float3 lerps = lerp(1.0 - f, f, float3(offset));
+        float weight = lerps.x * lerps.y * lerps.z;
+        if (weight <= 0.0)
+            continue;
+        uint entry = findSplitProbe(uints, shape, splitKey(splitLevelOf(key), cascade + 1u, base + offset));
+        if (entry == SplitNone)
+            continue;
+        for (uint k = 0u; k < 4u; k++)
+        {
+            float4 merged = light.lightAt(splitLightAt(shape, entry, first + (k & 1u) + (k >> 1u) * above, true));
+            if (merged.w >= 0.0)
+            {
+                sum += merged * weight;
+                weights += weight;
+            }
+        }
+    }
+    return weights > 0.0 ? sum / weights : float4(0.0, 0.0, 0.0, -1.0);
+}
+
+// Merges each way of cascade's probes into their merged light, a thread a way, once for each
+// cascade from the coarsest down after keepSplitLight. A way's merged light is its own light and,
+// by the share its own light lets through, the light merged above it (splitAboveLight), the sky's
+// along the way above the coarsest, with the share let through to the sky in w. A way no ray
+// reached merges to none, its w -1, which the ways below and the gather leave out, so a way no ray
+// tells of is not read as letting the sky through, and a way letting some through with none merged
+// above it takes none from above.
+public void mergeSplitCascade<W : IStoreUints, L : IStoreLight, K : ISky>(W uints, L light, K sky, SplitFrame frame,
+    SplitStore shape, uint cascade, uint index)
+{
+    if (cascade >= shape.cascades || index >= SplitBaseWays * shape.slots)
+        return;
+    uint ways = splitWays(cascade);
+    uint entry = splitPoolFirst(shape, cascade) + index / ways;
+    uint way = index % ways;
+    uint key = uints.load(splitPoolAt(shape) + 3u * entry);
+    if (key == 0u)
+        return;
+    float4 own = light.lightAt(splitLightAt(shape, entry, way, false));
+    float4 above = cascade + 1u < shape.cascades ? splitAboveLight(uints, light, frame, shape, key, cascade, way)
+        : float4(sky.skyAlong(splitWay(cascade, way)), 1.0);
+    float4 merged = float4(0.0, 0.0, 0.0, -1.0);
+    if (own.w >= 0.0)
+        merged = above.w < 0.0 ? float4(own.xyz, 0.0) : float4(own.xyz + own.w * above.xyz, own.w * above.w);
+    light.keepLight(splitLightAt(shape, entry, way, true), merged);
 }

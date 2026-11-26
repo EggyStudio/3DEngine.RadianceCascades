@@ -166,6 +166,8 @@ void test(uint3 id : SV_DispatchThreadID)
         traceSeenRays(seen, hits, sky, store, frame, shape, index);
     else if (pass == 10u)
         keepSplitLight(store, kept, frame, shape, index);
+    else if (pass == 14u)
+        mergeSplitCascade(store, kept, sky, frame, shape, uint(setup[11]), index);
     else if (pass == 11u && index < uint(setup[12]))
     {
         // The first point's ray at the frame of the thread's count, and the finest way it falls in.

@@ -261,7 +261,18 @@ pointer. One commit an engine, after item 3's first part.
     and none moved; a probe stands for its age and is freed the frame after; the gather lies on the
     levels' blend within 1e-6 and steps at most 0.050 between points 0.01 apart. Choices, a fresh
     entry's light reads as none from the frame it is taken, the gather keeps no sky share, a key
-    keeps 9 bits an axis so a level reaches at most 128 spacings. 227 tests.
+    keeps 9 bits an axis so a level reaches at most 128 spacings. 227 tests. Third commit `d2bd443`,
+    the rays from the seen points split by interval and deposited by count, pushed at 08:04 on
+    2026-11-26 after the run of `1245c78` went green, its run awaited. Directions by a
+    low-discrepancy offset a point, one step a frame, equal-area on the normal's half, each height
+    band within 0.004 of its share over 4,096 frames and each finest way within 0.020; on the
+    corridor one frame's 20,997 rays from 18,985 points give 29,000 parts, none lacking a probe and
+    the sums matching the whole-ray trace, 0.567 of the finest ways reached by frame 32. A point is
+    held within 254 coarsest spacings, 1,016 units at the defaults; past that it asks for nothing
+    and the binding gives it the far light or raises the levels or the spacing. Choices for the
+    merge, an unknown own way lets all light through, the average above renormalized over the known
+    children and the standing corners, the coarsest cascade taking the sky, the gather skipping
+    unknown merged ways. 231 tests.
 
 ## Verdicts
 
@@ -1216,3 +1227,38 @@ w −1 and no light. A part's interval is measured from the seen point that sent
 probe it goes to. The way of texel (x, y) of a cascade holds the four of texels (2x, 2y) to
 (2x + 1, 2y + 1) of the same half above it. Read first for the fourth commit `keepSplitLight` and
 `splitWayOf` in `rc_split.slang`.
+
+Item 18, its fourth commit, in the commit carrying this line. `mergeSplitCascade`, a thread a way,
+runs once for each cascade from the coarsest down after `keepSplitLight`. A way's merged light is
+its own light and, by the share its own lets through, the light merged above it
+(`splitAboveLight`). That light is the mean of the four ways of the cascade above that its texel
+holds, at twice its texel along each side of the same half, at each of the eight probes of that
+cascade about it that stand, weighed by their trilinear weights and taken over the corners standing
+and the ways holding light. Above the coarsest it is the sky's along the way. The merged w is the
+share let through to the sky. A probe's cell halved is its place in the next cascade's cells, so
+each axis weighs one probe whole or two by halves, and the probe it leads up to is always among
+them. The gather leaves out the base ways merged to none and takes each probe's weight over those
+holding a way facing the point.
+
+One of the four choices changed in the reading asked for. A way no ray reached was to let all
+light through, and on the closed room that lets the sky in, which the room's test reads. The room is
+8 by 4 by 6 and every wall sends 0.3. After four frames, letting such ways through puts 4,442 of the
+finest cascade's 6,528 ways a hundredth off the walls' light, the brightest at the sky's 1.000. A
+way whose rays all met a wall leaves the ways above it with no ray, and letting those through hands
+the sky above the coarsest down the cascades. Such a way merges to none instead (w −1). The ways
+below and the gather leave it out, and a way letting some through with none merged above it takes
+none from above. With that, none of the 3,522 finest ways holding light lies a hundredth off, and
+the room's 3,328 points gather the walls' light within a millionth.
+
+Read on the CPU (`dotnet test RadianceCascades.Tests --filter FullyQualifiedName~SplitStoreTests`,
+thirteen tests in 4.6 seconds, 234 in the suite). With each probe's own light set by a hash along
+every way of the corridor's 504 probes, 21,121 of the 105,024 ways reached by no ray and 327 corners
+above them not standing, the merge lies on the rule read in C# within a millionth. Under a sky of 1
+with nothing to meet, the corridor's 18,985 points gather 1 within a millionth after four frames.
+Three things the fifth commit takes as given. A frame runs `clearSplitTable`, `keepSplitProbes`,
+`askSeenProbes`, `askCascadeProbes` from the finest up, `traceSeenRays`, `keepSplitLight`,
+`mergeSplitCascade` from the coarsest down and `gatherSurface`, in that order. A point the store
+does not hold, or whose probes hold no way facing it, gathers 0. A way's light settles over frames
+by a tenth a ray, so a first frame holds the mean of one ray a point. Read first for the fifth
+commit `mergeSplitCascade` and `splitAboveLight` in `rc_split.slang`, and `MergedBy` in
+`SplitStoreTests.cs`.
