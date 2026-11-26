@@ -87,28 +87,7 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
 
     // The inside faces of the corridor of the merge's tests seen from an eye in it, which sees them
     // all, from -12 to 12 along it an eighth of a unit apart, the gap in its roof left out.
-    private static float[] CorridorFaces()
-    {
-        var points = new List<(Vector3 Place, Vector3 Normal)>();
-        for (int i = 0; i <= 192; i++)
-        {
-            var x = -12 + i * 0.125f;
-            for (int j = 0; j <= 20; j++)
-            {
-                var z = -1.25f + j * 0.125f;
-                points.Add((new(x, 0, z), Vector3.UnitY));
-                if (MathF.Abs(x) >= 1)
-                    points.Add((new(x, 3.5f, z), -Vector3.UnitY));
-            }
-            for (int j = 0; j <= 28; j++)
-            {
-                var y = j * 0.125f;
-                points.Add((new(x, y, -1.25f), Vector3.UnitZ));
-                points.Add((new(x, y, 1.25f), -Vector3.UnitZ));
-            }
-        }
-        return Floats(points);
-    }
+    private static float[] CorridorFaces() => ProbeMergeTests.CorridorSeenFaces(-12, 12);
 
     // The corridor's boxes, each sending a twentieth, with the lamp in its roof sending 5 and the
     // floor under its gap 0.6, as the merge's tests light them, each a box a hundredth of a unit
@@ -399,10 +378,12 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
     [CpuKernelFact]
     public void A_Split_Ways_Keep_The_Mean_Of_Their_Rays_And_Follow_It_By_Their_Count()
     {
-        // Over two frames in the lit corridor each way its rays reach takes their mean of light
-        // and of the share let through where it held none, and moves toward it by the share its
-        // count of rays gives where it held some, a way no ray reached keeps what it held, and
-        // the sums are emptied. Over 32 frames the rays reach most of the finest cascade's ways.
+        // Over two frames in the lit corridor each way its rays reach takes the mean of light and
+        // of the share let through of the rays its kept light is the mean of and the frame's, a
+        // way no ray reached keeps what it held, and the sums are emptied with the count of rays
+        // the kept light is the mean of left above the frame's. Over 32 frames the rays reach most
+        // of the finest cascade's ways, and a way whose count would pass the cap moves by a share
+        // of one over the cap a ray.
         var points = CorridorFaces();
         var eye = new Vector3(0, 1.5f, 0);
         var store = new Store(Shape, CorridorLitBoxes);
@@ -419,21 +400,16 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
             var keys = store.Keys();
             var takenNow = keys.Values.Where(v => v.Taken == frame).Select(v => v.Entry).ToHashSet();
             store.Keep(eye, frame);
-            Assert.All(store.Uints[sumsAt..(sumsAt + sums.Length)], u => Assert.Equal(0u, u));
             foreach (var (entry, _, _, cascade) in probes)
                 for (int way = 0; way < SplitStoreShape.BaseWays << 2 * cascade; way++)
                 {
                     var i = LightAt(cascade, entry, way);
-                    var n = sums[5 * i + 4];
-                    var kept = takenNow.Contains(entry) ? new Vector4(0, 0, 0, -1)
-                        : new Vector4(before[4 * i], before[4 * i + 1], before[4 * i + 2], before[4 * i + 3]);
-                    var mean = new Vector4(sums[5 * i], sums[5 * i + 1], sums[5 * i + 2], sums[5 * i + 3]) / (1024f * Math.Max(n, 1));
-                    var want = n == 0 ? kept : Vector4.Lerp(kept, mean, kept.W < 0 ? 1 : 1 - MathF.Pow(0.9f, n));
-                    var got = new Vector4(store.Light[4 * i], store.Light[4 * i + 1], store.Light[4 * i + 2], store.Light[4 * i + 3]);
-                    worst = MathF.Max(worst, (got - want).Length() / MathF.Max(want.Length(), 1e-3f));
+                    var (n, rays) = (sums[5 * i + 4] & 0xFFFFF, takenNow.Contains(entry) ? 0 : sums[5 * i + 4] >> 20);
+                    var after = n == 0 ? rays : Math.Min(rays + n, KeptRays);
+                    worst = MathF.Max(worst, Kept(store, sumsAt, i, sums, before, takenNow.Contains(entry), after));
                     if (n == 0)
                         held++;
-                    else if (kept.W < 0)
+                    else if (rays == 0)
                         fresh++;
                     else
                         followed++;
@@ -444,10 +420,46 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
         var finest = store.Probes(eye, 32).Where(p => p.Cascade == 0).ToList();
         var known = finest.Sum(p => Enumerable.Range(0, SplitStoreShape.BaseWays).Count(w => store.Light[4 * LightAt(0, p.Entry, w) + 3] >= 0));
         var share = known / (float)(finest.Count * SplitStoreShape.BaseWays);
+
+        // Each known finest way handed sums of 10 rays of light 3 as though it were the mean of
+        // KeptRays less 4, so its count passes the cap.
+        store.Frame(eye, 33, points, keep: false);
+        var capped = finest.SelectMany(p => Enumerable.Range(0, SplitStoreShape.BaseWays).Select(w => LightAt(0, p.Entry, w)))
+            .Where(i => store.Light[4 * i + 3] >= 0).ToList();
+        foreach (var i in capped)
+        {
+            for (int k = 0; k < 4; k++)
+                store.Uints[sumsAt + 5 * i + k] = k < 3 ? 10 * 3 * 1024u : 10 * 512u;
+            store.Uints[sumsAt + 5 * i + 4] = (uint)(KeptRays - 4) << 20 | 10;
+        }
+        var (capSums, capBefore) = (store.Uints[sumsAt..(sumsAt + 5 * Shape.Cascades * span)], store.Light[..(4 * Shape.Cascades * span)]);
+        store.Keep(eye, 33);
+        var worstCapped = capped.Max(i => Kept(store, sumsAt, i, capSums, capBefore, false, KeptRays));
         var said = $"over two frames {fresh} ways took their rays' mean, {followed} moved toward it and {held} kept their light, each "
-            + $"within {worst:0.000000} of it, and over 32 frames the rays reached {share:0.000} of the finest cascade's ways";
+            + $"within {worst:0.000000} of it, over 32 frames the rays reached {share:0.000} of the finest cascade's ways, and "
+            + $"{capped.Count} ways past the cap moved by a share of one over it a ray within {worstCapped:0.000000}";
         output.WriteLine(said);
-        Assert.True(worst < 1e-5f && fresh > 0 && followed > 0 && held > 0, said);
+        Assert.True(worst < 1e-5f && worstCapped < 1e-5f && fresh > 0 && followed > 0 && held > 0 && capped.Count > 0, said);
+    }
+
+    // The most rays a way's kept light is the mean of, as the Slang SplitKeptRays.
+    private const uint KeptRays = 256;
+
+    // How far the light kept at way i lies from the mean of what it held, of no rays where fresh,
+    // over the rays its sums' count kept above the frame's and of the frame's rays in its sums,
+    // those counted up to after, as a share of that mean, or infinity unless the store's sums from
+    // sumsAt are emptied with after kept above the frame's count.
+    private static float Kept(Store store, int sumsAt, int i, uint[] sums, float[] before, bool fresh, uint after)
+    {
+        var (n, rays) = (sums[5 * i + 4] & 0xFFFFF, fresh ? 0 : sums[5 * i + 4] >> 20);
+        var kept = fresh ? new Vector4(0, 0, 0, -1) : new Vector4(before[4 * i], before[4 * i + 1], before[4 * i + 2], before[4 * i + 3]);
+        var mean = new Vector4(sums[5 * i], sums[5 * i + 1], sums[5 * i + 2], sums[5 * i + 3]) / (1024f * Math.Max(n, 1));
+        var want = n == 0 ? kept : Vector4.Lerp(kept, mean, Math.Min(n / (float)Math.Max(after, 1), 1));
+        var got = new Vector4(store.Light[4 * i], store.Light[4 * i + 1], store.Light[4 * i + 2], store.Light[4 * i + 3]);
+        var at = sumsAt + 5 * i;
+        var emptied = store.Uints[at] == 0 && store.Uints[at + 1] == 0 && store.Uints[at + 2] == 0 && store.Uints[at + 3] == 0
+            && store.Uints[at + 4] == after << 20;
+        return emptied ? (got - want).Length() / MathF.Max(want.Length(), 1e-3f) : float.PositiveInfinity;
     }
 
     [CpuKernelFact]

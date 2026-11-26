@@ -758,6 +758,754 @@ corner toward the opening, which see the sky and span the least solid angle, as 
     so the levels carry it; the test holds the step under 3.6 and 1.31 as the baseline until item 18
     moves it to 2%. The ladder runs 10 m 45 s, past the shared lock's ten-minute bound.
 
+The gather toward the surface, `gatherTraced`, for a surface whose probes stand off it. A point
+sends a ray along each way of the finest cascade's octahedron that faces its normal, from a cell off
+the surface, and hands each on through `mergedLight` as a ray that ended where it began, weighed by
+cosine and solid angle. Built from 3DEngine's numbers, each failing first through `gatherAt`: the
+open box's floor under probes 2 m up reads 1.031 of its fine trace, where `gatherAt` reads 1.234,
+the binding's passes 1.346 and its main 1.142; the floor under the solid slab reads 0.933 of the
+trace of the slab as the field holds it, where `gatherAt` reads 1.129, and 1.39 of the whole slab's,
+since the binding's coarser field cascade ends about 6 m short of the point and the rays leaving
+there take the sky. No weighing of the probes about the point serves, since neither a probe's reach
+nor its hits say what lies between the surface and the probes' height. It costs 128 rays and about
+1,000 to 1,600 steps a point at 16 texels a side, which the README states, and a binding calls it
+where it chooses; `gatherAt` stands unchanged.
+
+The sky's share beside the light, at 3DEngine's second merge pass, which merged every texel again
+under a sky of 1 with every surface unlit and cost it 1.4 of 6.46 ms. The merge keeps the share in
+the same pass: a ray that takes the sky brings the share it carries there (`lastCascadeSkyShare`),
+and a hand-off the far probes' shares weighed as their light is. Each pass and `mergedLight` has a
+form over `IFarSkyProbes` with `IMergedSkyLight` or `ISurfaceSkyPoints`, and the form over
+`IFarProbes` reads through `NoSkyShares`, so no binding of `IFarProbes` changes and the march holds
+a binding's shading once in either. The open box's floor takes a share of 0.24696 against the
+0.25111 of the sky its black walls leave open, 1.7 percent under, the same under the uniform and the
+varying sky, and every light figure the suite prints is that of e660713. A binding that dims its sky
+for a cascade dims the share it keeps by its own rule, which the README states. The share takes its
+weight from the sky beside its light (`ISkyShare.shareAlong`), since 3DEngine lends a finer
+cascade's leaving rays no sky until its field holds every mesh in reach and cannot dim a share the
+merge has mixed; a sky read through `ISky` alone lends its share whole (`WholeShare`). The open
+box's floor with its finer cascade's sky gated off takes a share of 0.06367, its light over the
+sky's to 1e-5.
+
+The merge's cost, counted. Two bindings timed one cascade's merge alone, a pass, under an exclusive
+hold, 131,072 rays a dispatch: 3DEngine's finest 2.24 ms on Sponza and BevyCSharp's 6.72, against
+their own merges' 0.36 and 0.37 ms a frame for every cascade, with 62 to 89 percent of a finer
+cascade's rays past their end and a cascade that merges nothing from above 0.034 to 0.039. On the
+CPU a ray past its end takes 1.4 to 7.6 steps, about what a traced ray takes, but reads the field 14
+to 40 times and the reach maps 14 to 23, most of them the eight far probes' tests of standing inside
+a mesh and of seeing the hand-off, twice where the split was tested, and shades a surface on 0.07 to
+0.57 of its legs. A probe inside a mesh keeps `ReachInside` along every way of its reach map, which
+`farProbeSees` passes over, and the far probes about a hand-off are tested once for the split and
+the light alike: the field's reads a ray fall by a half to two thirds and the reach's by a quarter,
+and every figure the tests print stands as it was. What the marches buy, measured by leaving them
+out or ending them sooner: the lintel's row 11 to 41 percent over where it reads within 9, the four
+cascades' worst 16 percent off where it reads 7, the traced floors 29 over and 43 under where they
+read 3.6 and 7.8, so they stay. Neither binding's own merge shades a surface its march meets, and
+the shading the CPU cannot time is the next to place.
+
+The merge's hits. At 16af1c8 3DEngine timed three cascades' merge at 4.89 ms on Sponza and 9.23 to
+13.05 on the Bistro as bound, 4.00 and 4.08 with a hit lit by its probes alone, 0.54 and 0.57 with a
+hit taking nothing, and 0.55 and 0.56 with a hit one read of a texture at its cell, against its own
+whole merge's 0.36 and 0.25, so the shading at a hit is 89 to 94 percent of the merge's cost. On the
+CPU a merge taking nothing at a hit reads the lintel's deep end 0.507 of its trace against 0.819, 4
+of 64 probes within a quarter against 62, a sunlit wall a little past the near rays' reach 44
+percent under, the sunlit sheets 34 percent under and a wall past every far probe 0, and one taking
+in its place the far probes' light about the hit reads the open box's floor 1.49 times its share and
+the lintel's deep end 1.73 times its trace, so the hits stay shaded. An engine that holds the light
+of its field's cells (`IHeldLight`) passes the merge `HeldHitLight`, which reads at a hit the light
+held for its cell, and runs `holdCellLight` each frame over a share of the cells, each within a cell
+and a tenth of a surface shaded once by its own `hitLight`. On the CPU the sunlit wall so reads 0.6
+percent under the shaded merge and the sheets 0.04 percent over. Shading every cell within a cell of
+a surface once took 3DEngine 1.91 ms on Sponza and 3.07 on the Bistro, so held over eight frames a
+frame pays 0.24 and 0.38 beside the merge's 0.55. 3DEngine's own cheaper hit, its probes' kept light
+read half a spacing off the surface and its sun map at the hit with no lamps, took the whole merge
+of five cascades to 1.03 and 1.07 ms and passes its sunlit passage test. The comment of the lintel's
+deep-end test held figures from before the merge's reads changed, and gives the ones it prints. The
+choice: each binding passes the merge its own cheap hit, the sun's reach read at the surface and the
+probes' light half a spacing off it toward the ray, which the README states, and the held light
+stays offered beside it, held whole each frame, its share above 1 only on the owner's word.
+
+The crowns' share a step. A crossing passes over its depth the share of the cell each step within
+began in, to the power of that step's depth, where it passed the share of the cell it was met at for
+its whole depth, so a crown's thin edge no longer stands for its core. On the CPU a crown 6 units
+deep, held as BevyCSharp holds leaf cards that run together, one region half a cell inside
+throughout, passing 0.9 a unit within a unit of its faces and 0.3 within, reads the sky a probe 2
+units before it takes through it 0.992 of the trace of each way's own depth, where it read 1.232
+times it. The march takes no step and no read more, since each step within read its cell's share for
+a solid met within, and the floor behind the wall that lets light through reads 0.04 percent under
+what it did, the sheets as they did. The foliage trace's cost beyond BevyCSharp's own is not the
+module's march: its hitLight marches the crossing again, up to 64 half-cell steps, to light where
+the leaves stop the ray, which a crossing lit by the march where it has stopped half the light would
+spare, at a second place of the shading or a stop deferred a step.
+
+The closed rooms' 5 percent over, held. On the CPU the passes add no light to a closed room on one
+bounce: the open box with a lid, every face sending a light of 1, reads 1.0000 at all 24 points
+through four cascades, which a test holds. Under broad light, a wall, half the floor or the lid
+alone sending it, the points read 0.99 to 1.12 of the light traced against the room's faces on the
+mean, and each texel marched on to the coarsest level's end alone 0.97 to 1.15, single points up to
+a quarter either way in both, the sampling of 16 by 16 texels and no rule of the merge's.
+BevyCSharp's rooms take a bounce at each hit, its probes' faces read there, and its smooth room's
+second bounce read 11.1 percent of its light under its own code and 12.1 under the passes, so the 5
+percent is asked of it split, its views 2, 4 and 7 read under the cheap hit it binds with the
+probes' light at the hit and without it.
+
+A crossing's light where it has stopped half the light it carried in. The march takes no light where
+it meets a surface that lets light through, and takes it at the step within where the share the
+crossing has passed falls to half or under, or, where the crossing passes more, at its last point
+within, the light taken a step later where the crossing leaves the surface, meets a solid or ends
+with the march, the solid's step taken again without its count. The shading stays at its one call.
+On the CPU the crown lit from before it by a sun whose share its depth passes, each cell sending
+that share, reads a probe 2 units before it 0.10949 against 0.11402 traced, 0.960 of it, where taken
+where the ray met it it read 0.18061, 1.584 of it, which a test holds run failing first. Its trace
+takes 15.8 steps a ray on the mean and 64 at most before and after, and the crown under the sky, the
+sunlit wall through the march and the march-on and reaching 4, the sunlit sheets and the floor
+behind the wall that lets light through read every figure and step count as they did. `traceTexel`
+takes an `IMarchSteps` where a binding counts its trace's steps, which the tests' kernel does.
+
+The held light's two misfits, from 3DEngine's binding. A cell keeping a sheet thinner than a cell
+holds a light a side, 0 along its plane's normal and 1 against it (`heldSide`), shaded where a march
+toward the plane from either side stops, and the read takes the side the ray meets: on the CPU a
+sheet at 2.1, four tenths up its cell, lit from above alone reads a probe under it 0.00000 against
+0.00000 shaded and over it 0.27710 against 0.27710, where one light a cell read under it 0.27710,
+which a test holds run failing first. A cell holds its own light apart from the probes' light it
+reflects (`IHeldShading`, `WholeShading` for an engine whose hit weighs no probe's share), and the
+read weighs the probes' light by the share the engine gives at the hit (`IHeldLight.probeShare`):
+the sunlit wall whose hits take a quarter of a probes' light of 0.2 reads 0.17364 held against
+0.17461 shaded, where held whole it read 0.22521, 29 percent over, held by a second test run failing
+first. The holding pass shades a sheet's cells twice, 6,272 of a lone sheet's 9,860 held cells and
+2,144 of the box's 27,856 under a sheet for a lid, 64 and 8 percent more shading; the engines'
+counts of their sheet cells give their cost. The sunlit wall and sheets held read as they did, the
+sheets 0.46498 where they read 0.46501. The GPU lock is taken through Tools' gate, `modules/Tools`
+pinned at c389096.
+
+The lintel's mixed texels, kept as the setting. Each cascade takes its own `TracedMeans.perRead`, so
+a binding traces its finest two at 2 and reads the face under the lintel 0.825 of its trace at 2.21
+times the trace's steps, as all four at 2 read it at 4.0 times, where the coarser two at 2 read
+0.637 at 2.8 times and one ray a texel 0.637, which the README's table gives as the stated limit and
+the test holds at 0.8 or more. The fault is the merge's march past a finer cascade's ray's end,
+which meets the ground outside along the texel's middle way short of the ground's end. A texel whose
+ray ends unlike one of its four or eight neighbors', traced from its quarters, read 0.689 and 0.710
+at 1.8 and 2.05 times the steps, 11 to 14 percent of the texels mixed, since the finer cascades'
+rays end in open space and agree with their neighbors; its quarters handed on with no march read
+1.068 and broke six of the merge's tests, the four cascades' open box reading up to 1.25 times its
+share and the wall past the near rays' reach 22 percent under. A test on how the merged ray ended
+would take three dispatches a cascade, a second mechanism for one case, and is not built.
+
+The held light's sides for thin solids, from 3DEngine's binding at 389f951, whose thin room's wall
+is a box 0.1 thick in cells of 0.15, kept as a solid and not a sheet, so its cell held the face its
+middle lies on, the lamp's. A solid's cell holds side 1 too, the far face found within 1.2 cells of
+its middle against the field's normal, shaded where a march from beyond it stops, or side 0's light
+again where none lies there, and the read takes the side by the field's normal at the cell's middle.
+On the CPU a wall 0.1 thick lit from beyond it reads a probe before its dark face 0.00000 against
+0.00000 shaded and before its lit face 0.27366 against 0.27616, where the one side read the dark
+face 0.27366, run failing first; 2,944 cells about it hold their sides apart, and the holding pass
+reads the field up to 8 times more for each other held cell. Every other held figure stands.
+
+The held side's cost. On 41f0e09 3DEngine's thin room and its view pass, its holding pass taking
+2.25 ms on Sponza and 3.34 on the Bistro, where it took 2.06 and 2.80, a second side shaded apart
+for 10,183 of 153,245 held cells and 15,063 of 110,018, and its merge 0.77 and 0.98 ms, where it
+took 0.56 and 0.63, from the field's normal `heldSide` read at the cell's middle in six reads.
+`heldSide` reads a solid's side as the field's distance growing along the ray's way across half a
+cell either side of the middle, two reads, and every held figure stands.
+
+The closed rooms' 5 percent over, placed. BevyCSharp's views 2, 4 and 7 at 6e16181 read 1.050, 1.047
+and 1.086 of their traces bound, and with no probe light at the hit, its sun, lamps, glow and
+emission alone, 0.570, 0.382 and 0.550, so the bounce at a hit carries 43 to 62 percent of each
+view's light, and the 5 percent is 8 to 13 percent of that bounce. On one bounce the passes add
+none: the closed box lit by its -x wall alone reads, summed over 49 points for each of five facings,
+0.978 to 1.010 of the light traced against its faces, and its texels each marched on alone 0.975 to
+1.011, the merge adding 1.4 percent at most to its texels' own rays, which a test holds within 3
+percent beside the box every face of which sends the same light. The 5 percent so lies in the bounce
+a binding's hit reads of its probes at the surface, which is the binding's, with the read half a
+spacing off the surface toward the ray the README asks of a cheap hit. The held cells read the views
+3.568, 1.069 and 1.027 at 6e16181, view 2's thin walls mended since.
+
+Verdict 1, the Windows job's time. The tests build each kernel for the CPU through slangc, which
+hands it to the system's C++ compiler at its own level, given by Slang's rules as -Os to gcc and
+clang and as no level at all to Visual Studio's cl, so cl built every kernel unoptimized and each
+test that runs one ran several times slower on Windows than on Linux and macOS, the day's new tests
+running the passes the longest. The probe merge tests run one after another in one class, and on a
+desktop at -Os the heaviest were the lintel's two (25.7 and 23.6 seconds), the four scenes' floors a
+thread a texel (21.8), the closed room lit by one wall (16.4) and the floor under probes two units
+over it (16.1), of a suite of 3 minutes 22 seconds. `CpuKernel` gives slangc -O2, which gives cl /O2
+and the others -O2: the closed room, the lintel lit by the sky alone and the four scenes' floors
+take 170 seconds at -O0, 67 at -Os and 30 at -O2, the suite 2 minutes 2 seconds, and every line the
+tests print reads the same at -O2 as at -Os. The Windows job's minutes are those of this commit's
+run.
+
+The vestibule behind a doorway onto a sunlit court, which 3DEngine's door view of Sponza's vault
+read at 1.70 of its traced light under the passes and 1.19 under its own code. No light is counted
+twice along a ray that marches on: the merge takes a leg's light once, the march's or its far
+probes', never both. 3DEngine's view, screen probes off, reads 1.562 of its 256-path trace under the
+passes and 1.483 with c0's merge reading every probe above as inside, so that each c0 texel marches
+on alone to the coarsest cascade's end: the chain adds 5 percent, and the rest is the light each
+texel's own rays bring from its probe's place and their hits. On the CPU a room behind a wall 1.2
+units thick, its doorway onto a lit court and its far probes in the wall, reads 1.268 of a fine
+trace through four cascades and 1.216 with its texels each marched on alone, and a wider vault 0.723
+and 0.761. The coarsest cascade's 0.60 of the trace alone, 0.01 under 3DEngine's own code, is the
+court's light a ray reaches past the third cascade's end, which the march alone brings as well,
+since every cascade's rays begin at its probe. A held shading that reads the probes' reach maps for
+visibility in place of a march to each probe reads the view at 2.07 and 2.16 in 3DEngine's trial, so
+in this vault what a hit sees of the probes it reads moves the figure far more than the chain does.
+Nothing in the library changed.
+
+The listing of the held cells, which BevyCSharp asked the module to hold for every binding. A thread
+a cell over the whole field leaves most threads with no cell to shade, 25,600 cells held of about a
+million on Sponza in BevyCSharp, and a workgroup whose one thread shades takes as long as a full
+one, so its hold took 2.72 ms on Sponza and 2.95 on the Bistro over every cell, and 1.60 and 1.71
+with the cells listed first, the listing 0.048 and 0.064 more. `listHeldCell` lists into the
+binding's `IHeldList`, which the binding counts atomically and sets to 0 before the listing, the
+cells `holdCellLight` holds, chosen by the same test (`heldCellAt`) apart from the shading
+(`holdHeldCell`), and `holdListedCell` holds them a thread a listed cell. On the CPU the floor under
+the solid slab with a wall 0.1 thick, in two field cascades, lists 50,177 cells of 524,288, those
+the hold over every cell holds, and every held float is the same.
+
+The shading inside the march's step loop. `marchProbeRay` called `hitLight` within the loop its
+steps take, so a driver inlined a binding's whole shading in that loop and every step paid for it:
+one binding that left the loop at a stop and shaded once after it took its trace from 4.02 to 1.75
+ms in one scene and from 5.50 to 2.02 in another, every reading the same, with a second call site.
+The march's steps take an inner loop that reads the field alone and leaves where a step takes the
+light of a surface, a crossing that has stopped half its light, one leaving a surface or meeting a
+solid within it before its light is taken, a stop, or the march's end with a crossing's light still
+to take, and an outer loop shades there at the one call and goes on. The merge marches through the
+same function, so its marches take the same form. The test of one call site holds, beside the one
+copy of the shading in the SPIR-V of a trace and of both merges, that the innermost loop about it
+holds a loop of its own, the steps', where before the change it held none. All 175 tests pass and
+every line the tests print reads the same as before. The README names as a binding's choice the rays
+of each cascade above the finest beginning at the finer one's end, which took that binding's trace
+from 4.02 to 3.27 ms and from 5.50 to 5.14 alone, beside the floor of a box open to the sky that it
+read 3.6 times its light.
+
+The held list's count each frame. BevyCSharp recorded its count every frame under a moving field,
+1,267 frames on Sponza and 1,280 on the Bistro with the finest field cascade moving 20 times, and
+found no gap and no frame's count more than 5 percent from the one before, the largest at a move of
+the field, its 0 a buffer write queued before the frame's commands and its hold dispatched over
+every cell. `IHeldList`'s comment asks for the 0 among the frame's commands before the listing, a
+clear of the buffer or a dispatch of one thread, since a 0 from the host that reaches the GPU after
+the listing's submit leaves the count going on from the frame before, and for the hold dispatched
+after the listing among the same commands, over every cell or by a dispatch the GPU sizes from the
+count's buffer, and not over a count read back to the host, which waits on the listing or is a frame
+old.
+
+The grazing way handed off over a floor. 3DEngine's door view read its floor's probe 142 percent
+over at the first bounce in ways handed to the cascade above at 2 m, one of which takes 0.0526 where
+its trace meets a step's face 4.79 out with 0.0172, the far probes about the ray's end standing a
+spacing over the floor and seeing over the step. On the CPU a probe 0.5 over a floor, its far probes
+2 apart with their lower row inside the floor and a step's face 2.76 past the ray's end, reads that
+way 1.000 against 0.333 traced, 3.0 times it, and every way marched alone reads its trace. Weighing
+a far probe by how near its ray runs to the near ray's changes nothing there, every one that counts
+standing as far off it. Marching on where the far probes that count stand on the whole more than a
+quarter or a half of the far spacing off the ray's line took 62 and 39 percent more steps past the
+rays' ends, and only on the side the ray heads away from, at a half, 14 percent, reading the way
+0.333 and moving no other test's figures or steps. On the branch `offside-march`, in 3DEngine, that
+rule left the floor's probe as it was, the door view 1.556 to 1.536 and 1.603 to 1.592 with the
+screen probes, the merge 0.76 and 0.78 ms against 0.76, and every other reading the same, so the
+merge keeps the over-read and the case is a test of it, the way reading over 2.5 times its trace.
+
+Handoff, for a fresh session, in place of those above. Where the work stands: the library holds the
+field's plan, the triangles' layout and the glow lights in C#, and in Slang the probes' octahedron,
+the cell code, resolve and pinch, the hit's color read, the splat, the stamp, the field's distance
+and march (`rc_field_read`), the probes' trace through surfaces that let light through, their reach
+and their gather (`rc_probes`), the merge with the seeing rule and the self-march
+(`rc_cascade_merge`) and the per-thread passes an engine's kernels call (`rc_probe_passes`), each
+run on the CPU by its tests through `CpuKernel`. The rules agreed for the merge: a far probe inside
+a mesh or not seeing the near ray's end weighs nothing, every cascade's rays begin at its probe, a
+texel no probe above sees marches on to the coarsest cascade's end, and a cascade's end lies within
+twice its spacing, which the README states. A near ray past its end beside a surface marches on to
+it or to open space, the lesser of a far spacing and the field's band, before it hands off. A
+surface a ray crosses adds its own light weighed by what it keeps, and a binding may cap a cascade's
+steps (`ProbeCascade.stepCap`). A binding gives the passes its probes' places (`IProbePlaces`), a
+hit's light (`IProbeField.hitLight`) and the sky along a way (`ISky`), and a near texel takes the
+far texels it covers (`farTexelsLight`). A binding's struct holds no array, which the tests check on
+the module's own kernels by their SPIR-V. A hand-off near an opening's edge read the room behind it
+about 1.4 times the fine trace, and the split rule, a ray marching on where its far probes disagree
+(`HitSpread`), takes it within a quarter at about 1.15 times the steps, reading a four-cascade open
+box's floor 8 percent under, its figures in its Reply. A field's build runs `seamSheet` after the
+pinch. The march calls `hitLight` at one place, outside the loop its steps take, and the merge
+marches at one place, which a test holds by the SPIR-V. A cascade is traced at `TracedMeans.perRead`
+texels a side of each it is read at, 2 at four times the rays, which the lintel's sampling asks, or
+1. A surface whose probes stand off it gathers along its own rays (`gatherTraced`). The merge keeps
+the sky's share beside the light in one pass (`IFarSkyProbes`, `IMergedSkyLight`). A probe inside a
+mesh keeps `ReachInside` in its reach map, and the far probes about a hand-off are tested once. The
+shading at a merge's hits is most of its cost, and each binding passes the merge a cheap hit of its
+own, the sun's reach read at the surface and the probes' light half a spacing off it, or the held
+light of the field's cells (`HeldHitLight`, `holdCellLight`) held whole each frame. A binding may
+list the cells to hold first (`listHeldCell`, `IHeldList`) and hold them a thread a listed cell
+(`holdListedCell`), the count set to 0 among the frame's commands before the listing and the hold
+dispatched over every cell or sized on the GPU from the count's buffer. A crossing passes each
+step's own share and takes its light where it has stopped half the light it carried in. A cascade's
+traced texels a side of each read one are a binding's setting for each cascade, the finest two at 2
+reading the lintel's face 0.825 at 2.2 times the trace's steps. The closed rooms' 5 percent over
+lies in the bounce a binding's hit reads of its probes, the passes adding none on one bounce. A
+vestibule beside a sunlit court reads over its trace in the light its texels' own rays bring from
+their probes' places and their hits, the chain adding 5 percent. A grazing way handed off over a
+floor takes what the far probes over it see past a step it meets beyond its end, 3.0 times its
+trace, a test of the over-read, since marching on where those probes stand off the ray mended it on
+the CPU and not in 3DEngine's door view. The tests build their kernels for the CPU at -O2, at which
+Visual Studio's cl optimizes them as gcc and clang do. Next, as the bindings land the passes: the
+engines' further findings as they take the passes, then the split sum at a hit, the screen probes,
+the light on the picture and the contact shadow's march. Left behind each part's Reply: the field's
+normal, the cascades' table, the march held within a cascade, the splat's second plane, the lending
+of thin emitters, the repaint and the clearing of codes. Open: AGENTS.md's documents rows for
+DEVLOG.md and CHEATSHEET.md wait for the owner. Read first: AGENTS.md, this file's head and
+Decisions, the Replies from the field's distance on, the README's binding section, NORM.md's N 4.8
+to 4.11 and N 7.9, `CpuKernel.cs` and the head of `rc_probe_passes.slang`. Every build and test goes
+through N 7.9's lock by `python3 -I modules/Tools/scripts/gpu.py shared -- <part> -- <part>`, built
+with `--no-restore -p:UseSharedCompilation=false`, its output written to a file of which the summary
+line and the failing lines alone are read, and each commit is read by `commitcheck.py . --staged
+--message=<file>` first. At a binding's request, in the commit carrying this line:
+`build/fetch-slang.sh` reads an archive's sha256 with `shasum -a 256`, on macOS, Linux and Git's
+bash on Windows alike, and Python's hashlib where a system has none, in place of `sha256sum`, which
+N 6.6's check refuses. This repository's own tests do not run that check on its scripts; the
+binding's suite found it.
+
+Item 8, in the commit carrying this line, after `af7d199`. A merge says whether it reads the
+per-probe stage (`IMerge.readsStage`), and a binding runs `stageProbe` over a cascade's probes
+before the cascade's merge, keeps one uint a probe (`IStageKeep`) and hands the values to
+`mergeTexel` beside the merge (`IStageValues`), `NoStageValues` where the merge reads none, so a
+merge that reads none pays nothing. `FarSightLines` keeps a bit for each of the eight far probes
+about a probe, clamped onto the far grid, set where the probe sees it along a line marched through
+the field past surfaces that let light through (`seesAcross`, `opaqueAlong`), half a cell kept clear
+at either end. The eight lengths wait for a merge that asks for them. The third rung,
+`MergeByMarchedSight`, is gi_merge.slang's merge to the letter but in three places where the module
+has no like. The far texel's mark, whole, half or inside, has none, so a far probe inside a mesh is
+passed over by its reach map. The march on begins at the near ray's end, the interval's end for a
+ray that reached it. A texel traces one ray where 3DEngine traces four. The ladder's cost counts the
+stage's steps. The theories pin each merge's own bound. The first commit's port fix stands, the
+second merge leaving out far probes outside the field, whose reach maps are open along every way.
+Its lintel weakness, far probes above the opening read toward the ground under the lintel, stays
+pinned.  The third rung loses light by its rule and not by the port. Where the march on meets a
+surface short of the far level's end and no far probe's own hit lies within its interval to agree,
+as at a graze over a floor, the light from past the ray's end is none, so the uniform closed room
+reads 0.84 to 0.96. Where every coarser probe about a probe stands behind the room's faces none is
+seen, so the lintel's deep end reads 0.15 of its trace and its face under the sky alone none of it.
+The ladder ranks it last at both configurations, 0.426 and 0.349 on the mean distance.  The ladder's
+configuration axis takes 3DEngine's configuration as its session gave it, probes every 8 cells of a
+field of five cascades of 64 cells from 0.125, 8 a side, spacing 1 to 16, the finest two traced at
+16 texels a side and read at 8 for four rays a texel, every ray to four spacings but the last two's
+to the field's diagonal of 221.7, caps of 64 but the last's, probes moved 0.1 clear by at most 0.45
+of their spacing, and each point gathered from the finest level about it. The door is Sponza's
+vestibule and not a built room, so the ladder's stand-in is a vestibule off a sunlit court. At that
+configuration the CPU does not read the walls high. `MergeAtRayEnd` reads the door's walls 1.075 and
+the vestibule's 1.04 to 1.07, where the device path at `42ed4e13` reads up to 2.05. So the cause is
+not sampling at that configuration, and the ladder does not predict the device. The two part before
+the gather, since the device's probe (3,4,2) of cascade 1 reads 2.1 times main's on its +z face, at
+what the CPU does not hold, the light a hit takes, which on the CPU is a fixed light and on the
+device the probes' own light frame over frame for 240 frames, beside the sun and Sponza's meshes.
+The engine's own merge reads the vestibule's walls 0.555 on the CPU where main reads 1.07 on the
+device, so the device's walls take most of their light through that bounce, and the ladder predicts
+the device only where it holds the bounce. No merge stands above every other at both configurations,
+`MergeAtRayEnd` reading 14.4 a texel at the engine's against marched sight's 12.7, so the default
+stays `MergeAtRayEnd`.  Item 8's two commits stand as above, every merge behind `IMerge`, the stage
+and the ladder at two configurations, `.github/LADDER.md` written by `RC_LADDER=.github/LADDER.md
+dotnet test RadianceCascades.Tests --filter FullyQualifiedName~The_Ladder` in about five and a half
+minutes. Open: the ladder holds one bounce, so it does not say whether the device's 2.05 lies in the
+bounce; AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md wait for the owner, and
+LADDER.md's row is with the owner. Read first: the README's ladder section,
+`rc_marched_sight_merge.slang`, `stageProbe` in `rc_probe_passes.slang`, `ProbeMergeTests.Ladder.cs`
+and the test kernel's pass 10.
+
+Item 9, in the commit carrying this line, after `e310325`. The ladder runs every merge to a steady
+state of the bounce. A round runs the whole chain with every hit taking its surface's own light and
+what the surface reflects of the light the probes gave it the round before, a half where it is not
+black and the lintel room's 0.352, gathered at a cell of a grid of 64 a side over the scene's
+surfaces, and nothing is kept past that one round. The test kernel reads that light a cell back
+along the ray from the hit (`bounceAt`), so a march that stops at a sheet's plane inside a wall one
+cell thick reads the side it came from, which a first run without it leaked through the thin wall at
+0.05 of the lit room. The traced loop follows the same rounds over the same cells, those the points'
+rays meet a surface in and those the cells' own rays meet in turn, 2,392 to 6,372 a scene, so the
+two loops part only where a cell's light comes from, the probes or the trace. A closed room whose
+faces send 1 and reflect a half settles at pi times 2 less a sixty-fourth in seven rounds at a gain
+of 0.5000 traced, and the merge at the ray's end follows it at 1.0000 round for round, a test of the
+default suite. Each run of a kernel on the CPU enters a library of its own, a copy of the compiled
+file, so the ladder runs its 48 loops side by side in about five minutes.
+
+With the loop in, the vestibule's walls at 3DEngine's configuration read 1.042 of their trace after
+one gather and 1.033 at the steady state with `MergeAtRayEnd`, in seven rounds at a gain of 0.443,
+where the traced loop's is 0.447. No merge carries an error round the loop on the CPU, since no
+merge's gain lies more than 0.03 above the traced loop's in any scene. The merge that loses light at
+one gather does not hold the loop down either. By marched sight the vestibule's walls read 0.555
+after one gather and 0.600 at the steady state, since what it loses is the light from past its rays'
+ends, the court's through the opening, in every round alike, and its gain lies up to 0.085 below the
+trace's. The merge at the ray's end holds the loop nearest one at the engine's configuration, 0.043
+on the mean distance, and by reach sight at the module's, 0.083 against 0.098 with a worse worst
+part. No merge stands above every other at both, so the default stays `MergeAtRayEnd`.
+
+The CPU reads near one with the bounce in, so the 2.05 lies in what a device hit reflects of the
+probes, where the CPU's reflects its albedo over pi of the module's gather. For the device's walls
+to read twice the CPU's from the same first frame, its gain a frame must be near 0.72 against the
+CPU's 0.44. A device hit (`glossyHit` in 3DEngine's `probelight.slang`) reflects its diffuse share
+past the gloss's of a six-faced cube of each probe's light read at the normal and moved toward the
+faces' light at the surfaces (`towardSurface`), beside the gloss's share of the same cube read about
+the mirror way, both times `lights.counts.z` and `kept`. The gloss's share takes no part of the
+paint's color, so a smooth wall at a graze reflects nearly all it takes, and the gain a frame can
+lie well above the paint's albedo. The same gain would raise main's merge, which reads 0.600 on the
+CPU at the steady state, and main's 1.07 on the device would then be a merge that loses light
+carried up by a hit that reflects too much. The 3DEngine session is asked, through the reviewer's
+queue, for frames 1 to 10 from a cold start at `42ed4e13` and at `df4d0559`, the +z face of probe
+(3,4,2) of cascade 1 in `bounced` and the left wall, with `lights.counts.z`, `kept` and the gloss's
+share at the wall's hits, to set beside the vestibule's rounds in LADDER.md.
+
+Item 9 stands in one commit, the bounce in the test kernel and the tests, the ladder's tables after
+one gather and at the steady state with the rounds and the gain a round, the vestibule round by
+round, and the CPU kernel's copies. Open: the device's frames from the 3DEngine session, and
+AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md wait for the owner, LADDER.md's row with
+the owner. Read first: `ProbeMergeTests.Bounce.cs`, `bounceAt` in the test kernel, the README's
+ladder section, and the last two tables of LADDER.md.
+
+Item 10, in the commit carrying this line, after `c395762`. `rc_cone_read` reads the cone a rough
+surface reflects from the merged levels and traces nothing, whole each frame with no history, behind
+`IConeRead`, whose first read is `ConeAtProbes`. It weighs each texel of a level by the lobe of a
+GGX surface of alpha the roughness squared at the texel's middle way times its solid angle, at the
+eight probes about the point by their trilinear weight and the gather's sight, so the thin wall's
+leak is 0 at the module's configuration. The lobe is never narrower than half a texel's mean width,
+the square root of pi over the texels a side, and the level read is the finest from the point's own
+up that keeps texels as narrow as the cone, or else the first that keeps the most. Test pass 11 runs
+it over the ladder's eight scenes, a low room lit by a small bright light and a red wall beside a
+gray floor, at 0.1, 0.2, 0.3, 0.5, 0.7 and 1.0, against the same lobe traced with 4,096 rays a cone,
+the trace's own noise at most 0.017 of a scene's light. A difference is taken over a scene's traced
+light at roughness 1.0, so a scene whose narrow cones see little is read against the light it holds.
+
+The mark, on the median scene, is 0.5 at the module's configuration, 0.3 reading 0.103, and 0.7 at
+3DEngine's, 0.5 reading 0.118. Rays a probe set it at the module's: 16 texels a side floor the lobe
+at alpha 0.111, roughness 0.333, and the widening alone parts by 0.081 at 0.3, 0.295 at 0.2 and
+0.438 at 0.1. Probe spacing sets it at 3DEngine's. Its finest two levels keep 8 texels, flooring the
+lobe at roughness 0.471, so a narrower cone reads the first level that keeps 16, whose probes stand
+4 apart against the point's 1. There it reads under the trace by 0.42 to 0.47 of the scenes' light
+on the mean and leaks 0.021 of the lit room through the thin wall. The far cascades' sky share does
+not set it, since the open box and the red wall under a sky mark with the closed rooms. On the mean
+over every part, no roughness reads within 0.10 at either configuration. The lintel room's points by
+the opening part most, by 4.8 at the module's and 7.9 at 3DEngine's at 0.1, falling to 0.11 and 0.14
+at 1.0, and the lintel room and the roof window read within 0.10 only at 1.0. The small bright
+light's floor parts by 1.0 to 3.2 at the module's at every roughness and the closed box with one
+lamp by 0.12 to 0.88 at both, since a texel takes its light from one ray at the module's finest
+level and from four at 3DEngine's, so a small source fills a whole texel or misses it. A cone reads
+167 to 323 texels at the module's and 88 to 171 at 3DEngine's. On the sheet's spheres before the red
+wall, the module's reading parts from the trace by 0.039 at 0.3 and 3DEngine's by 0.030 at 0.5.
+
+For each level from the one a point gathers from up, a host hands the kernel the level's cascade at
+the texels it keeps, its merged light at those texels, its reach map and its probes' places. Its
+merge writes all of these from the coarsest level down. Per point, it hands the place, the normal,
+the way toward the eye, the roughness and the level its gather reads, and a buffer for the light. It
+scales that light by its own reflectance, as a split sum scales its filtered light.
+
+Item 10 stands in one commit, which holds the read and its shapes, test pass 11, the closed room's
+fact of every cone reading 1, the cones' section of LADDER.md with each scene's mark, the README's
+section of rough reflections and the sheet. Open: the parity dump from the 3DEngine session, whose
+replay goes first, and AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md, which wait for
+the owner, as LADDER.md's row does. Read first: `rc_cone_read.slang`, `ProbeMergeTests.Cone.cs`,
+pass 11 in the test kernel, and the cones' section of LADDER.md.
+
+The parity dump, in the commit carrying this line, after `11ece81`. 3DEngine logged probe (3, 4, 2)
+of cascade 1 in the door view on the two frames after the cold start's clear, at `42ed4e13`, whose
+module is `84c4225`. Since then the library's passes have changed only by moving the merge into its
+own shape. `ParityReplayTests` runs each texel's trace and merge again on the CPU through
+`parity_replay_cpu.slang`, every call answered from the log. On both frames, all 256 texels of the
+trace and of the merge make the device's calls in its order, their arguments at most 7.6e-6 from the
+device's, and keep its light to the bit. The library's passes run alike on the device and the CPU,
+so what parts lies in what the binding answers. The held cells do not carry the old bounce. On frame
+1, the merge's 16 hits past the rays' ends read 0 but for two directly lit cells (0.41 each), and on
+frame 2 the held cells refill and read 0.005 to 0.03. Cascade 1 traces in halves, so on frame 1 the
+probe's merge reads its rays kept from before the clear. They end where frame 2's fresh rays end on
+every texel, and frame 2's light is 0.58 of theirs on the median texel (0.32 and 0.73 the
+quartiles), so the clear leaves the old light in every ray of the parity not traced that frame. This
+probe's merged light on frame 1 is 0.95 of frame 2's, the old rays' extra light offset by the empty
+held cells, so it does not by itself give the door view's 1.482 against main's 0.834. The run that
+would part the two is frame 1 at `42ed4e13` with the kept rays cleared with the gather's images, or
+with every probe traced on the first frame. Open, in place of item 10's list, are that run in the
+3DEngine session and AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md, which wait for the
+owner, as LADDER.md's row does. Read first: `ParityReplayTests.cs` and `parity_replay_cpu.slang`.
+
+The clean frame 1 from the 3DEngine session, at `42ed4e13` with the probe traced whole on the first
+frame, replays alike, all 256 texels traced and merged as the device did them, arguments at most
+7.6e-6 apart and the light kept to the bit, on that frame and the next. Its rays carry no light on
+frame 1, and the probe's light comes from texel (1, 3) alone, whose rays march on past their ends
+and meet the floor through the held cells. The 3DEngine session reads the split at frame 1 as
+`df4d0559`'s carried rays, whose spot follows the frame's number, and the settled split as
+repeating, 2.034 to 2.045 at `42ed4e13` against 1.072 to 1.075 at `df4d0559`. The CPU's loop settles
+the vestibule's walls at 1.033 of their trace with `MergeAtRayEnd`, near `df4d0559`'s and far from
+`42ed4e13`'s. A dump of a settled frame replays through `ParityReplayTests` as it stands.
+
+Item 11, in the commit carrying this line, after `151689d`. `MergeAboutProbe`, in
+`rc_reach_sight_merge`, is the fourth merge. Its `farLightAbout(field, probes, places, far, place,
+way, texels, out skyShares, out weights)` takes the shape the host asked for, blending the far
+probes about the near probe's own place, each at its trilinear weight where it stands within the
+field and sees that place by its reach map, and reading each toward the point of the near ray
+nearest that probe's hit along the way. No march past the ray's end leaves a probe out, and the ray
+marches on itself to the march's end where none counts. The new scene, `ArcadeCourt` in
+`ProbeMergeTests.Court.cs`, is a court 8 high open to a black sky, its floor lit in a strip 3 wide
+down its middle with the shadow lines of the walls' tops along it, an arcade under a roof at 3 along
+each long wall with a beam across its front, and the long walls read low within the arcades and high
+above them. It meets the mark at an engine's configuration, the merge at the ray's end reading the
+high wall 2.367 of the trace after one gather and 1.922 settled, against the low wall's 1.163 and
+1.082, which a test holds. It does not part the merges as the device did, since every merge reads
+the high wall 2.37 to 2.73 of the trace after one gather there (`MergeAboutProbe` 2.727,
+`MergeByMarchedSight` 2.573), so on the CPU the surplus lies outside how a merge hands a ray off. At
+the module's configuration the merge at the ray's end reads the high wall 1.212 after one gather and
+0.883 settled, and the blend about the probe parts the two walls most, 0.575 low and 1.264 high
+after one gather. Over the eight scenes of the standing, the mean and the worst part read 0.095 and
+0.487 for `MergeByReachSight`, 0.099 and 0.329 for `MergeAtRayEnd`, 0.130 and 0.720 for
+`MergeAboutProbe` and 0.501 and 1.769 for `MergeByMarchedSight` at the module's configuration, and
+0.072 and 0.653, 0.107 and 0.724, 0.227 and 0.750, and 0.283 and 0.768 in the order of the standing
+at an engine's, the merge at the ray's end first. The merge at the ray's end stands above
+`MergeAboutProbe` at both and above `MergeByReachSight` at an engine's, and no merge stands above
+every other at both, so it stays the default. `MergeAboutProbe` takes 0.0 steps a texel past its
+ray's end on the mean and reads 7.9 and 16.2 far texels a texel, against the merge at the ray's
+end's 6.7 and 14.3. A host hands it nothing it does not hand today, the field, the far probes'
+light, sky shares and reach (`IFarSkyProbes`), their places and the sky, as for `MergeAtRayEnd`, and
+names `MergeAboutProbe merge;` before `mergeTexel` and `gatherTraced`. Where the host's merge reads
+a far probe's reach as the mean of four texels, the module reads the one texel the way toward the
+place falls in (`texelOfWay`).
+
+Handoff, for a fresh session, beside the one above that begins with where the work stands, whose
+account of the library holds. The ladder runs four merges over nine scenes at two configurations,
+eight in the standing and the window held out, and writes `.github/LADDER.md` and the README's table
+where `RC_LADDER` names the file. The court between arcades holds the device's case of a high wall
+read over its trace by the merge at the ray's end, but at an engine's configuration every merge
+reads it over by about the same, so the CPU does not yet rank the merges as the device did, and the
+merge at the ray's end stays the default. `ParityReplayTests` replays a binding's dump of a frame
+through the passes. Open are AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md, which wait
+for the owner, as LADDER.md's row does. Read first `ProbeMergeTests.Court.cs`,
+`ProbeMergeTests.Ladder.cs` and `rc_reach_sight_merge.slang`.
+
+Item 12, in the commit carrying this line, after `6aa63e9`. The source is the level the gather
+reads, named in one reading. At an engine's configuration the court's wall points lie at z = -3.75,
+a quarter of a unit past the finest level's last probes at -3.5, so the gather takes them to the
+level spaced 2 (`gatherLevel` in the test binding, the finest level whose probes stand about a point
+on every side). Of that level's trilinear weight over the high wall, the probes 0.75 off the wall
+above the roof hold 0.572 and count, and the row at y = 3 in and under the roof (0.084) and the
+column behind the wall (0.344) are left out already, by the field and by their sight of the point,
+so leaving out the probes the item names reads 2.367 as it stands, and so do the probes left at
+their grid places. Probe (-1, 5, -3) of that level, followed through its 256 texels, keeps the light
+traced from its place along every way, 5.065 toward the court against 5.065, where the wall's point
+behind it sees 1.238 along the same ways. The texels that carry it look down past the roof's edge,
+from (0.09, -0.83, 0.55) to (0.53, -0.74, 0.42) and their mirrors, and their rays end on the sunlit
+strip 5.3 to 9.5 units out, where the same ways from the wall's point meet the roof's top 1.6 to 2.9
+out. One thing at a time, after one gather, the high wall reads 2.367 of its trace as it stands,
+1.240 gathered from the finest level, 1.729 along each point's own rays, 1.801 with the level spaced
+2 the last and its light past its end none, 2.027 with four times the rays a probe (32 texels a
+side, as an octahedron holds a square count), 1.432 with the spacing halved, and 2.367 with the sky
+share zero, since the court's sky is black and the share of 0.093 carries no light. The module's
+configuration gathers from the finest level alone, its edge probes a quarter of a unit off the wall,
+and reads the high wall 1.212, the same source at a third of the offset. Along each point's own rays
+it reads 1.535 there and 1.729 at an engine's, since `gatherTraced` hands each ray on at open space,
+half a unit out, to the probes about it, which see past the roof's edge as the gathered probes do.
+The mend proposed is the binding's rule and no kernel's, to gather a point from the finest level
+whose probes stand about it or within half its spacing past its edge probes, the level's own cells,
+which `GatherRim` sets in the test binding. It adds no read and no step. The court's high wall reads
+1.240 after one gather and 1.177 settled, in place of 2.367 and 1.922. Over the ladder's scenes at
+an engine's configuration with the merge at the ray's end, settled, the mean distance goes from
+0.072 to 0.074 and the worst part from 0.653 to 0.446. The vestibule's walls go from 1.033 to 0.995
+and the held-out room's walls from 1.166 to 1.026, and the lamp's box falls from 0.907 to 0.640 on
+its floor and from 0.919 to 0.672 on its walls, which is the mend's cost and which this item does
+not read further. By the ladder's rule the mend does not stand above the gather as it stands, being
+farther on the mean.
+`A_Court_Wall_Past_The_Finest_Probes_Takes_The_Light_The_Probes_A_Level_Above_See_Three_Quarters_Of_A_Unit_Off_It`
+holds the probe and the two readings of the high wall, and `dotnet test RadianceCascades.Tests
+--filter FullyQualifiedName~Court` with `RC_COURT` set measures the rest in some ten minutes. The
+setup comment of the test kernel now names the fourth merge at 127.
+
+Handoff, for a fresh session, beside the two above. The court's surplus on the CPU is the gather's
+level, the wall's points read by probes a level above that stand 0.75 off the wall. The rule that
+would mend it, `GatherRim`, is in the test binding and off in the ladder, waiting on the owner's
+choice against the lamp's box. Open are AGENTS.md's documents rows for DEVLOG.md and CHEATSHEET.md,
+which wait for the owner, as LADDER.md's row does. Read first `ProbeMergeTests.Court.cs` and
+`gatherLevel` in `probe_passes_cpu.slang`.
+
+Item 12's rim, in the commit carrying this line, after `1e53334`. An engine's configuration in the
+tests now gathers each point from the finest level whose probes stand about it or within half its
+spacing past its edge probes (`GatherRim`), and the README says what a binding does at a level's rim
+and why. A host's binding should hold by a level every point within half its spacing past its edge
+probes, the level's own cells, its edge probes taking it, and hand to the level above only a point
+past that rim, since a wall's points a quarter of a unit past the finest level's last probes
+otherwise go to the level above, whose probes stand a spacing off the wall and see past what hides
+it. With it the ladder at an engine's configuration reads, on the mean and in the worst part, 0.074
+and 0.446 for `MergeAtRayEnd`, 0.117 and 0.388 for `MergeByReachSight`, 0.229 and 0.655 for
+`MergeAboutProbe` and 0.316 and 0.810 for `MergeByMarchedSight`, and the merge at the ray's end
+stands above `MergeAboutProbe` alone there and stays the default. The lamp's box moves to 0.640
+since its floor's and walls' points, past the finest level's probes as the court's are, now go to
+that level's probes a quarter of a unit off, which trace the lamp nearly as the points do (0.373 at
+a wall probe's place against 0.343 beside it), where the level above's probes 0.75 off stood nearer
+the lamp and traced more of it (0.484 against 0.387). Probes of both levels keep only part of the
+small lamp where it lies past their rays' end, a finest wall probe 7.016 of the 10.482 its ways
+trace, one of the level above 6.535 of 13.117 and a finest probe over the floor 3.445 of 14.905, so
+the over-read 0.75 off had hidden a loss at the hand-off, which the rim shows. With the rim the
+court parts the merges, the merge at the ray's end nearest and the three that blend the far probes
+about the near probe's own place over the trace on the high wall, the other way round from the
+device, each part's light after one gather and settled as `RC_LADDER` writes it.
+
+| Merge | Low wall | High wall |
+|---|---|---|
+| `MergeAtRayEnd` | 1.175 and 1.137 | 1.240 and 1.177 |
+| `MergeByReachSight` | 1.324 and 1.259 | 1.668 and 1.474 |
+| `MergeByMarchedSight` | 0.871 and 0.871 | 1.681 and 1.454 |
+| `MergeAboutProbe` | 0.899 and 0.899 | 1.780 and 1.484 |
+
+The lamp's box's figures come from `dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~Court` with `RC_COURT` set, which reads the court's knockouts of item 12 with
+each point held by the probes about it, as they were read.
+
+Handoff, for a fresh session, beside the ones above. The rim is on at an engine's configuration in
+the tests, the court parts the merges with the merge at the ray's end nearest, and the lamp's box
+shows the merge's loss of a small bright light past a ray's end. Open are AGENTS.md's documents rows
+for DEVLOG.md and CHEATSHEET.md, which wait for the owner, as LADDER.md's row does.
+
+The owner confirmed AGENTS.md's documents rows on 2026-11-23, and the commit carrying this line
+links DEVLOG.md and CHEATSHEET.md there with the commands that write them and adds a row for
+LADDER.md with its command.
+
+The moving thin wall, in the commit carrying this line. `stampCell` takes the cascade's cell width
+and stamps a box thinner than a cell along an axis of its own a cell across there, held in its own
+space by the length of each axis's row, so a turned or scaled box holds a cell of the world.
+`StampTests` stamps a wall of 0.1 at eight places across a cell at each cascade's cell of an
+engine's field. At its own thickness a march passes it at 0, 3, 5, 5 and 7 of the 8 at cells of
+0.125 to 2. Held, every place holds a cell's middle and the row reads the distance to a wall a cell
+thick. A thin moving mesh's faces then stand out by half a cell less half its thickness, 0.0125 at
+0.125 and 0.075 at 0.25, so near them a ray along that axis meets it up to that much early, a probe
+that near its face stands inside it, and a point on its face lies that far inside the field's wall.
+The engine's call must hand the cell, `stampCell(shapes, p, cellWidth, reach, still)`, its
+`originAndCell.w`, when it moves its pointer. Handoff, for a fresh session. The stamp holds thin
+boxes, and the engine's call takes the new argument when it moves to this commit. Read first:
+`rc_field_stamp.slang`, `StampTests.cs` and the README's paragraph on `stampCell`.
+
+Item 13, in the commit carrying this line. `rc_probe_passes.slang` gains `GatherRim` (0.5),
+`gatheredLevel(levels, p, rim)` and `gatherSurface(field, levels, surfaces, index)` in two forms,
+the second keeping the share of the sky. `IGatherLevels` and `IGatherSkyLevels` sit in
+`rc_cascade_merge.slang` beside `IFarProbes`, with `GatherLevelProbes` and `GatherSkyLevelProbes`
+reading one level of them as a cascade's probes, so the cone read takes the same struct:
+`IConeLevels` and `ConeLevelProbes` are gone for them, no engine having bound them.
+`GatherLevelTests` reads the four points at levels 0, 0, 1 and 2 at the library's rim and 0, 1, 1
+and 2 with none. The test kernel's gather calls `gatherSurface` at an engine's configuration and the
+library's `gatheredLevel` for its knockouts, and the court and the ladder read as before, the high
+wall 1.240 and LADDER.md the same but its date. An engine hands `gatherSurface` its field
+(`IProbeField`), its pixels (`ISurfacePoints`, the place from depth and the normal, keeping the
+light) and one struct over its cascade images (`IGatherLevels`). That struct gives the level count,
+each level's `ProbeCascade` at the texels it keeps, a probe texel's merged light and reach, and a
+probe's place by its own move rule, in place of `finestAround` and `probesAround` in one engine's
+`gi_screen.slang` and the finest-cascade choice in the other's `gi_light.slang`. Handoff, for a
+fresh session. The gather's level and weights are the library's; item 10 follows the engines' probe
+passes. Read first: `gatherSurface` in `rc_probe_passes.slang`, `IGatherLevels` in
+`rc_cascade_merge.slang` and `GatherLevelTests.cs`.
+
+Item 14, in the commit carrying this line. The mark is not the cause. The engine's branch at
+997d10e7 hands the module every interval from 0, so each ray is traced from its probe and none
+begins past a surface. Built with each level's rays past the first begun at its spacing, as the
+engine's main begins them, and those meeting a surface between the probe and that start kept as met
+with no light, the floor under the solid slab read 1.562 of the sky traced there at the ray's end
+and 1.693 by reach sight, alike with the mark, without it and with every ray begun at its probe, and
+1.056 against 1.059 with every surface sending half the sky's light, so the mark is not kept. Two
+causes are, and the floors test prints both (`dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~A_Floor_Under_A_Solid_Slab_And`). The slab's floor reads 1.693 by reach sight
+with the finest two levels read at 8 texels a side, the 2 by 2 means of the 16 they trace, as an
+engine binds them, and 0.915 read at the 16. The floor takes the sky under the slab's edge at a
+graze, and a mean of four rays read at its texel's middle way weighs the low two at the middle's
+cosine, about twice their own, in the gather and again where the level below takes the coarser
+texel. The open box's floor read 0.612 by reach sight, where the far cascade ends at the field's
+edge and the ray takes every far probe that sees its probe with no march, a probe in the box's
+corner lending the wall beside it along a way the ray leaves by through the top. Such a probe
+weighs nothing where its own hit lies short of where the ray ended (`sightedFarLight`), and the
+floor reads 1.160. The test holds the slab within 0.15 of the trace in the logarithm with the
+finest two read at 16, and the open box within 0.2 as bound. By reach sight the ladder reads at the
+engine's configuration 0.088 on the mean where 0.117 and 0.367 worst where 0.388, the vestibule
+0.022 where 0.129, the open box 0.016 where 0.069 and the door 0.026 where 0.014, and at the
+module's 0.092 where 0.095 and 0.454 worst where 0.487, the lintel's
+(`RC_LADDER=.github/LADDER.md dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~The_Ladder`). A merge taking the march's own surface wherever it meets one, in
+place of the far probes that agree on it, read the slab 0.856 but the module's lintel's deepest
+0.547 where 0.615 and its closed box 0.261 where 0.096, so it is not kept. The engine's slab reads
+near its reference with its finest two levels kept at the 16 texels they trace, four times their
+merged light's memory, and keeps the excess at 8. Handoff, for a fresh session. Past a far cascade
+that ends at the field's edge, the merge by reach sight leaves out each far probe whose own hit
+lies short of the ray's end, and nothing an engine binds changes. Read first: `sightedFarLight` and
+`reachSightLight` in `rc_reach_sight_merge.slang` and `ProbeMergeTests.Floors.cs`.
+
+Item 15, in the commit carrying this line. The surplus is where the probes stand, not the merge, the
+kept texels or the levels. On a wall under a lamp, a ladder scene now, at the engine's
+configuration by reach sight, the top middle reads 1.507 of its trace after one gather and 1.432 at
+the steady state. The finest level's probe half a unit before it keeps 1.140 of the light traced
+along its texels' ways from its place, and those ways take 1.834 of what they take from the wall's
+point behind it, which sees the lamp lower (`dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~A_Wall_Under_A_Lamp`). Read while working, the part read higher still with the
+finest two levels kept at the 16 texels they trace, lower at the module's configuration, and
+nearer its trace along the point's own rays (`gatherTraced`). The module's loop gains 0.486 a round
+where the trace gains 0.489, so the surplus does not grow from one gather to the steady state. The
+engine's growth from 1.02 at zero bounce to 1.5 to 1.85 settled is the light its hits take from its
+faces (`bouncedPlaced` and `probesHold` in its `lights.slang`), which grow alike, and lies outside
+the module. On a flat wall a model of the sight check over the lamp wall's points, its probes half
+a unit or a tenth off, found every point seen by some probe, and the few the module reads black at
+the wall's top corners at the ray's end are seen by their probes, whose texels' middle ways miss
+the small lamp and read nothing traced from their places too. A point no probe of its level sees,
+each inside a mesh or not seeing it by its reach, now takes the level above's light and goes no
+further (`gatherSurface` and `gatheredSums` in `rc_probe_passes.slang`). The floor of a slot 0.6
+wide, whose finest probes about it all stand inside the blocks and the ground, read nothing and
+reads 1.513 to 1.546 of its trace. In a slot 0.2 wide, narrower than the level above's cells, the
+rule walked to the coarsest lent two of the four points the whole sky from a probe over the
+blocks, so it stops at one level, and those two stay dark while the other two read 1.260
+(`dotnet test RadianceCascades.Tests --filter FullyQualifiedName~A_Point_No_Probe`). By reach
+sight the ladder over ten scenes reads 0.095 on the mean and 0.367 worst at the engine's
+configuration where 0.088 and 0.367 over nine, and 0.103 and 0.454 at the module's where 0.092 and
+0.454, the new scene alone moving them, and at the module's configuration the merge at the ray's
+end now stands above it, the default staying `MergeAtRayEnd`
+(`RC_LADDER=.github/LADDER.md dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~The_Ladder`). Handoff, for a fresh session. The gather falls to the level above
+for a point none of its own level's probes sees, and nothing an engine binds changes. Read first
+`gatherSurface` and `gatheredSums` in `rc_probe_passes.slang` and `ProbeMergeTests.Lamp.cs`.
+
+Item 16, in the commit carrying this line. The lintel's miss came with item 14's rule, which left
+out each far probe whose own hit lay short of where the ray ended where the far cascade is the
+coarsest, its end at the field's edge. That rule is gone. Such a ray marches on to twice where it
+ended, where far's interval would end were the ends doubling to the last, and takes the far probes
+by the rule a far cascade that ends within the march takes them (`reachSightLight`). Under a slab 2
+over a floor in a field 19.2 across, the engine's slab's, a probe 0.6 up read its face toward +x
+1.73 times the sky traced along its texels' ways and reads 1.199 with the march, and the ways of
+its face toward -z that meet a surface in the field take 0.013 where the trace gives none (`dotnet
+test RadianceCascades.Tests --filter FullyQualifiedName~A_Probe_Under_A_Slab`). Along the ways that
+leave the field before they meet the floor that face takes 0.555 against 0.280 traced, the sky past
+the field's edge where the floor lies beyond it, which no merge can know, so what 14's mend did not
+reach of the engine's slab is its field's size. The module's floors under the solid slab and in the
+open box read 0.915 and 1.160 as they did (`dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~A_Floor_Under_A_Solid_Slab`). Read by the engine's session with this file in
+place of 39d0a8a's, the lintel's sky reads 0.0705 against the reference's 0.0802 where it read
+0.1079, and its test passes. The solid slab's floor reads 0.141 of the open floor's trace where it
+read 0.126, the half canopy 0.301 as pinned, and the open box 0.904, 0.943 and 1.373 at High,
+Medium and Low as pinned. The box at Low stays over its 1.25, and 774d11d's file read it 1.289, so
+its surplus is not this merge's and stays open. The ladder by reach sight reads 0.095 on the mean
+and 0.367 worst at the engine's configuration as it did, its steps a texel 2.1 where 1.2, and 0.103
+and 0.467 at the module's where 0.103 and 0.454, the module's lintel's deepest settled at 0.627
+where 0.635 (`RC_LADDER=.github/LADDER.md dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~The_Ladder`). Handoff, for a fresh session. Where the far cascade's end lies at
+the field's edge, the merge by reach sight marches the ray on to twice where it ended and takes the
+far probes as a cascade ending within the march does, and nothing an engine binds changes. The
+engine's slab needs a field reaching past its floor, and its open box at Low a reading of the
+engine's own gather. Read first `reachSightLight` in `rc_reach_sight_merge.slang` and
+`ProbeMergeTests.Floors.cs`.
+
+Item 17, in the commit carrying this line. The corridor joins the ladder in
+`ProbeMergeTests.Corridor.cs`, a corridor along x 2.5 wide and 3.5 high inside under a sun through a
+gap in its roof and a lamp in the roof beside it, its points on the floor and on the wall at -z from
+-6 to 6. The eye walks it in quarter steps, from -8 to 8 at the engine's configuration with each
+field cascade and its level snapped to the level's spacing about the eye, and from -4 to 4 at the
+module's with its levels snapped about the eye in the field's one cascade, which holds still, each
+point gathered by `gatherSurface` within `GatherRim`. The ladder writes its section, The corridor
+walked, at both configurations by each merge. By reach sight at the engine's configuration the
+swing reads 3.594 worst and 2.466 at the 99th part and the step 3.558 and 1.299, the other merges'
+swings 3.496 to 4.870 worst and 2.297 to 2.934 at the 99th part, and the module's 3.141 to 3.637 and
+2.635 to 3.299. With the levels held still and the field alone moving over -8 to 8 the swing reads
+0.631 and 0.246, where the walk kept out of the tree read 0.33 and 0.136 over -4 to 4, and with the
+field held still 3.633 and 2.437, so the levels carry the swing (`RC_LADDER=.github/LADDER.md dotnet
+test RadianceCascades.Tests --filter FullyQualifiedName~The_Ladder`). The three causes named in the
+item were read from that walk's figures by level, which no committed command reads. A test holds the
+step at the engine's configuration by reach sight under 3.6 at worst and 1.31 at the 99th part, the
+dense levels' reading, in place of the 2% bound item 18 is to meet, and takes 44 seconds (`dotnet
+test RadianceCascades.Tests --filter FullyQualifiedName~A_Corridors_Fixed_Point`). The ladder with
+the corridor runs 10 minutes 45 seconds, past the GPU gate's shared bound of ten, so it ran under
+`--minutes 30`, and the suite comes to about 9 minutes against that bound. No library code changes.
+Handoff, for a fresh session. The corridor's walk is `CorridorWalk` and `CorridorSwings`, its
+layouts `SnappedEngineField` and `CorridorModuleLevels`, and item 18's sparse probes are read on it
+beside the dense grid as one more layout, the test's bound going to 2% once they meet it. Read first
+`ProbeMergeTests.Corridor.cs` and the corridor's section of the ladder's test in
+`ProbeMergeTests.Ladder.cs`.
+
 ## Decisions
 
 1. **The repository's birth.** The owner made this repository on 2026-10-31 at 12:05 among six,

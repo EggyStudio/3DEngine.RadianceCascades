@@ -172,8 +172,10 @@ below, and each part is added to the probe of its cascade that the point's neare
 to, at the way it falls in, as its light, the share it lets through and a count of one, until a
 part meets a surface or leaves the world. A point over the overlap of two levels traces the same
 way again by the next level's intervals. `keepSplitLight` keeps each way's light from those sums,
-a thread a way, the mean of its rays where it held none, moved toward that mean by a tenth for each
-ray where it held some, and empties them. `mergeSplitCascade` merges each cascade's ways from the
+a thread a way, the mean of what it held over the rays it is the mean of and of the frame's rays,
+those counted up to `SplitKeptRays`, 256, past which each ray moves it by a 256th, so a way settles
+as its rays come and then follows a change of light over 256 of them, and empties the sums, the
+count of rays its light is the mean of kept above the frame's in the bits past `SplitCountBits`. `mergeSplitCascade` merges each cascade's ways from the
 coarsest down, a thread a way, each way's own light and, by the share it lets through, the mean of
 the four ways above that its texel holds at each probe of the cascade above about it that stands,
 by their trilinear weights over those standing, and the sky's above the coarsest. A way no ray
@@ -205,7 +207,16 @@ of 1 with nothing to meet the corridor's points gather 1, and in a closed room w
 0.3 its 3,328 points gather that light, each within a millionth, where letting the ways no ray
 reached through would put 4,442 of the finest cascade's 6,528 ways a hundredth off it, the
 brightest at the sky's 1 (`dotnet test
-RadianceCascades.Tests --filter FullyQualifiedName~SplitStoreTests`).
+RadianceCascades.Tests --filter FullyQualifiedName~SplitStoreTests`). Walked along the corridor as
+the dense levels are, 4 frames at each quarter step after 256 at the first eye, a fixed point's
+light on the split probes steps 0.429 of its mean at worst and 0.202 at the 99th part at an
+engine's configuration, against the dense levels' 3.558 and 1.299, and 0.319 and 0.164 at the
+module's, the rays' noise alone moving it between readings with the eye still 0.082 and 0.068 at an
+engine's and 0.061 and 0.051 at the module's. It steps most where its level steps to the next, the two levels reading it 0.665 to 1.948
+of each other from the 5th part to the 95th at an engine's configuration, since a coarser level's
+probes stand for a wider patch about the corridor's lamp and gap, over an overlap narrower than a
+quarter step below the fourth level (`dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~On_The_Split_Probes`).
 
 `stampCell` takes the cascade's cell width, and stamps a box thinner than a cell along an axis of
 its own a cell across there. A march meets a surface within a tenth of a cell of it (`MarchHit`), so

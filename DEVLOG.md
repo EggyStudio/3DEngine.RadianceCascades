@@ -15,6 +15,14 @@ Done that day
 
 Commits that day
 
+- `3c43c5e` The split cascades merge each way of a cascade from the probes standing above it by
+  renormalized trilinear weights, a way no ray reached left out so a closed room takes no sky.
+- `d2bd443` Each seen point of the split cascades sends a ray a frame along its low-discrepancy
+  ways, split by its level's intervals into the probes of each cascade and kept by count.
+- `1245c78` The split cascades keep a store of probes beside the surfaces the eye sees, each keeping
+  its entry while the eye moves until no point has asked for it within the store's age, and gather a
+  point's light from its level blended with the next over their overlap, the dense levels staying
+  the default layout.
 - `b3862c6` The split cascades' hand is written out in Slang ahead of their passes, the seen points,
   a part of a ray's trace, the store's uints and light, the eye and the frame's count, and a test
   kernel gives it over buffers on every target with 32-bit atomics alone.
