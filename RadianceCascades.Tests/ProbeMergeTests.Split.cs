@@ -24,6 +24,16 @@ public sealed partial class ProbeMergeTests
     // which the swing the rays' noise alone gives is read apart from the walk's.
     private const int CorridorSplitStill = 8;
 
+    // The short walk's warm frames, its still readings and its eyes at an engine's configuration,
+    // the first 2 units of the walk, whose field is built anew at each eye.
+    private const int CorridorShortWarm = 64;
+    private const int CorridorShortStill = 4;
+    private const int CorridorShortEngineEyes = 9;
+
+    // The module's one cascade of the corridor's field, built once for every store over it.
+    private static readonly Lazy<float[]> CorridorModuleCells =
+        new(() => Field(CorridorBoxes.SelectMany((box, i) => Cuboid(box.Low, box.High, i + 1)).ToList()));
+
     // The corridor's inside faces from low to high along it an eighth of a unit apart, each on the
     // world's grid of an eighth so a face keeps its points as the eye moves, as an eye in it sees
     // them, the gap in its roof left out.
@@ -72,7 +82,7 @@ public sealed partial class ProbeMergeTests
         {
             this.configuration = configuration;
             this.cascades = cascades ?? new();
-            moduleCells = configuration == Configuration.Module ? Field(triangles) : [];
+            moduleCells = configuration == Configuration.Module ? CorridorModuleCells.Value : [];
             cellLight = CellLightBy(light ?? CorridorLight);
             gathered = points.SelectMany(p => new[] { p.Place.X, p.Place.Y, p.Place.Z, 1f, p.Normal.X, p.Normal.Y, p.Normal.Z, 0f }).ToArray();
             (Uints, Light, Taken) = (new uint[Shape.Uints], new float[4 * Shape.Lights], new float[4 * Math.Max(points.Length, 4 * 8 * SplitStoreShape.BaseWays)]);
@@ -143,11 +153,12 @@ public sealed partial class ProbeMergeTests
     }
 
     // Each corridor point's gathered light at each eye of a walk by the split store, kept over the
-    // walk as an engine keeps it (SplitCorridor). The store runs CorridorSplitWarm frames at the
-    // first eye and CorridorSplitFrames at each, and each point is gathered after an eye's last
-    // frame, with the CorridorSplitStill readings at the first eye and, for each point whose level
-    // and the next both stand about it, the next's light over its own.
-    private static (float[][] Walk, float[][] Still, List<float> Levels) CorridorSplitWalk(Configuration configuration, float[] eyes)
+    // walk as an engine keeps it (SplitCorridor). The store runs warm frames at the first eye and
+    // CorridorSplitFrames at each, and each point is gathered after an eye's last frame, with still
+    // readings at the first eye and, for each point whose level and the next both stand about it,
+    // the next's light over its own.
+    private static (float[][] Walk, float[][] Still, List<float> Levels) CorridorSplitWalk(Configuration configuration, float[] eyes,
+        int warm = CorridorSplitWarm, int stillReadings = CorridorSplitStill)
     {
         var store = new SplitCorridor(configuration, CorridorPoints);
         var (walk, still, levels) = (new float[eyes.Length][], new List<float[]>(), new List<float>());
@@ -156,8 +167,8 @@ public sealed partial class ProbeMergeTests
             store.At(new(eyes[e], 1.5f, 0));
             if (e == 0)
             {
-                store.Frames(CorridorSplitWarm);
-                for (int s = 0; s < CorridorSplitStill; s++)
+                store.Frames(warm);
+                for (int s = 0; s < stillReadings; s++)
                 {
                     store.Frames(CorridorSplitFrames);
                     still.Add(store.Gather());
@@ -185,14 +196,27 @@ public sealed partial class ProbeMergeTests
         // wider patch of the corridor about the lamp and the gap, and the overlap over which the
         // gather blends them is the last tenth of a level's reach, narrower than a quarter step
         // below the fourth level. The test holds each at its reading, the step under the dense
-        // levels' 3.558 and 1.299, until the levels read nearer.
+        // levels' 3.558 and 1.299, until the levels read nearer. The whole walk runs where
+        // RC_LADDER is set, as in the ladder's run, in 2.2 minutes on a desktop
+        // (RC_LADDER=.github/LADDER.md dotnet test RadianceCascades.Tests --filter
+        // FullyQualifiedName~On_The_Split_Probes). Elsewhere, as in the build's run, the walk
+        // warms 64 frames, reads 4 times with the eye still and walks the first 2 units at an
+        // engine's configuration, in 35 seconds (the same without RC_LADDER), since the build's
+        // slowest system takes several times what a desktop takes and an engine's field is built
+        // anew at each eye.
+        var whole = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RC_LADDER"));
+        var bounds = whole
+            ? new[] { (Configuration.Engine, 0.45f, 0.22f, 0.095f, 0.085f), (Configuration.Module, 0.35f, 0.19f, 0.085f, 0.065f) }
+            : new[] { (Configuration.Engine, 0.37f, 0.24f, 0.105f, 0.065f), (Configuration.Module, 0.38f, 0.2f, 0.055f, 0.04f) };
         var failed = new List<string>();
-        foreach (var (configuration, bound, partBound, stillBound, stillPartBound) in new[] { (Configuration.Engine, 0.45f, 0.22f, 0.095f, 0.085f), (Configuration.Module, 0.35f, 0.19f, 0.085f, 0.065f) })
+        foreach (var (configuration, bound, partBound, stillBound, stillPartBound) in bounds)
         {
-            var (walk, still, levels) = CorridorSplitWalk(configuration, CorridorEyes(configuration));
+            var eyes = CorridorEyes(configuration);
+            var (walk, still, levels) = whole ? CorridorSplitWalk(configuration, eyes)
+                : CorridorSplitWalk(configuration, configuration == Configuration.Engine ? eyes[..CorridorShortEngineEyes] : eyes, CorridorShortWarm, CorridorShortStill);
             var (worst, part, worstStep, stepPart) = CorridorSwings(walk);
             var (_, _, stillStep, stillPart) = CorridorSwings(still);
-            var said = $"at {configuration}'s configuration a fixed point's light on the split probes moves over the walk {worst:0.000} of its mean "
+            var said = $"{(whole ? "over the whole walk" : "over the short walk")} at {configuration}'s configuration a fixed point's light on the split probes moves over the walk {worst:0.000} of its mean "
                 + $"at worst and {part:0.000} at the 99th part, between steps {worstStep:0.000} at worst and {stepPart:0.000} at the 99th part, "
                 + $"with the eye still between readings {stillStep:0.000} at worst and {stillPart:0.000} at the 99th part, and where two levels "
                 + $"stand about a point the next reads {levels[levels.Count / 2]:0.000} of its own at the median, {levels[levels.Count / 20]:0.000} "

@@ -284,19 +284,33 @@ pointer. One commit an engine, after item 3's first part.
     per-way average a running mean with the count capped a way where a tenth of a ray a frame is too
     noisy for the 2% bound; the ladder's split rows in the commit after. Fifth commit, first part,
     `5dec8d3`, the corridor walked on the split probes, pushed at 09:05 on 2026-11-26 after the run
-    of `3c43c5e` went green, its run awaited. A cap of 256 rays a way with the count in the sums,
-    256 warm frames and four at each quarter step; with the eye still the capped mean moves a point
-    0.010 to 0.022 at the 99th part where a tenth of a ray moved it 0.156. The step at the engine's
-    configuration 0.429 worst and 0.202 at the 99th part against the dense grid's 3.558 and 1.299,
-    at the module's 0.319 and 0.164, the test holding that reading; the 2% bound does not hold yet.
-    The cause is the level switch, two levels reading a point 0.665 to 1.948 of each other and the
-    0.9 overlap narrower than a quarter step; more frames an eye did not help, a start of 0.5 gave
-    0.213 and 0.102 at 1.8 times the ray time, keying probes by face nothing. Ruled, the 0.9 start
-    stays as the published method has it and the bound stays 2% as the aim with the test at the
-    reading; the next part reads why two levels read the same point up to twice apart, the coarser
-    level's probes' places, their directions' coverage and the sky share each set against the trace
-    at that point, and mends the cause rather than widening the blend; the ladder's split rows after
-    that.
+    of `3c43c5e` went green, its run cancelled on Linux at the job's 30 minutes (Verdict 2). A cap
+    of 256 rays a way with the count in the sums, 256 warm frames and four at each quarter step;
+    with the eye still the capped mean moves a point 0.010 to 0.022 at the 99th part where a tenth
+    of a ray moved it 0.156. The step at the engine's configuration 0.429 worst and 0.202 at the
+    99th part against the dense grid's 3.558 and 1.299, at the module's 0.319 and 0.164, the test
+    holding that reading; the 2% bound does not hold yet. The cause is the level switch, two levels
+    reading a point 0.665 to 1.948 of each other and the 0.9 overlap narrower than a quarter step;
+    more frames an eye did not help, a start of 0.5 gave 0.213 and 0.102 at 1.8 times the ray time,
+    keying probes by face nothing. Ruled, the 0.9 start stays as the published method has it and the
+    bound stays 2% as the aim with the test at the reading; the next part reads why two levels read
+    the same point up to twice apart, the coarser level's probes' places, their directions' coverage
+    and the sky share each set against the trace at that point, and mends the cause rather than
+    widening the blend; the ladder's split rows after that. The levels' disagreement read and half
+    mended at `3d9cbfc`, pushed at 09:59 on 2026-11-26 after the corridor's run ended cancelled
+    (Verdict 2), its run awaited. At a wall point with the eye at -3, levels 3 and 4 read 1.329 and
+    0.577 of the trace, with coverage full at both; the first cause was each level's rays starting
+    at a quarter of its own spacing, mended by one start for both levels lifted by the point's
+    distance from the eye, after which the finer reads 1.016 and 0.988 of the trace and the coarser
+    0.515 and 0.611 at the two configurations, the walk's step 0.429 and 0.207 at the engine's and
+    0.330 and 0.179 at the module's with the still swing 0.088 and 0.081, the test's bounds at
+    those. The second cause stays open, the coarser probes' footprint mixing the floor's and both
+    walls' rays over 2.4 units, the worst points the floor under the gap at 2.479 and the floor near
+    the field's end at 1.748; keying probes by face did nothing. A reach of eight probes at four
+    times the slots was read, the levels 0.727 to 1.173 of each other and the still swing 0.040, the
+    step 0.522 worst and 0.175 at the 99th part, and ruled out, four times the memory for no gain in
+    the step; the ladder's split rows next, the footprint open until the engines read the design on
+    the device. 239 tests.
 
 ## Verdicts
 
@@ -314,6 +328,16 @@ the Windows job 2 minutes with the CPU kernels built at full optimization.
     the cost, a coarser trace where the bound allows or the heavy cases behind one shared fixture. A
     larger limit is no mend. Settled when a run passes on the three systems with the Windows job's
     minutes stated.
+
+2. **The build on `5dec8d3` is cancelled on Linux at the job's 30 minutes.** Read at 09:59 on
+    2026-11-26, run of `5dec8d3`, job 139773518212. Windows and macOS pass in six minutes; the Linux
+    test job ran past its limit of 30 minutes and was cancelled, the corridor walk on the split
+    probes with its 256 warm frames and four at each quarter step being the new cost, the suite at 9
+    to 10 minutes on the desk. `3d9cbfc`, pushed at 09:59, meets the same limit unless mended. The
+    mend, its own commit ahead of the ladder's split rows, makes the walk's test fit the runner,
+    fewer warm frames or points under a setting the ladder's full read does not use, with the full
+    walk kept for the ladder's own run, and raises the Linux job's limit to 60 minutes beside it,
+    saying the job's time after.
 
 ## Decisions
 
@@ -631,3 +655,21 @@ Asked. Whether the levels take eight probes a reach, `Reach` 2 at a spacing of a
 times the slots, 16,384. A variant of the walk not committed read the levels 0.727 to 1.173 of each
 other from the 5th part to the 95th at an engine's configuration, the step 0.522 at worst and 0.175
 at the 99th part, and the still swing 0.040 and 0.030. The ladder's split rows follow this commit.
+
+Verdict 2, in the commit carrying this line. The Linux job's tests took 22.3 minutes on `3c43c5e`
+against 6.5 on Windows and 5.5 on macOS (`gh run view 45775092884 --json jobs`), so the Linux runner
+is several times slower than the others at the CPU kernels before the walk, and its log needs admin
+rights to read. On the desktop the whole split walk takes 2.2 minutes, half of it an engine's field
+built anew at each of its 65 eyes at 745 ms an eye, a frame taking 90 ms at an engine's
+configuration and 45 at the module's, two thirds of it the rays, by a timing not committed. Where
+`RC_LADDER` is unset the walk warms 64 frames, reads 4 times with the eye still and walks the first
+2 units at an engine's configuration, in 35 seconds. A point steps 0.344 at worst and 0.229 at the
+99th part at an engine's and 0.360 and 0.185 at the module's, the still swing 0.099 and 0.059 and
+0.051 and 0.037, the test holding them under 0.37, 0.24, 0.105 and 0.065 and 0.38, 0.20, 0.055 and
+0.04 (`dotnet test RadianceCascades.Tests --filter FullyQualifiedName~On_The_Split_Probes`). With
+`RC_LADDER` set the whole walk runs and reads as at `3d9cbfc` under its bounds
+(`RC_LADDER=.github/LADDER.md dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~On_The_Split_Probes`). The module's field of the corridor is built once for every
+split store over it, and the lamp's edge's test takes 55 seconds. The Linux job's limit is 60
+minutes, its comment giving the run's times. The job's time on this commit is read once its run
+ends.
