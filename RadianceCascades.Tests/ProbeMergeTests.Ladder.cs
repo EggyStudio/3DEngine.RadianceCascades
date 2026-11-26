@@ -16,14 +16,16 @@ public sealed partial class ProbeMergeTests
     // and the place the field is about, its parts each a name and its points, the light traced to a
     // point facing a way, whether it is held out of the standing, and the points of a dark room
     // beside a lit one whose light is the leak through the wall between them. AtEngine builds the
-    // scene again at an engine's configuration, its field, setting and levels, and Bounce is how
-    // its surfaces pass light between them round after round, whatever the configuration.
+    // scene again at an engine's configuration, its field, setting and levels, Bounce is how its
+    // surfaces pass light between them round after round, whatever the configuration, and Eye is
+    // where the split store's levels are laid about, the place an engine's field is about.
     private sealed record LadderScene(string Name, float[] Cells, Setting Setting, Level[] Levels, Vector3 Place,
         (string Name, (Vector3, Vector3)[] Points)[] Parts, Func<Vector3, Vector3, float> Traced, bool HeldOut = false,
         (Vector3, Vector3)[]? Dark = null)
     {
         public Func<LadderScene>? AtEngine { get; init; }
         public Bounce? Bounce { get; init; }
+        public Vector3 Eye { get; init; } = new(0, 2, 0);
     }
 
     // The configurations the ladder reads every merge at, the module's chain of the closed room's
@@ -151,8 +153,9 @@ public sealed partial class ProbeMergeTests
             dark)
         {
             AtEngine = () => new(name, EngineCells(triangles, about), EngineSetting(setting with { LightByPlace = true }, about), EngineLevels(about), Floor,
-                parts, (p, n) => TracedAmongBoxes(boxes, p, n, light, sky), heldOut, dark) { Bounce = bounce },
+                parts, (p, n) => TracedAmongBoxes(boxes, p, n, light, sky), heldOut, dark) { Bounce = bounce, Eye = about },
             Bounce = bounce,
+            Eye = about,
         };
     }
 
@@ -208,7 +211,7 @@ public sealed partial class ProbeMergeTests
         var lamp = new LadderScene("a closed box with one lamp", Field(closedTriangles), new Setting { CellLight = lampLight, SkyLight = 0 },
             LadderLevels(new(new(-3.5f, 0.5f, -3.5f), 1, 8, 8, 8, NearTexels, 2)), Floor,
             [("floor", Grid(new(-3, 0.25f, -3), Vector3.UnitX, 7, Vector3.UnitZ, 7, Vector3.UnitY)), ("walls", RoomWalls(1, 2, 4))],
-            (p, n) => TracedAmongBoxes(closedBoxes, p, n, lampLight, 0)) { Bounce = BoxBounce(closedBoxes, lampLight, 0) };
+            (p, n) => TracedAmongBoxes(closedBoxes, p, n, lampLight, 0)) { Bounce = BoxBounce(closedBoxes, lampLight, 0), Eye = new(0, 4, 0) };
         var lampCenter = new Vector3(0, 4, 0);
         lamp = lamp with
         {
@@ -235,7 +238,7 @@ public sealed partial class ProbeMergeTests
         var lintel = new LadderScene("a room under a lintel", lintelCells,
             new Setting { FieldCascades = LintelField, CellLight = lintelLight, SkyLight = LintelSky, Moved = true }, LintelLevels, UnderLintel,
             [("by the opening", Columns(0, 3)), ("between", Columns(3, 3)), ("deepest", Columns(6, 2))],
-            (p, n) => TracedAgainstBoxes(MovedOff(p), n)) { Bounce = LintelBounce(lintelLight) };
+            (p, n) => TracedAgainstBoxes(MovedOff(p), n)) { Bounce = LintelBounce(lintelLight), Eye = new(-2, 1.5f, 0) };
         // At the engine's configuration the lintel's own four cascades of the field are the
         // engine's finest four, about the same place, its light built again over the five.
         var lintelCenter = new Vector3(-2, 1.5f, 0);
@@ -433,6 +436,23 @@ public sealed partial class ProbeMergeTests
                 EachRound = eachRound.Select(round => ByPart(scene, round)).ToList(),
             };
         });
+        // The split store's loop over each scene at each configuration on the same field, light and
+        // bounce, the loops side by side as the merges' run.
+        var split = new SplitRow[built.Length];
+        Parallel.For(0, built.Length, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount / 2) }, j =>
+        {
+            var (configuration, each, scene) = built[j];
+            var (points, lit) = LadderPoints(scene);
+            var reference = traced[each.Name];
+            var (tracedFirst, tracedSteady) = (ByPart(scene, reference.First), ByPart(scene, reference.Steady));
+            var (first, light, rounds, settles, gain, _) = SplitLoop(scene, reference.Transport, points, lit);
+            split[j] = new(configuration, each, ByPart(scene, first).Select((sum, p) => sum / tracedFirst[p]).ToArray(),
+                ByPart(scene, light).Select((sum, p) => sum / tracedSteady[p]).ToArray(), rounds, settles, gain,
+                scene.Dark is null ? 0 : light[lit..].Average() / reference.Steady[..lit].Average());
+        });
+        foreach (var r in split)
+            output.WriteLine($"{r.Configuration}, {r.Scene.Name}, split, {string.Join(", ", r.First.Select(q => Invariant(q, "0.000")))} after one gather, "
+                + $"{string.Join(", ", r.Ratios.Select(q => Invariant(q, "0.000")))} at the steady state in {r.Rounds} rounds, leak {Invariant(r.Leak, "0.00000")}");
         foreach (var r in rows)
             output.WriteLine($"{r.Configuration}, {r.Scene.Name}, {r.Merge}, {string.Join(", ", r.First.Select(q => Invariant(q, "0.000")))} after one gather, "
                 + $"{string.Join(", ", r.Ratios.Select(q => Invariant(q, "0.000")))} at the steady state in {r.Rounds} rounds, gain {Invariant(r.Gain, "0.000")}, "
@@ -546,6 +566,7 @@ public sealed partial class ProbeMergeTests
         file.AppendLine($"| every one | traced | {RoundByRound(traced[vestibule.Name].EachRound.Select(round => ByPart(vestibule, round)).ToList())} |");
         foreach (var r in vestibuleRows)
             file.AppendLine($"| {ConfigurationName(r.Configuration)} | {MergeName(r.Merge)} | {RoundByRound(r.EachRound)} |");
+        SplitSection(file, split, rows, standing, top.Length == 1 ? top[0] : Merge.AtRayEnd);
         // The corridor walked at each configuration by each merge, and at an engine's by reach
         // sight with its levels and then its field held still.
         (Configuration Configuration, Merge Merge, Still Still)[] walked =
@@ -555,6 +576,7 @@ public sealed partial class ProbeMergeTests
         ];
         var walks = walked.Select(w => (w.Configuration, w.Merge, w.Still, Swings: CorridorSwings(CorridorWalk(w.Configuration, w.Merge, CorridorEyes(w.Configuration), w.Still))))
             .ToArray();
+        var splitWalks = configurations.Select(c => (Configuration: c, Swings: CorridorSwings(CorridorSplitWalk(c, CorridorEyes(c)).Walk))).ToArray();
         file.AppendLine();
         file.AppendLine("## The corridor walked");
         file.AppendLine();
@@ -565,7 +587,9 @@ public sealed partial class ProbeMergeTests
             + "module's, its levels snapped about it in the field's one cascade, which holds still. Each point is gathered from the finest level "
             + "about it within half its spacing past its edge probes. The swing is each point's light at every eye over its mean over the walk, "
             + "taken whole, and the step each step's change over that mean, each the worst and the 99th part. At an engine's configuration by "
-            + "reach sight the walk is read again with the levels and then the field held still about its middle."))
+            + "reach sight the walk is read again with the levels and then the field held still about its middle. On the split probes the store "
+            + $"runs {CorridorSplitWarm} frames at the first eye and {CorridorSplitFrames} at each step after, its levels laid about the eye, "
+            + "the points it sees the corridor's faces within 16 of the eye along it."))
             file.AppendLine(line);
         file.AppendLine();
         file.AppendLine("| Configuration | Merge | Held still | Worst swing | Swing at the 99th part | Worst step | Step at the 99th part |");
@@ -574,6 +598,13 @@ public sealed partial class ProbeMergeTests
         {
             var held = w.Still switch { Still.Field => "the field", Still.Levels => "the levels", _ => "nothing" };
             var row = $"| {ConfigurationName(w.Configuration)} | {MergeName(w.Merge)} | {held} | {Invariant(w.Swings.Worst, "0.000")} | "
+                + $"{Invariant(w.Swings.Part, "0.000")} | {Invariant(w.Swings.WorstStep, "0.000")} | {Invariant(w.Swings.StepPart, "0.000")} |";
+            file.AppendLine(row);
+            output.WriteLine(row);
+        }
+        foreach (var w in splitWalks)
+        {
+            var row = $"| {ConfigurationName(w.Configuration)} | {SplitMergeName} | nothing | {Invariant(w.Swings.Worst, "0.000")} | "
                 + $"{Invariant(w.Swings.Part, "0.000")} | {Invariant(w.Swings.WorstStep, "0.000")} | {Invariant(w.Swings.StepPart, "0.000")} |";
             file.AppendLine(row);
             output.WriteLine(row);
@@ -599,6 +630,7 @@ public sealed partial class ProbeMergeTests
             File.WriteAllText(readme, string.Join('\n', lines) + "\n");
         }
         output.WriteLine(file.ToString());
-        Assert.True(rows.Length == configurations.Length * merges.Length * scenes.Length, "every merge reads every scene at every configuration");
+        Assert.True(rows.Length == configurations.Length * merges.Length * scenes.Length && split.Length == configurations.Length * scenes.Length,
+            "every merge and the split store read every scene at every configuration");
     }
 }

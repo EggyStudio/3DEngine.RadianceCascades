@@ -1,8 +1,9 @@
 // The split cascades' passes over a scene's field on the CPU, as an engine's compute kernels run
 // them, one pass a dispatch, their rays traced through the field's march (FieldHits) and lit by
-// the light each cell of the test's one cascade holds by the hit's place, so the corridor's walk
-// reads the split store beside the dense levels on the same field. One kernel holds the passes,
-// picked by a value of the setup, so each target compiles every function.
+// the light each cell of the test's one cascade holds by the hit's place, or the field's own
+// cell's, and by the bounce the setup holds, so the corridor's walk and the ladder's scenes read
+// the split store beside the dense levels on the same field. One kernel holds the passes, picked
+// by a value of the setup, so each target compiles every function.
 import rc_split;
 
 // Each cell's distance, the plane it keeps and its share of light through, five floats a cell, as
@@ -14,11 +15,15 @@ RWStructuredBuffer<float> cells;
 // seen points and of points gathered at 12 and 13, the field's cells along a side at 14 and the
 // count of its cascades at 15, each one's least corner and cell from 16, four floats each, the
 // sky's light at 48, the least corner, the cell and the cells along a side of the grid cellLight
-// holds from 49, the cap of steps a ray's part takes at 54, none where 0, and the level and the
-// gathered point whose probes' ways pass 9 reads at 55 and 56.
+// holds from 49, the cap of steps a ray's part takes at 54, none where 0, the level and the
+// gathered point whose probes' ways pass 9 reads at 55 and 56, at 57 whether a hit takes the light
+// of the field's cell it lies in rather than the light of its place, at 58 where the bounce a hit
+// takes begins in cellLight, none where 0, and from 59 the least corner of the bounce's grid, its
+// cell and its cells along a side.
 RWStructuredBuffer<float> setup;
 
-// The light of each cell of the grid the setup gives from 49, x fastest.
+// The light of each cell of the grid the setup gives from 49, x fastest, or of each cell of the
+// field as cells holds them where the setup asks for it, then the bounce's where it holds one.
 RWStructuredBuffer<float> cellLight;
 
 // The seen points, each two float4, its place with 1 in w where the eye sees it, then its normal.
@@ -77,12 +82,29 @@ struct FieldCells : IProbeField
     float throughAt(int cascade, int3 at) { return cells[index(cascade, at) * 5 + 4]; }
 
     // The light of the cell of cellLight's grid the hit lies in, whatever cascade of the field
-    // holds it, as the light traced to a point reads it.
+    // holds it, as the light traced to a point reads it, or the light of the field's cell where the
+    // setup asks for it, and the bounce the setup holds.
     float3 hitLight(float3 place, float3 way, int cascade, int3 at)
     {
+        if (setup[57] > 0.5)
+            return float3(cellLight[index(cascade, at)] + bounceAt(place, way));
         int n = int(setup[53]);
         int3 q = clamp(int3(floor((place - float3(setup[49], setup[50], setup[51])) / setup[52])), int3(0), int3(n - 1));
-        return float3(cellLight[(q.z * n + q.y) * n + q.x]);
+        return float3(cellLight[(q.z * n + q.y) * n + q.x] + bounceAt(place, way));
+    }
+
+    // The light the round before lends a hit at place along way, the light the surface reflects of
+    // the probes in the cell of the bounce's grid a cell back along the ray, as the dense passes
+    // read it, and none where the setup holds none or that point lies outside the grid.
+    float bounceAt(float3 place, float3 way)
+    {
+        if (setup[58] < 0.5)
+            return 0.0;
+        int n = int(setup[63]);
+        int3 q = int3(floor((place - way * setup[62] - float3(setup[59], setup[60], setup[61])) / setup[62]));
+        if (any(q < 0) || any(q >= n))
+            return 0.0;
+        return cellLight[uint(setup[58]) + uint((q.z * n + q.y) * n + q.x)];
     }
 };
 

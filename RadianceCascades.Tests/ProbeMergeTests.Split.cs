@@ -57,58 +57,60 @@ public sealed partial class ProbeMergeTests
                 points.Add((new(x, y, 1.25f), -Vector3.UnitZ));
             }
         }
-        return points.SelectMany(p => new[] { p.Place.X, p.Place.Y, p.Place.Z, 1f, p.Normal.X, p.Normal.Y, p.Normal.Z, 0f }).ToArray();
+        return SplitRun.Floats([.. points]);
     }
 
-    // The split store over the corridor's field at a configuration, its buffers and setup kept from
-    // frame to frame as an engine keeps them. At places the eye, the field about it at an engine's
-    // configuration or the module's one cascade, which holds still, and the faces the eye sees, the
-    // corridor's within 16 of it along the corridor and inside the field unless others are given.
-    // The store's rays are traced through the field and lit by light by place under an even sky,
-    // and the points gathered are given, with room in Taken for the probes' ways pass 9 reads.
-    private sealed class SplitCorridor
+    // The split store over a field, its buffers and setup kept from frame to frame as an engine
+    // keeps them. Its rays are traced through the field Field gives about the eye and lit by the
+    // light given, by the hit's place in the test's one cascade or, where FieldCellLight is set, by
+    // the field's own cell, under an even sky, and, where a bounce's grid is given, by the bounce
+    // Bounce holds, read a cell back along the ray. The points gathered are given, with room in
+    // Taken for the probes' ways pass 9 reads, and the points seen are given by Seen.
+    private class SplitRun
     {
-        private readonly Configuration configuration;
-        private readonly List<Triangle> triangles = CorridorBoxes.SelectMany((box, i) => Cuboid(box.Low, box.High, i + 1)).ToList();
-        private readonly ConcurrentDictionary<Vector4, float[]> cascades;
-        private readonly float[] moduleCells, cellLight, gathered;
+        private readonly float[] cellLight, gathered;
         private readonly float[] setup = new float[64];
         private float[] cells = [], seen = [];
         private Vector3 eye;
         private uint frame;
 
-        public SplitCorridor(Configuration configuration, (Vector3 Place, Vector3 Normal)[] points, ConcurrentDictionary<Vector4, float[]>? cascades = null,
-            Func<Vector3, float>? light = null, float sky = 1)
+        public SplitRun(SplitStoreShape shape, (Vector3 Place, Vector3 Normal)[] points, float[] light, float sky, Vector4? bounceGrid = null)
         {
-            this.configuration = configuration;
-            this.cascades = cascades ?? new();
-            moduleCells = configuration == Configuration.Module ? CorridorModuleCells.Value : [];
-            cellLight = CellLightBy(light ?? CorridorLight);
-            gathered = points.SelectMany(p => new[] { p.Place.X, p.Place.Y, p.Place.Z, 1f, p.Normal.X, p.Normal.Y, p.Normal.Z, 0f }).ToArray();
+            Shape = shape;
+            cellLight = bounceGrid is null ? light : [.. light, .. new float[Size * Size * Size]];
+            gathered = Floats(points);
             (Uints, Light, Taken) = (new uint[Shape.Uints], new float[4 * Shape.Lights], new float[4 * Math.Max(points.Length, 4 * 8 * SplitStoreShape.BaseWays)]);
             (setup[5], setup[6], setup[7], setup[8], setup[9], setup[10]) = (Shape.Slots, Shape.Spacing, Shape.Levels, Shape.Cascades, Shape.Reach, Shape.Age);
             (setup[13], setup[14], setup[48]) = (points.Length, Size, sky);
             (setup[49], setup[50], setup[51], setup[52], setup[53]) = (Corner.X, Corner.Y, Corner.Z, Cell, Size);
+            if (bounceGrid is { } grid)
+                (setup[58], setup[59], setup[60], setup[61], setup[62], setup[63]) = (light.Length, grid.X, grid.Y, grid.Z, grid.W, Size);
         }
 
-        public SplitStoreShape Shape => CorridorSplitShape;
+        public SplitStoreShape Shape { get; }
         public uint[] Uints { get; }
         public float[] Light { get; }
         public float[] Taken { get; }
+        public bool FieldCellLight { init => setup[57] = value ? 1 : 0; }
 
-        public void At(Vector3 place, float[]? seenFaces = null)
+        // Places and normals as the kernel takes them, two float4 a point, 1 in the first's w.
+        public static float[] Floats((Vector3 Place, Vector3 Normal)[] points) =>
+            points.SelectMany(p => new[] { p.Place.X, p.Place.Y, p.Place.Z, 1f, p.Normal.X, p.Normal.Y, p.Normal.Z, 0f }).ToArray();
+
+        // The eye, the field about it, its cascades' least corners and cells and their cells one
+        // cascade after another, finest first.
+        public void Field(Vector3 place, Vector4[] field, float[] fieldCells)
         {
-            eye = place;
-            Vector4[] field = configuration == Configuration.Module ? [new(Corner, Cell)] : SnappedEngineField(eye);
-            cells = configuration == Configuration.Module ? moduleCells
-                : field.SelectMany(f => cascades.GetOrAdd(f, k => FieldCascade(triangles, new(k.X, k.Y, k.Z), k.W))).ToArray();
-            setup[15] = field.Length;
+            (eye, cells, setup[15]) = (place, fieldCells, field.Length);
             for (int c = 0; c < field.Length; c++)
                 (setup[16 + 4 * c], setup[17 + 4 * c], setup[18 + 4 * c], setup[19 + 4 * c]) = (field[c].X, field[c].Y, field[c].Z, field[c].W);
-            var (low, high) = configuration == Configuration.Module ? (Corner.X + Cell / 2, Corner.X + Size * Cell - Cell / 2) : (-60f, 60f);
-            seen = seenFaces ?? CorridorSeenFaces(MathF.Max(eye.X - 16, low), MathF.Min(eye.X + 16, high));
-            setup[12] = seen.Length / 8;
         }
+
+        // The points seen, as Floats gives them.
+        public void Seen(float[] points) => (seen, setup[12]) = (points, points.Length / 8);
+
+        // The light each cell of the bounce's grid lends a hit, x fastest.
+        public void Bounce(float[] grid) => grid.CopyTo(cellLight, (int)setup[58]);
 
         // Runs a pass over threads, for a cascade, a level and a point where it takes them.
         public void Run(int pass, int threads, int cascade = 0, int level = 0, int point = 0)
@@ -149,6 +151,27 @@ public sealed partial class ProbeMergeTests
         {
             Run(8, (int)setup[13]);
             return Taken[..(4 * (int)setup[13])];
+        }
+    }
+
+    // The split store over the corridor's field at a configuration. At places the eye, the field
+    // about it at an engine's configuration or the module's one cascade, which holds still, and the
+    // faces the eye sees, the corridor's within 16 of it along the corridor and inside the field
+    // unless others are given. Its hits are lit by light by place.
+    private sealed class SplitCorridor(Configuration configuration, (Vector3 Place, Vector3 Normal)[] points,
+        ConcurrentDictionary<Vector4, float[]>? cascades = null, Func<Vector3, float>? light = null, float sky = 1)
+        : SplitRun(CorridorSplitShape, points, CellLightBy(light ?? CorridorLight), sky)
+    {
+        private readonly List<Triangle> triangles = CorridorBoxes.SelectMany((box, i) => Cuboid(box.Low, box.High, i + 1)).ToList();
+        private readonly ConcurrentDictionary<Vector4, float[]> cascades = cascades ?? new();
+
+        public void At(Vector3 place, float[]? seenFaces = null)
+        {
+            Vector4[] field = configuration == Configuration.Module ? [new(Corner, Cell)] : SnappedEngineField(place);
+            Field(place, field, configuration == Configuration.Module ? CorridorModuleCells.Value
+                : field.SelectMany(f => cascades.GetOrAdd(f, k => FieldCascade(triangles, new(k.X, k.Y, k.Z), k.W))).ToArray());
+            var (low, high) = configuration == Configuration.Module ? (Corner.X + Cell / 2, Corner.X + Size * Cell - Cell / 2) : (-60f, 60f);
+            Seen(seenFaces ?? CorridorSeenFaces(MathF.Max(place.X - 16, low), MathF.Min(place.X + 16, high)));
         }
     }
 

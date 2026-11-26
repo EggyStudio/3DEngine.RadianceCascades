@@ -207,8 +207,9 @@ hundredth of a unit apart. In the corridor lit as the merge's tests light it, 20
 seen points add 29,000 parts to the probes, 6,909 reaching the second cascade and 239 the coarsest,
 each sum the same as the rays traced whole and split where they ended give, and over 4,096 frames a
 point's rays take the share of each eighth of their half's height within 0.004 of it. Under a sky
-of 1 with nothing to meet the corridor's points gather 1, and in a closed room whose walls all send
-0.3 its 3,328 points gather that light, each within a millionth, where letting the ways no ray
+of 1 with nothing to meet the corridor's points gather pi, its irradiance, as the dense passes'
+gather keeps a surface's light, and in a closed room whose walls all send 0.3 its 3,328 points
+gather pi times that light, each within a millionth, where letting the ways no ray
 reached through would put 4,442 of the finest cascade's 6,528 ways a hundredth off it, the
 brightest at the sky's 1 (`dotnet test
 RadianceCascades.Tests --filter FullyQualifiedName~SplitStoreTests`). Walked along the corridor as
@@ -229,6 +230,18 @@ levels of spacing 2 and 4 meet, the point traced takes 0.5006 at an engine's con
 and the next 0.515 and 0.611, and fed by its own rays alone the two read 0.983 and 0.988 at an
 engine's and 0.983 and 1.006 at the module's (`dotnet test RadianceCascades.Tests --filter
 FullyQualifiedName~At_The_Lamps_Edge`).
+
+Over the ladder's ten scenes, each round of the bounce run by a store anew that sees the scene's
+points and the places of its bounce's cells for 64 frames, the split store reads a part 0.165 from
+its trace on the mean and 0.530 at worst at the module's configuration and 0.166 and 0.550 at an
+engine's, against 0.096 and 0.329 and 0.094 and 0.446 by the merge at the ray's end on the dense
+grid, and the dark room beside the lit one takes 0.167 of the lit room's light through their wall of
+one cell, where on the dense grid it takes none. It reads nearer than the dense grid on the wall
+under a lamp, 0.058 from its trace on the mean against 0.086 at the module's configuration and 0.054
+against 0.168 at an engine's, and farthest in the closed box with one lamp, whose floor and walls
+take 0.652 and 0.589 of their trace at the module's, under the lintel, 1.250 to 1.687, in the
+vestibule, 1.216 to 1.379, and on the arcades' high wall, 1.470 (`RC_LADDER=.github/LADDER.md dotnet
+test RadianceCascades.Tests --filter FullyQualifiedName~The_Ladder`).
 
 `stampCell` takes the cascade's cell width, and stamps a box thinner than a cell along an axis of
 its own a cell across there. A march meets a surface within a tenth of a cell of it (`MarchHit`), so

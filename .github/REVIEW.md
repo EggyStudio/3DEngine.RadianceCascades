@@ -298,19 +298,27 @@ pointer. One commit an engine, after item 3's first part.
     and the sky share each set against the trace at that point, and mends the cause rather than
     widening the blend; the ladder's split rows after that. The levels' disagreement read and half
     mended at `3d9cbfc`, pushed at 09:59 on 2026-11-26 after the corridor's run ended cancelled
-    (Verdict 2), its run awaited. At a wall point with the eye at -3, levels 3 and 4 read 1.329 and
-    0.577 of the trace, with coverage full at both; the first cause was each level's rays starting
-    at a quarter of its own spacing, mended by one start for both levels lifted by the point's
-    distance from the eye, after which the finer reads 1.016 and 0.988 of the trace and the coarser
-    0.515 and 0.611 at the two configurations, the walk's step 0.429 and 0.207 at the engine's and
-    0.330 and 0.179 at the module's with the still swing 0.088 and 0.081, the test's bounds at
-    those. The second cause stays open, the coarser probes' footprint mixing the floor's and both
-    walls' rays over 2.4 units, the worst points the floor under the gap at 2.479 and the floor near
-    the field's end at 1.748; keying probes by face did nothing. A reach of eight probes at four
-    times the slots was read, the levels 0.727 to 1.173 of each other and the still swing 0.040, the
-    step 0.522 worst and 0.175 at the 99th part, and ruled out, four times the memory for no gain in
-    the step; the ladder's split rows next, the footprint open until the engines read the design on
-    the device. 239 tests.
+    (Verdict 2), its run green at 10:25. At a wall point with the eye at -3, levels 3 and 4 read
+    1.329 and 0.577 of the trace, with coverage full at both; the first cause was each level's rays
+    starting at a quarter of its own spacing, mended by one start for both levels lifted by the
+    point's distance from the eye, after which the finer reads 1.016 and 0.988 of the trace and the
+    coarser 0.515 and 0.611 at the two configurations, the walk's step 0.429 and 0.207 at the
+    engine's and 0.330 and 0.179 at the module's with the still swing 0.088 and 0.081, the test's
+    bounds at those. The second cause stays open, the coarser probes' footprint mixing the floor's
+    and both walls' rays over 2.4 units, the worst points the floor under the gap at 2.479 and the
+    floor near the field's end at 1.748; keying probes by face did nothing. A reach of eight probes
+    at four times the slots was read, the levels 0.727 to 1.173 of each other and the still swing
+    0.040, the step 0.522 worst and 0.175 at the 99th part, and ruled out, four times the memory for
+    no gain in the step; the ladder's split rows next, the footprint open until the engines read the
+    design on the device. 239 tests. The ladder's split rows read on 2026-11-26, the commit
+    following. A library fault found and mended with it, the split gatherSurface keeping the
+    cosine-weighted mean where the dense gather keeps pi times it, the split layout reading pi times
+    dimmer. Under the split store the ladder's mean and worst are 0.165 and 0.530 at the module's
+    configuration and 0.166 and 0.550 at the engine's, against the merge at the ray's end's 0.096
+    and 0.329 and 0.094 and 0.446, and the split leaks 0.167 through the one-cell wall where the
+    dense grid leaks none. Read as the footprint once more, and set to be read as two faces of a
+    thin wall sharing one base probe whose rays deposit contradicting values into the same
+    direction, blocked from one side and open from the other, averaged by count.
 
 ## Verdicts
 
@@ -328,16 +336,6 @@ the Windows job 2 minutes with the CPU kernels built at full optimization.
     the cost, a coarser trace where the bound allows or the heavy cases behind one shared fixture. A
     larger limit is no mend. Settled when a run passes on the three systems with the Windows job's
     minutes stated.
-
-2. **The build on `5dec8d3` is cancelled on Linux at the job's 30 minutes.** Read at 09:59 on
-    2026-11-26, run of `5dec8d3`, job 139773518212. Windows and macOS pass in six minutes; the Linux
-    test job ran past its limit of 30 minutes and was cancelled, the corridor walk on the split
-    probes with its 256 warm frames and four at each quarter step being the new cost, the suite at 9
-    to 10 minutes on the desk. `3d9cbfc`, pushed at 09:59, meets the same limit unless mended. The
-    mend, its own commit ahead of the ladder's split rows, makes the walk's test fit the runner,
-    fewer warm frames or points under a setting the ladder's full read does not use, with the full
-    walk kept for the ladder's own run, and raises the Linux job's limit to 60 minutes beside it,
-    saying the job's time after.
 
 ## Decisions
 
@@ -673,3 +671,40 @@ FullyQualifiedName~On_The_Split_Probes`). The module's field of the corridor is 
 split store over it, and the lamp's edge's test takes 55 seconds. The Linux job's limit is 60
 minutes, its comment giving the run's times. The job's time on this commit is read once its run
 ends.
+
+Verdict 2, its time. The run of `4bbcd0d` went green, the Linux job in 21.2 minutes, its tests 20.7,
+Windows in 7.3 and macOS in 6.1 (`gh run view 45791850009 --json jobs`).
+
+Item 18, the ladder's split rows, in the commit carrying this line. The split store runs over every
+ladder scene at both configurations through the bounce's loop beside the merges, on the field, the
+light and the bounce they run on. Each round a store anew, its levels about the place an engine's
+field is about, sees the scene's points and the places of the bounce's cells for 64 frames, its
+hits lit by place or, under the lintel, by the field's own cell, and by the bounce a cell back along
+the ray as the dense hits take it, and gathers at the same points. The whole split walk at both
+configurations stands in the corridor's table beside the merges'. Reading it found a fault in the
+library, the split `gatherSurface` keeping the cosine-weighted mean where the dense gather keeps pi
+times it, so a binding taking the split layout would read its light pi times dimmer. The split
+gather keeps the irradiance, the three tests of its value and the README's sentence with it.
+
+The readings. A part lies 0.165 from its trace on the mean and 0.530 at worst at the module's
+configuration and 0.166 and 0.550 at an engine's, against 0.096 and 0.329 and 0.094 and 0.446 by
+the merge at the ray's end on the dense grid, and the dark room takes 0.167 and 0.169 of the lit
+room's light through the wall of one cell where on the dense grid it takes none. It is nearer than
+the dense grid on the wall under a lamp, 0.058 against 0.086 and 0.054 against 0.168, and on the
+held-out room's mean, 0.019 against 0.030 and 0.018 against 0.032, within 0.06 on the mean in the
+door's room, the open box, the hall and the thin wall's lit room, and farthest in the closed box
+with one lamp, 0.652 and 0.589 of the trace at the module's, under the lintel, 1.250 to 1.687, in
+the vestibule, 1.216 to 1.379, and on the arcades' high wall, 1.470. Walked along the corridor a
+point steps 0.330 at worst and 0.179 at the 99th part at the module's and 0.429 and 0.207 at an
+engine's, against 3.702 and 0.503 and 3.534 and 1.305 by the merge at the ray's end
+(`RC_LADDER=.github/LADDER.md dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~The_Ladder`, 13 minutes on the desk). The bound of 2% holds on no scene.
+
+The cause, by a reading not committed. A scene's point alone, the store seeing it and nothing else
+for 256 frames, reads 0.76 to 1.14 of its trace under the lintel, 0.45 to 1.19 in the closed box and
+0.95 to 0.99 in the thin wall's lit room. With every point seen, the lintel's points by its side
+walls read 1.98 and 2.21, and those in the room's middle 0.75 to 0.85. So the far parts are the
+coarser probes' footprint the corridor showed, a probe holding the mean of rays from faces that see
+different light, and the leak is the same footprint across a wall thinner than a probe's spacing.
+The closed box's points alone stay far, its lamp of 2 a side seen through ways of the finest
+cascade's 32.

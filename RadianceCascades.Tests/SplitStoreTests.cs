@@ -217,9 +217,10 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
     public void A_Split_Gather_Blends_Two_Levels_Over_Their_Overlap_And_Steps_Nowhere()
     {
         // Points along a line from the eye out past every level's reach, each level's probes
-        // holding a light of 2 to its level along every way, so a point takes its level's light
-        // where it stands in one and the two blended by its share over the last tenth of a reach,
-        // and its light climbs smoothly where the eye's distance takes it from a level to the next.
+        // holding a light of 2 to its level along every way, so a point takes pi times its level's
+        // light where it stands in one and the two blended by its share over the last tenth of a
+        // reach, and its light climbs smoothly where the eye's distance takes it from a level to
+        // the next.
         var line = Enumerable.Range(0, 1601).Select(i => (new Vector3(i * 0.01f, 1.5f, 0.2f), Vector3.UnitY)).ToArray();
         var points = Floats(line);
         var eye = new Vector3(0, 1.5f, 0);
@@ -240,7 +241,7 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
             while (d >= reach && level + 1 < Shape.Levels)
                 (level, reach) = (level + 1, reach * 2);
             var next = level + 1 < Shape.Levels ? Math.Clamp((d / reach - 0.9f) / 0.1f, 0, 1) : 0;
-            var expected = MathF.Pow(2, level) * (1 + next);
+            var expected = MathF.PI * MathF.Pow(2, level) * (1 + next);
             worst = MathF.Max(worst, MathF.Abs(taken[4 * k] - expected) / expected);
             if (k > 0)
                 steepest = MathF.Max(steepest, MathF.Abs(taken[4 * k] - taken[4 * k - 4]) / taken[4 * k - 4]);
@@ -626,8 +627,8 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
     public void A_Split_Store_Under_An_Even_Sky_With_Nothing_To_Meet_Gathers_The_Sky()
     {
         // The corridor's points with no corridor about them, under a sky of 1 with nothing for
-        // their rays to meet, gather 1 after four frames, each way's rays leaving the world past
-        // their cascades' intervals.
+        // their rays to meet, gather its irradiance of pi after four frames, each way's rays
+        // leaving the world past their cascades' intervals.
         var points = CorridorFaces();
         var count = points.Length / 8;
         var eye = new Vector3(0, 1.5f, 0);
@@ -635,8 +636,8 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
         for (uint frame = 1; frame <= 4; frame++)
             store.Frame(eye, frame, points, rays: true);
         var taken = store.Run(4, eye, 4, points, count);
-        var worst = Enumerable.Range(0, count).Max(k => MathF.Abs(taken[4 * k] - 1));
-        var said = $"{count} points under a sky of 1 gather it within {worst:0.000000} of it";
+        var worst = Enumerable.Range(0, count).Max(k => MathF.Abs(taken[4 * k] / MathF.PI - 1));
+        var said = $"{count} points under a sky of 1 gather pi times it within {worst:0.000000} of it";
         output.WriteLine(said);
         Assert.True(worst < 1e-4f, said);
     }
@@ -645,9 +646,9 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
     public void A_Split_Store_In_A_Closed_Room_Whose_Walls_Send_One_Light_Gathers_That_Light()
     {
         // In a closed room whose walls all send 0.3, which a ray's part holds as 307 of 1024, every
-        // seen point gathers that light after four frames, the ways no ray reached left out of the
-        // merge, where letting all their light through would let the sky in at the coarsest
-        // cascade.
+        // seen point gathers pi times that light after four frames, the ways no ray reached left
+        // out of the merge, where letting all their light through would let the sky in at the
+        // coarsest cascade.
         var (points, walls) = Room(0.3f);
         var count = points.Length / 8;
         var eye = new Vector3(0, 2, 0);
@@ -656,7 +657,7 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
             store.Frame(eye, frame, points, rays: true);
         var held = 307 / 1024f;
         var taken = store.Run(4, eye, 4, points, count);
-        var worst = Enumerable.Range(0, count).Max(k => MathF.Abs(taken[4 * k] - held) / held);
+        var worst = Enumerable.Range(0, count).Max(k => MathF.Abs(taken[4 * k] / MathF.PI - held) / held);
         var probes = store.Probes(eye, 4);
         var finest = probes.Where(p => p.Cascade == 0).ToList();
         var (through, _) = MergedBy(store, probes, through: true);
@@ -665,7 +666,7 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
             finest.Sum(p => merged[(0, p.Entry)].Count(m => m.W >= 0 && MathF.Abs(m.X - held) > 0.01f * held));
         var known = finest.Sum(p => left[(0, p.Entry)].Count(m => m.W >= 0));
         var brightest = finest.Max(p => through[(0, p.Entry)].Max(m => m.X));
-        var said = $"{count} points gather the walls' light within {worst:0.000000} of it, {Off(left)} of the finest cascade's "
+        var said = $"{count} points gather pi times the walls' light within {worst:0.000000} of it, {Off(left)} of the finest cascade's "
             + $"{known} merged ways lying a hundredth off it, and had the ways no ray reached let all through, "
             + $"{Off(through)} of {finest.Count * SplitStoreShape.BaseWays} would, the brightest at {brightest:0.000}";
         output.WriteLine(said);

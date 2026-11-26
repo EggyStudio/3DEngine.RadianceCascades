@@ -523,7 +523,8 @@ public float3 splitLevelLight<W : IStoreUints, L : IStoreLight>(W uints, L light
 // from the level splitLevelAt picks for it and over the overlap from the next, blended by its
 // share, each level's light from the probes standing about the point (splitLevelLight), and from
 // the one level alone where the other has none standing about it. A point the store does not hold
-// (splitHolds) takes none.
+// (splitHolds) takes none. The light kept is pi times the cosine-weighted mean, the irradiance, as
+// the dense passes' gather keeps it, so a binding reads the same light whichever layout it takes.
 public void gatherSurface<W : IStoreUints, L : IStoreLight, A : ISurfacePoints>(W uints, L light, SplitFrame frame, SplitStore shape,
     A surfaces, uint index)
 {
@@ -541,7 +542,7 @@ public void gatherSurface<W : IStoreUints, L : IStoreLight, A : ISurfacePoints>(
     if (next > 0.0)
         nextTaken = splitLevelLight(uints, light, shape, level + 1u, p, n, nextWeights);
     float share = nextWeights <= 0.0 ? 0.0 : weights <= 0.0 ? 1.0 : next;
-    surfaces.keepTaken(index, lerp(taken, nextTaken, share));
+    surfaces.keepTaken(index, lerp(taken, nextTaken, share) * 3.14159265);
 }
 
 // The point of a disk of radius 1 a point of the square from -1 to 1 stands for, by the concentric

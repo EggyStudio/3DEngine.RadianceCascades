@@ -1537,3 +1537,22 @@ while the game waits on the engine's package; the session that owns the code tod
 session's scripts going into Tools; each engine's session binds the module (item 4). Every session
 reads REVIEW.md's head, its items and the Replies before a batch, as N 7.7 says, and the reviewing
 session pushes.
+
+## Verdicts settled
+
+2. **The build on `5dec8d3` is cancelled on Linux at the job's 30 minutes.** Read at 09:59 on
+    2026-11-26, run of `5dec8d3`, job 139773518212. Windows and macOS pass in six minutes; the Linux
+    test job ran past its limit of 30 minutes and was cancelled, the corridor walk on the split
+    probes with its 256 warm frames and four at each quarter step being the new cost, the suite at 9
+    to 10 minutes on the desk. `3d9cbfc`, pushed at 09:59, meets the same limit unless mended. The
+    mend, its own commit ahead of the ladder's split rows, makes the walk's test fit the runner,
+    fewer warm frames or points under a setting the ladder's full read does not use, with the full
+    walk kept for the ladder's own run, and raises the Linux job's limit to 60 minutes beside it,
+    saying the job's time after. Mended at `4bbcd0d`, pushed at 10:25 after the run of `3d9cbfc`
+    went green within the 30 minutes. Without the ladder's variable the walk warms 64 frames, reads
+    4 still and walks the first 2 units at the engine's configuration, 35 s on the desk where 2 m 10
+    s, its bounds 0.37 and 0.24 for the step and 0.105 and 0.065 still at the engine's, 0.38, 0.20,
+    0.055 and 0.04 at the module's; with the variable set the whole walk runs under the earlier
+    bounds, the field built once for both. The Linux job's limit 60 minutes with the job times in a
+    comment. Settled at 10:5x on 2026-11-26, run 45791850009 green with the Linux job at 21.2
+    minutes, Windows 7.3 and macOS 6.1.
