@@ -201,7 +201,12 @@ trilinear weight and by the share of it the point sees from where its rays start
 more than half of `SeeingSlack` of the spacing and none where it meets one short by the whole, a
 probe not behind the point's face by half that lifted off the face as the ray's start is, since the
 field's march meets the face short of a probe on its plane where it comes in low, over those
-standing and seen that hold a way facing the point, and blends the next level in by the point's share over the overlap. A point's level is the base-two
+standing and seen that hold a way facing the point, and blends the next level in by the point's share over the overlap.
+A point that sees none of its level's probes takes those of the next it sees where they stand, and
+one that sees none of either takes its own level's by their trilinear weights alone, which stand
+since it asks for one of them and hold its own rays. Over a field whose cells are coarse beside the
+lift of the rays' start, the march from that start can meet a face at once along every way and see
+no probe of any level, and such a point would be dark. A point's level is the base-two
 logarithm of its greatest distance along an axis from the eye over the finest level's reach, and a
 probe keeps its entry while seen points ask for it, so the light it keeps stays with it as the eye
 moves. A probe's ways are the middles of the texels of a square of 4 a side for each half of the

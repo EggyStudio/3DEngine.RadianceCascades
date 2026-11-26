@@ -589,6 +589,14 @@ public int3 splitSeenCell<H : IRayHits>(H hits, SplitStore shape, uint level, fl
 public float3 splitLevelLight<W : IStoreUints, L : IStoreLight, H : IRayHits>(W uints, L light, H hits, SplitStore shape, uint level,
     float3 p, float3 n, float3 origin, out float weights)
 {
+    return splitLevelLight(uints, light, hits, shape, level, p, n, origin, true, weights);
+}
+
+// splitLevelLight, each probe weighed by its trilinear weight alone where bySight is false, as
+// the gather takes a point's own level's probes where it sees none of either level's.
+public float3 splitLevelLight<W : IStoreUints, L : IStoreLight, H : IRayHits>(W uints, L light, H hits, SplitStore shape, uint level,
+    float3 p, float3 n, float3 origin, bool bySight, out float weights)
+{
     float spacing = splitSpacing(shape, level, 0u);
     float3 q = p / spacing;
     int3 base = int3(floor(q));
@@ -603,7 +611,8 @@ public float3 splitLevelLight<W : IStoreUints, L : IStoreLight, H : IRayHits>(W 
         uint entry = findSplitProbe(uints, shape, splitKey(level, 0u, base + offset));
         if (weight <= 0.0 || entry == SplitNone)
             continue;
-        weight *= splitProbeSight(hits, p, origin, float3(base + offset) * spacing, SeeingSlack * spacing);
+        if (bySight)
+            weight *= splitProbeSight(hits, p, origin, float3(base + offset) * spacing, SeeingSlack * spacing);
         if (weight <= 0.0)
             continue;
         float3 taken = float3(0.0);
@@ -630,8 +639,13 @@ public float3 splitLevelLight<W : IStoreUints, L : IStoreLight, H : IRayHits>(W 
 // from the level splitLevelAt picks for it and over the overlap from the next, blended by its
 // share, each level's light from the probes standing about the point that it sees from where its
 // rays start (splitLevelLight), and from the one level alone where the other has none it sees. A
-// point that sees none of either takes none, as does a point the store does not hold
-// (splitHolds), though the probe its own rays go to (splitSeenCell) is one it sees. The light kept
+// point that sees none of its level's probes takes those of the next it sees where they stand,
+// and one that sees none of either takes its own level's by their trilinear weights alone, which
+// stand since it asks for one of them and hold its own rays, where the next level's stand only
+// where other points ask for them. Over a field whose cells are coarse beside the lift of the
+// rays' start off the face, the march from that start can meet a face at once along every way
+// and see no probe of any level, and a point that took none would be dark. A point the store
+// does not hold (splitHolds) takes none. The light kept
 // is pi times the cosine-weighted mean, the irradiance, as the dense passes' gather keeps it, so a
 // binding reads the same light whichever layout it takes. A binding hands it the hits its rays are
 // traced by (IRayHits), the same as traceSeenRays takes.
@@ -648,10 +662,12 @@ public void gatherSurface<W : IStoreUints, L : IStoreLight, H : IRayHits, A : IS
     float3 origin = splitRayOrigin(frame, shape, p, n);
     float next, weights, nextWeights = 0.0;
     uint level = splitLevelAt(frame, shape, p, next);
-    float3 taken = splitLevelLight(uints, light, hits, shape, level, p, n, origin, weights);
+    float3 taken = splitLevelLight(uints, light, hits, shape, level, p, n, origin, true, weights);
     float3 nextTaken = float3(0.0);
-    if (next > 0.0)
-        nextTaken = splitLevelLight(uints, light, hits, shape, level + 1u, p, n, origin, nextWeights);
+    if (next > 0.0 || (weights <= 0.0 && level + 1u < shape.levels))
+        nextTaken = splitLevelLight(uints, light, hits, shape, level + 1u, p, n, origin, true, nextWeights);
+    if (weights <= 0.0 && nextWeights <= 0.0)
+        taken = splitLevelLight(uints, light, hits, shape, level, p, n, origin, false, weights);
     float share = nextWeights <= 0.0 ? 0.0 : weights <= 0.0 ? 1.0 : next;
     surfaces.keepTaken(index, lerp(taken, nextTaken, share) * 3.14159265);
 }

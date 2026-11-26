@@ -373,7 +373,39 @@ pointer. One commit an engine, after item 3's first part.
     one reading of the non-chain parents at half weight, kept if it holds the walk and lowers the
     rise; the lintel's 0.316 stands as the next fault, the far parts of other children's rays
     carried by a seen parent. The hand's askCascadeProbes gains the hits and the entry widens to
-    four uints.
+    four uints. The merge by the parents' sight with the gather's lift at `bc1e297`, pushed at 14:21
+    on 2026-11-26, its run awaited. The whole walk 0.360 and 0.220 at the module's configuration and
+    0.609 and 0.249 at the engine's, the short walk 0.548 and 0.218 and 0.348 and 0.200, the bounds
+    at those; the lamp edge 1.197 and 1.127 from every face and within 2% from its own rays, kept at
+    a quarter; the ladder 0.107 and 0.459 at both from 0.080 and 0.405, the leak 0 and the held-out
+    room 0.021 and 0.062, the lintel 0.316 as the next fault. Half weight on the other parents read
+    0.101 and 0.415 with the lintel 0.267 but the walk 0.402 and 0.652, and was rejected; the chain
+    parent alone kept the ladder but not the walk. The hand's askCascadeProbes takes the hits and an
+    entry is four uints. 240 tests. From the engine's device at 1080p on 2026-11-26, the split's
+    rays take 54 ms of a 72 ms frame where the published method's whole frame is under 9 ms on a
+    laptop device, because each of a ray's parts is traced as its own ray query, 2,650,656 rays into
+    4,688,000 queries with 2,603,000 shaded; the published method traces each ray once and splits
+    its one hit by distance into the cascades' intervals, the far intervals taking transmittance 0
+    past the hit and the light at the hit alone. Taken as the next change after the lintel, the
+    hits' interface handing one trace a ray and the split done by distance, read on the ladder for
+    equality within noise and by the engine for its time. From the engine's binding of bc1e297 at
+    Low, 280 of a closed room's 15,360 pixels gather none, their level 2 probes standing and asked
+    but none passing the sight march through the engine's coarse field; a fallback for a point none
+    of whose probes are seen at the coarsest level it has, the probes taken unweighted by sight or
+    the level above, with a ladder test at a coarse field, before the lintel if small; the engine's
+    pin waits on it.
+
+19. **The finest probes from the view, kept; the coarse levels as fixed world grids.** The direction
+    of 2026-11-26 at 16:3x (Decision 11), after item 18's fallback for a point no probe sees and
+    before the lintel's carry-over and the single trace. Two changes to the split store. A probe,
+    once placed from the view, is kept until memory presses rather than freed the frame after it is
+    last asked for, with the store's memory read and a rule for what goes first when it fills, so a
+    turn of the eye finds the probes it left behind still standing; and the levels above the finest
+    are plain world-space grids that never move with the eye, the finest level alone placed from the
+    visible surfaces, so a fixed point's level is set by where it stands and never changes as the
+    eye comes near, in place of the level by distance from the eye. Read on the corridor walk
+    against today's 0.360 and 0.609 worst step and on the whole ladder, the store's memory beside;
+    the walk's bound moves toward 2% with it. One or two commits, the hand's change said if any.
 
 ## Verdicts
 
@@ -444,6 +476,12 @@ Decisions 1 to 5 stand in REVIEW-ARCHIVE.md under Decisions; the last five follo
     by hit distance from the surface points, item 18, measured on the corridor's number and the
     engine's door before the engines rebind; the dense grid's remaining misses are not chased
     further, and the screen cascades stay as they are on top of whichever world probes exist.
+
+11. **The finest probes from the view and kept, the coarse levels fixed in the world.** The
+    direction of 2026-11-26, item 19. Probes placed from the view are cached in world space and kept
+    until memory presses, and the levels above the finest are fixed world grids rather than levels
+    by distance from the eye, so nothing a fixed point reads changes with the eye's place; the
+    finest level alone follows the view onto the surfaces.
 
 ## Replies
 
@@ -864,3 +902,55 @@ step the whole walk 0.402 and 0.220 at the module's configuration and 0.652 and 
 engine's, so it lowers the rise and does not hold the walk, and is not taken. The lift with the one
 probe above alone keeps the ladder at 0.080 and 0.415 and steps the walk 0.519 and 0.859, so the
 lift helps the walk only beside the merge's sight.
+
+Item 18, the gather's fallback for a point that sees none of its probes, in the commit carrying
+this line. `gatherSurface` takes a point that sees none of its level's probes about it from those
+of the next level it sees where they stand, as it took a point over the overlap, and a point that
+sees none of either from its own level's probes by their trilinear weights alone, which
+`splitLevelLight` takes when told not to weigh by sight. Its own level's probes stand, since the
+point asks for one of them, and hold its own rays, where the next level's stand only where other
+points ask for them and reach farther past a wall. The ask and the trace are as they were, so where
+every gathered point sees one of its probes the store reads as before, and the hand changes nothing.
+The test is the lamp's closed box with every face sending a light of 1, read at 1,536 points every
+half unit over its faces from the room's middle and from an eye low by a wall, over fields whose
+finest cell is 0.5 and 1. It reads 1.0000 at every point (`dotnet test RadianceCascades.Tests
+--filter FullyQualifiedName~Over_A_Coarse_Field`).
+
+By a reading not committed, the gather that took none left 8 of those points dark from the eye by
+the wall over the field of 0.5 and 104 and 174 from the two eyes over the field of 1, along the
+floor's and the lid's edges at levels 2 and 3, and none over the module's own field of 0.25. There
+the lift of a ray's start, 0.125 to 0.5, lies within a cell, and the march from it meets a face at
+once along every way. The next level's probes by sight brought back none of them, since no point
+asks for them there. Asking for the next level's probe as well and tracing the ray there too, as
+the overlap does, brought back about a tenth of 6,144 such points over the field of 1, and moved
+the module's short walk at the 99th part from 0.218 to 0.241, since the points by the corridor's
+corners that see none of their probes then add their rays to the next level's probes that the
+walk's points read. It is not taken.
+
+The ladder's split rows read as at `bc1e297`, 0.107 from the trace on the mean and 0.459 at worst
+at the module's configuration and 0.108 and 0.459 at an engine's, the leak 0, since no point of a
+ladder scene sees none of its probes, by a reading not committed of the split rows alone. The whole
+walk steps 0.360 and 0.220 at the module's configuration and 0.609 and 0.249 at an engine's, and
+the short walk 0.548 and 0.218 and 0.348 and 0.200, every step as before
+(`RC_LADDER=.github/LADDER.md dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~On_The_Split_Probes`).
+
+The lintel, by a reading not committed, one thing out at a time at the module's configuration, its
+parts by the opening, between and deepest. The chain parent alone reads 1.081, 1.272 and 0.901 of
+the trace and the merge by sight 1.242, 1.710 and 1.328. The sight taken into cascade 0 alone reads
+1.244, 1.598 and 1.108, into cascade 1 alone 1.079, 1.368 and 1.166 and into cascade 2 alone 1.081,
+1.278 and 0.901, and the other parents along x alone 1.124, 1.397 and 1.104, along y alone 1.150,
+1.387 and 1.006 and along z alone 1.092, 1.289 and 0.873. The parent a cell rounded up hands on to,
+which weighs 1, holds rays that start a quarter, 0.375 and 0.4375 of its spacing toward −x, −y and
+−z of its place at cascades 1 to 3, and the merge by sight adds the lower parent and the one toward
+the opening, whose rays from the floor's points pass under the lintel's foot at 2 high where the
+point's own rays meet the lintel, carried mostly into cascade 0 and along x and y. Three mends were
+read. A parent picked at random along each odd axis broke the closed room's store test at 0.137 and
+raised the door's room 12%. Rays handed on to a parent picked among those seen, by share, read the
+split ladder 0.090 and 0.415 with the lintel 0.189 and stepped the short walk 0.614 and 0.238 at
+the module's configuration. The parents weighed three quarters and a quarter about a probe by their
+sight read the ladder 0.079 and 0.391 with the lintel 0.138 and the leak 0, and stepped the whole
+walk 0.426 and 0.214 and 0.728 and 0.247, its worst at an engine's configuration at the wall's
+point 2.5 high 5 along the corridor as the eye crosses 3.25, which steps 0.519 under the merge at
+`bc1e297`. None is taken, and the lintel waits behind item 19, whose grids change the hand-off it
+rests on.
