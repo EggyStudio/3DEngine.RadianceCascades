@@ -214,15 +214,40 @@ pointer. One commit an engine, after item 3's first part.
     (the high wall there), and proposes the mend with its cost. No mend is made in this item unless
     it is a fault in a kernel, which is mended with a test.
 
-15. **The surface gather's light over the trace, and the points no probe sees.** From the engine's
-    item 313 on 2026-11-25, under Decision 9, after item 14. The gather at the engine's depth
-    points, in its sky form over the engine's merged images, reads 1.5 to 1.85 of the traced light
-    once settled on the door's wall where the module's own note gives 1.26 on an open box floor, and
-    at zero bounce 1.02 of the wall against the engine's faces at 0.63; and it gives 0 where no
-    probe passes the sight check at 0.125 spacing, a dither of black points on the wall. One reading
-    of where the surplus comes from, the merge, the weights or the levels, with a ladder scene that
-    holds a wall under a lamp settled, and a rule for a point no probe sees, the nearest seeing
-    probe or the coarser level, with its test. One commit.
+16. **The engine's door at the mark, read again on items 14 and 15.** From the engine's 304 on
+    2026-11-26 with the pin at 39d0a8a and the finest levels at 16 texels a side. The six parts over
+    the reference at zero 0.85, 0.41, 3.34, 0.33, 0.14 and 5.35 against the engine's own 0.73, 0.85,
+    3.88, 0.29, 0.38 and 4.38, settled 1.62, 1.18, 4.19, 0.97, 1.18 and 6.71 against 1.30, 1.47,
+    4.82, 0.78, 1.17 and 5.83; the open box at Low 1.373 against 1.25, the solid slab's floor 0.126
+    against 0.063, the half canopy 0.310 against 0.403, and the lintel's sky 0.1079 against at most
+    0.0882 where it passed at 774d11d, the same four misses at 8 texels a side, so the lintel's miss
+    came with items 14 or 15 and the texel count moved the slab by 0.007 and not from 1.69 to 0.92
+    as the module's slab did. The module's slab and the engine's differ, so this item builds the
+    engine's slab, lintel, open box and half canopy as ladder scenes at the engine's configuration
+    from the figures it hands, finds what its mend of 14 did not reach and what 15 broke at the
+    lintel, and mends it with a test; then the engine reads 304 again. One or two commits.
+
+17. **A fixed point's light holds still as the field moves.** The direction of 2026-11-26 through
+    the engine's item 317. On the ladder, a corridor of fixed walls under a sun and a lamp with the
+    field and its cascades stepped along it in small steps over several cells of every level, so
+    every edge crosses a set of fixed surface points; each point's gathered light over the walk
+    against its own mean, the number the worst swing and the 99th part, under 2% as the first bound,
+    at both configurations and with each merge. The scene joins the ladder and a test holds it.
+    Where it swings, the edge and level are named and the placement or the merge mended with the
+    test; the engine's figures from 317 come here as they are read. One commit, before 16's second
+    commit if 16 is not done. Read against the sparse method on 2026-11-26. Ours is a dense grid a
+    level about the eye with probes in air and inside walls, each tracing from where it stands, the
+    host moving one off a surface and the gather skipping one inside a mesh; theirs keeps only the
+    probes nearest the visible surface points, persisted, with rays started at the surface points
+    and split by hit distance into each cascade's probe and direction. Ours lacks the sparse set,
+    the ray splitting, the time-jittered low-discrepancy directions, the irradiance texture a probe
+    and the temporal blend. Under movement each probe keeps its world place, the spacing being eight
+    cells and the snap eight, and a level's region moves a whole spacing at a time. The likeliest
+    mover of a fixed point is the gather's hard switch of level at a level's edge, the point's light
+    jumping from level n's gather to n+1's in one frame where the levels read differently near
+    walls; second, the fade bands of the field cascade a ray reads following the eye, so a hit can
+    move by a coarse cell. First to take, a blend across each level's edge band in the gather as the
+    sparse method's overlap does, once the corridor shows that swing.
 
 ## Verdicts
 
@@ -1009,3 +1034,32 @@ end now stands above it, the default staying `MergeAtRayEnd`
 FullyQualifiedName~The_Ladder`). Handoff, for a fresh session. The gather falls to the level above
 for a point none of its own level's probes sees, and nothing an engine binds changes. Read first
 `gatherSurface` and `gatheredSums` in `rc_probe_passes.slang` and `ProbeMergeTests.Lamp.cs`.
+
+Item 16, in the commit carrying this line. The lintel's miss came with item 14's rule, which left
+out each far probe whose own hit lay short of where the ray ended where the far cascade is the
+coarsest, its end at the field's edge. That rule is gone. Such a ray marches on to twice where it
+ended, where far's interval would end were the ends doubling to the last, and takes the far probes
+by the rule a far cascade that ends within the march takes them (`reachSightLight`). Under a slab 2
+over a floor in a field 19.2 across, the engine's slab's, a probe 0.6 up read its face toward +x
+1.73 times the sky traced along its texels' ways and reads 1.199 with the march, and the ways of
+its face toward -z that meet a surface in the field take 0.013 where the trace gives none (`dotnet
+test RadianceCascades.Tests --filter FullyQualifiedName~A_Probe_Under_A_Slab`). Along the ways that
+leave the field before they meet the floor that face takes 0.555 against 0.280 traced, the sky past
+the field's edge where the floor lies beyond it, which no merge can know, so what 14's mend did not
+reach of the engine's slab is its field's size. The module's floors under the solid slab and in the
+open box read 0.915 and 1.160 as they did (`dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~A_Floor_Under_A_Solid_Slab`). Read by the engine's session with this file in
+place of 39d0a8a's, the lintel's sky reads 0.0705 against the reference's 0.0802 where it read
+0.1079, and its test passes. The solid slab's floor reads 0.141 of the open floor's trace where it
+read 0.126, the half canopy 0.301 as pinned, and the open box 0.904, 0.943 and 1.373 at High,
+Medium and Low as pinned. The box at Low stays over its 1.25, and 774d11d's file read it 1.289, so
+its surplus is not this merge's and stays open. The ladder by reach sight reads 0.095 on the mean
+and 0.367 worst at the engine's configuration as it did, its steps a texel 2.1 where 1.2, and 0.103
+and 0.467 at the module's where 0.103 and 0.454, the module's lintel's deepest settled at 0.627
+where 0.635 (`RC_LADDER=.github/LADDER.md dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~The_Ladder`). Handoff, for a fresh session. Where the far cascade's end lies at
+the field's edge, the merge by reach sight marches the ray on to twice where it ended and takes the
+far probes as a cascade ending within the march does, and nothing an engine binds changes. The
+engine's slab needs a field reaching past its floor, and its open box at Low a reading of the
+engine's own gather. Read first `reachSightLight` in `rc_reach_sight_merge.slang` and
+`ProbeMergeTests.Floors.cs`.

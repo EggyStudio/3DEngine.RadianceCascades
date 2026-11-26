@@ -455,8 +455,8 @@ groupshared memory, since a dispatch does not group its threads by probe at ever
   to the far cascade's end, leaves out each probe whose own hit along the way lies off the surface
   that march meets, reads each toward the point of the ray nearest its hit, and takes its own
   march where none is left (`reachSightLight`). Where the far cascade's end lies at the coarsest's,
-  which the ray does not march to, it leaves out each probe whose own hit lies short of where the
-  ray ended, since that surface stands beside the ray.
+  the field's edge, the march runs to twice where the ray ended, since far probes standing higher
+  than a ray along a way under the horizon see past the floor it meets there.
 - `MergeByMarchedSight`, in `rc_marched_sight_merge`, takes the eight far probes about the near
   probe's own place, clamped onto the far grid, that the near probe sees along a line marched
   through the field past surfaces that let light through. The stage marches the lines once a probe
@@ -510,11 +510,11 @@ by round.
 | Configuration | Merge | Mean distance | Worst part | Leak | Steps a texel | Reads a texel | Most gain a round | Stands above | Held out, mean and worst |
 |---|---|---|---|---|---|---|---|---|---|
 | the module's | at the ray's end, `MergeAtRayEnd` | 0.096 | 0.329 | 0.00000 | 1.0 | 6.5 | 0.501 | by reach sight, about its own probe, by marched sight | 0.030 and 0.041 |
-| the module's | by reach sight, `MergeByReachSight` | 0.103 | 0.454 | 0.00000 | 1.0 | 6.9 | 0.501 | none | 0.065 and 0.143 |
+| the module's | by reach sight, `MergeByReachSight` | 0.103 | 0.467 | 0.00000 | 1.1 | 6.9 | 0.501 | none | 0.065 and 0.143 |
 | the module's | about its own probe, `MergeAboutProbe` | 0.161 | 0.720 | 0.00000 | 0.0 | 7.6 | 0.501 | none | 0.073 and 0.170 |
 | the module's | by marched sight, `MergeByMarchedSight` | 0.430 | 1.769 | 0.00000 | 1.0 | 6.6 | 0.475 | none | 0.270 and 0.412 |
 | an engine's | at the ray's end, `MergeAtRayEnd` | 0.094 | 0.446 | 0.00000 | 0.6 | 14.4 | 0.501 | about its own probe | 0.032 and 0.040 |
-| an engine's | by reach sight, `MergeByReachSight` | 0.095 | 0.367 | 0.00000 | 1.2 | 15.3 | 0.501 | none | 0.041 and 0.055 |
+| an engine's | by reach sight, `MergeByReachSight` | 0.095 | 0.367 | 0.00000 | 2.1 | 15.2 | 0.501 | none | 0.041 and 0.055 |
 | an engine's | about its own probe, `MergeAboutProbe` | 0.216 | 0.655 | 0.00000 | 0.0 | 16.2 | 0.501 | none | 0.109 and 0.219 |
 | an engine's | by marched sight, `MergeByMarchedSight` | 0.274 | 0.810 | 0.00000 | 1.3 | 12.8 | 0.497 | none | 0.154 and 0.262 |
 

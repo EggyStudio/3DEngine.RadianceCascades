@@ -12,9 +12,12 @@ Done that day
 
 - Item 13 at `e042398`. The pixel's gather written once, its level by the rim rule.
 - Item 14 at `d89a34b`. A ray that meets a surface before its interval reads dark in the merge.
+- Item 15 at `39d0a8a`. The surface gather's light over the trace, and the points no probe sees.
 
 Commits that day
 
+- `39d0a8a` A surface point that no probe of its level sees takes the light of the level above, and
+  a ladder scene of a wall under a lamp reads where its light over the trace comes from.
 - `d89a34b` The merge by reach sight leaves out a far probe whose own hit lies short of where the
   ray ended past a far cascade reaching the field's edge, and a test holds a floor under a solid
   slab and one in an open box against the sky traced there.

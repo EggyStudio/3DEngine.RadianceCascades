@@ -1,6 +1,6 @@
 # The ladder of merges
 
-Measured on 2026-11-25 on the tree of d89a34b with the changes committed beside it, every merge the
+Measured on 2026-11-26 on the tree of 39d0a8a with the changes committed beside it, every merge the
 passes take by name (`IMerge`) run over 10 scenes on the CPU at 2 configurations, as `dotnet test
 RadianceCascades.Tests` writes it with `RC_LADDER` naming this file. The module's configuration is
 its tests' chain of four levels in one cascade of the field of 64 cells of 0.25. An engine's is one
@@ -33,11 +33,11 @@ default. The last scene is held out of the standing and read apart, since no mer
 | Configuration | Merge | Mean distance | Worst part | Leak | Steps a texel | Reads a texel | Most gain a round | Stands above | Held out, mean and worst |
 |---|---|---|---|---|---|---|---|---|---|
 | the module's | at the ray's end, `MergeAtRayEnd` | 0.096 | 0.329 | 0.00000 | 1.0 | 6.5 | 0.501 | by reach sight, about its own probe, by marched sight | 0.030 and 0.041 |
-| the module's | by reach sight, `MergeByReachSight` | 0.103 | 0.454 | 0.00000 | 1.0 | 6.9 | 0.501 | none | 0.065 and 0.143 |
+| the module's | by reach sight, `MergeByReachSight` | 0.103 | 0.467 | 0.00000 | 1.1 | 6.9 | 0.501 | none | 0.065 and 0.143 |
 | the module's | about its own probe, `MergeAboutProbe` | 0.161 | 0.720 | 0.00000 | 0.0 | 7.6 | 0.501 | none | 0.073 and 0.170 |
 | the module's | by marched sight, `MergeByMarchedSight` | 0.430 | 1.769 | 0.00000 | 1.0 | 6.6 | 0.475 | none | 0.270 and 0.412 |
 | an engine's | at the ray's end, `MergeAtRayEnd` | 0.094 | 0.446 | 0.00000 | 0.6 | 14.4 | 0.501 | about its own probe | 0.032 and 0.040 |
-| an engine's | by reach sight, `MergeByReachSight` | 0.095 | 0.367 | 0.00000 | 1.2 | 15.3 | 0.501 | none | 0.041 and 0.055 |
+| an engine's | by reach sight, `MergeByReachSight` | 0.095 | 0.367 | 0.00000 | 2.1 | 15.2 | 0.501 | none | 0.041 and 0.055 |
 | an engine's | about its own probe, `MergeAboutProbe` | 0.216 | 0.655 | 0.00000 | 0.0 | 16.2 | 0.501 | none | 0.109 and 0.219 |
 | an engine's | by marched sight, `MergeByMarchedSight` | 0.274 | 0.810 | 0.00000 | 1.3 | 12.8 | 0.497 | none | 0.154 and 0.262 |
 
@@ -60,7 +60,7 @@ No merge stands above every other at every configuration, so the default stays t
 | the module's | a lit room beside a dark one through a wall of one cell | by marched sight, `MergeByMarchedSight` | lit floor 0.924, lit walls 0.869 | lit floor 0.883, lit walls 0.836 | 7 | 0.475 | 0.152 | 0.180 | 0.00000 | 1.0 | 4.6 |
 | the module's | a lit room beside a dark one through a wall of one cell | about its own probe, `MergeAboutProbe` | lit floor 0.953, lit walls 0.907 | lit floor 0.953, lit walls 0.933 | 7 | 0.500 | 0.059 | 0.069 | 0.00000 | 0.0 | 5.2 |
 | the module's | a room under a lintel | at the ray's end, `MergeAtRayEnd` | by the opening 0.917, between 0.981, deepest 0.917 | by the opening 0.719, between 0.780, deepest 0.735 | 4 | 0.300 | 0.295 | 0.329 |  | 2.0 | 18.4 |
-| the module's | a room under a lintel | by reach sight, `MergeByReachSight` | by the opening 1.107, between 0.897, deepest 0.623 | by the opening 0.892, between 0.783, deepest 0.635 | 4 | 0.291 | 0.271 | 0.454 |  | 1.5 | 20.2 |
+| the module's | a room under a lintel | by reach sight, `MergeByReachSight` | by the opening 1.125, between 0.976, deepest 0.669 | by the opening 0.885, between 0.800, deepest 0.627 | 4 | 0.292 | 0.270 | 0.467 |  | 2.3 | 20.1 |
 | the module's | a room under a lintel | by marched sight, `MergeByMarchedSight` | by the opening 0.334, between 0.187, deepest 0.149 | by the opening 0.284, between 0.192, deepest 0.170 | 5 | 0.278 | 1.559 | 1.769 |  | 1.6 | 17.9 |
 | the module's | a room under a lintel | about its own probe, `MergeAboutProbe` | by the opening 0.912, between 1.219, deepest 1.111 | by the opening 0.770, between 1.045, deepest 1.041 | 5 | 0.279 | 0.115 | 0.262 |  | 0.0 | 22.5 |
 | the module's | an open box under a sky | at the ray's end, `MergeAtRayEnd` | floor 1.029, walls 1.002 | floor 1.012, walls 1.002 | 6 | 0.405 | 0.007 | 0.011 |  | 1.2 | 6.1 |
@@ -68,7 +68,7 @@ No merge stands above every other at every configuration, so the default stays t
 | the module's | an open box under a sky | by marched sight, `MergeByMarchedSight` | floor 0.271, walls 1.029 | floor 0.378, walls 0.841 | 5 | 0.327 | 0.573 | 0.972 |  | 1.1 | 6.0 |
 | the module's | an open box under a sky | about its own probe, `MergeAboutProbe` | floor 1.396, walls 1.110 | floor 1.182, walls 1.074 | 6 | 0.381 | 0.120 | 0.168 |  | 0.0 | 7.1 |
 | the module's | a long hall | at the ray's end, `MergeAtRayEnd` | by the opening 0.961, middle 0.993, far end 0.993 | by the opening 0.954, middle 0.988, far end 0.995 | 7 | 0.489 | 0.021 | 0.047 |  | 0.4 | 5.2 |
-| the module's | a long hall | by reach sight, `MergeByReachSight` | by the opening 1.017, middle 0.994, far end 0.992 | by the opening 0.990, middle 0.993, far end 0.998 | 7 | 0.487 | 0.007 | 0.010 |  | 0.7 | 4.4 |
+| the module's | a long hall | by reach sight, `MergeByReachSight` | by the opening 1.017, middle 0.994, far end 0.992 | by the opening 0.990, middle 0.993, far end 0.998 | 7 | 0.487 | 0.007 | 0.010 |  | 0.8 | 4.4 |
 | the module's | a long hall | by marched sight, `MergeByMarchedSight` | by the opening 0.978, middle 0.917, far end 0.893 | by the opening 0.909, middle 0.867, far end 0.838 | 7 | 0.458 | 0.138 | 0.177 |  | 0.8 | 4.9 |
 | the module's | a long hall | about its own probe, `MergeAboutProbe` | by the opening 1.181, middle 1.184, far end 1.034 | by the opening 1.097, middle 1.122, far end 1.041 | 7 | 0.482 | 0.083 | 0.115 |  | 0.0 | 4.7 |
 | the module's | a vestibule off a sunlit court | at the ray's end, `MergeAtRayEnd` | wall at -z 1.000, wall at +z 1.000, beside the door 1.021, floor 0.962, ceiling 1.030 | wall at -z 0.913, wall at +z 0.913, beside the door 0.946, floor 0.922, ceiling 0.865 | 6 | 0.445 | 0.093 | 0.145 |  | 0.9 | 4.7 |
@@ -88,43 +88,43 @@ No merge stands above every other at every configuration, so the default stays t
 | the module's | held out, a room with a roof window and a pillar | by marched sight, `MergeByMarchedSight` | floor 0.570, walls 0.799, ceiling 1.024, pillar 0.880 | floor 0.662, walls 0.742, ceiling 0.867, pillar 0.795 | 7 | 0.459 | 0.270 | 0.412 |  | 0.9 | 4.8 |
 | the module's | held out, a room with a roof window and a pillar | about its own probe, `MergeAboutProbe` | floor 1.375, walls 1.064, ceiling 0.999, pillar 0.914 | floor 1.185, walls 1.060, ceiling 1.046, pillar 0.980 | 7 | 0.488 | 0.073 | 0.170 |  | 0.0 | 5.1 |
 | an engine's | a room with a door | at the ray's end, `MergeAtRayEnd` | floor 1.005, walls 1.030, ceiling 1.006 | floor 1.009, walls 1.020, ceiling 1.009 | 7 | 0.494 | 0.013 | 0.020 |  | 0.4 | 15.2 |
-| an engine's | a room with a door | by reach sight, `MergeByReachSight` | floor 0.990, walls 1.086, ceiling 1.009 | floor 1.015, walls 1.055, ceiling 1.011 | 7 | 0.493 | 0.026 | 0.053 |  | 1.2 | 15.2 |
+| an engine's | a room with a door | by reach sight, `MergeByReachSight` | floor 0.990, walls 1.086, ceiling 1.009 | floor 1.015, walls 1.055, ceiling 1.011 | 7 | 0.493 | 0.026 | 0.053 |  | 2.1 | 15.2 |
 | an engine's | a room with a door | by marched sight, `MergeByMarchedSight` | floor 0.879, walls 0.893, ceiling 0.936 | floor 0.894, walls 0.890, ceiling 0.907 | 7 | 0.489 | 0.109 | 0.116 |  | 1.3 | 12.4 |
 | an engine's | a room with a door | about its own probe, `MergeAboutProbe` | floor 0.850, walls 0.942, ceiling 0.928 | floor 0.895, walls 0.942, ceiling 0.908 | 7 | 0.496 | 0.089 | 0.111 |  | 0.0 | 15.9 |
 | an engine's | a closed box with one lamp | at the ray's end, `MergeAtRayEnd` | floor 0.629, walls 0.662 | floor 0.640, walls 0.672 | 7 | 0.501 | 0.422 | 0.446 |  | 0.6 | 11.0 |
-| an engine's | a closed box with one lamp | by reach sight, `MergeByReachSight` | floor 0.707, walls 0.673 | floor 0.701, walls 0.693 | 7 | 0.501 | 0.361 | 0.367 |  | 1.2 | 13.4 |
+| an engine's | a closed box with one lamp | by reach sight, `MergeByReachSight` | floor 0.707, walls 0.673 | floor 0.701, walls 0.693 | 7 | 0.501 | 0.361 | 0.367 |  | 2.0 | 13.4 |
 | an engine's | a closed box with one lamp | by marched sight, `MergeByMarchedSight` | floor 0.707, walls 0.608 | floor 0.677, walls 0.627 | 7 | 0.493 | 0.428 | 0.467 |  | 1.3 | 11.2 |
 | an engine's | a closed box with one lamp | about its own probe, `MergeAboutProbe` | floor 0.738, walls 0.667 | floor 0.716, walls 0.686 | 7 | 0.501 | 0.355 | 0.377 |  | 0.0 | 14.4 |
 | an engine's | a lit room beside a dark one through a wall of one cell | at the ray's end, `MergeAtRayEnd` | lit floor 0.953, lit walls 0.941 | lit floor 0.955, lit walls 0.950 | 7 | 0.500 | 0.049 | 0.051 | 0.00000 | 0.4 | 14.2 |
-| an engine's | a lit room beside a dark one through a wall of one cell | by reach sight, `MergeByReachSight` | lit floor 0.961, lit walls 0.941 | lit floor 0.962, lit walls 0.953 | 7 | 0.500 | 0.044 | 0.048 | 0.00000 | 1.0 | 14.4 |
+| an engine's | a lit room beside a dark one through a wall of one cell | by reach sight, `MergeByReachSight` | lit floor 0.961, lit walls 0.941 | lit floor 0.962, lit walls 0.953 | 7 | 0.500 | 0.044 | 0.048 | 0.00000 | 1.9 | 14.4 |
 | an engine's | a lit room beside a dark one through a wall of one cell | by marched sight, `MergeByMarchedSight` | lit floor 0.961, lit walls 0.941 | lit floor 0.956, lit walls 0.948 | 7 | 0.497 | 0.049 | 0.054 | 0.00000 | 1.2 | 11.7 |
 | an engine's | a lit room beside a dark one through a wall of one cell | about its own probe, `MergeAboutProbe` | lit floor 0.962, lit walls 0.941 | lit floor 0.963, lit walls 0.953 | 7 | 0.500 | 0.043 | 0.048 | 0.00000 | 0.0 | 14.9 |
 | an engine's | a room under a lintel | at the ray's end, `MergeAtRayEnd` | by the opening 0.892, between 0.870, deepest 0.981 | by the opening 0.887, between 0.914, deepest 1.021 | 5 | 0.287 | 0.077 | 0.120 |  | 0.9 | 11.6 |
-| an engine's | a room under a lintel | by reach sight, `MergeByReachSight` | by the opening 0.897, between 0.954, deepest 0.966 | by the opening 0.879, between 0.960, deepest 0.937 | 5 | 0.288 | 0.079 | 0.129 |  | 1.2 | 13.0 |
+| an engine's | a room under a lintel | by reach sight, `MergeByReachSight` | by the opening 0.897, between 0.954, deepest 0.966 | by the opening 0.879, between 0.960, deepest 0.937 | 5 | 0.288 | 0.079 | 0.129 |  | 2.0 | 12.9 |
 | an engine's | a room under a lintel | by marched sight, `MergeByMarchedSight` | by the opening 0.676, between 0.312, deepest 0.362 | by the opening 0.660, between 0.445, deepest 0.531 | 5 | 0.277 | 0.619 | 0.810 |  | 1.3 | 11.2 |
 | an engine's | a room under a lintel | about its own probe, `MergeAboutProbe` | by the opening 0.463, between 0.390, deepest 0.434 | by the opening 0.534, between 0.519, deepest 0.617 | 5 | 0.291 | 0.588 | 0.655 |  | 0.0 | 14.2 |
 | an engine's | an open box under a sky | at the ray's end, `MergeAtRayEnd` | floor 0.990, walls 1.002 | floor 0.992, walls 0.999 | 6 | 0.407 | 0.005 | 0.008 |  | 0.7 | 13.4 |
-| an engine's | an open box under a sky | by reach sight, `MergeByReachSight` | floor 1.054, walls 1.011 | floor 1.024, walls 1.007 | 6 | 0.403 | 0.016 | 0.024 |  | 1.3 | 15.2 |
+| an engine's | an open box under a sky | by reach sight, `MergeByReachSight` | floor 1.054, walls 1.011 | floor 1.024, walls 1.007 | 6 | 0.403 | 0.016 | 0.024 |  | 2.2 | 15.1 |
 | an engine's | an open box under a sky | by marched sight, `MergeByMarchedSight` | floor 0.786, walls 0.963 | floor 0.871, walls 0.949 | 6 | 0.412 | 0.095 | 0.138 |  | 1.4 | 13.1 |
 | an engine's | an open box under a sky | about its own probe, `MergeAboutProbe` | floor 0.824, walls 0.968 | floor 0.910, walls 0.966 | 6 | 0.418 | 0.064 | 0.094 |  | 0.0 | 16.5 |
 | an engine's | a long hall | at the ray's end, `MergeAtRayEnd` | by the opening 0.986, middle 0.980, far end 0.990 | by the opening 0.987, middle 0.979, far end 0.983 | 7 | 0.487 | 0.018 | 0.022 |  | 0.5 | 20.4 |
-| an engine's | a long hall | by reach sight, `MergeByReachSight` | by the opening 0.974, middle 0.971, far end 0.988 | by the opening 0.975, middle 0.965, far end 0.978 | 7 | 0.488 | 0.028 | 0.036 |  | 1.5 | 20.0 |
+| an engine's | a long hall | by reach sight, `MergeByReachSight` | by the opening 0.974, middle 0.971, far end 0.988 | by the opening 0.975, middle 0.965, far end 0.978 | 7 | 0.488 | 0.028 | 0.036 |  | 2.5 | 20.0 |
 | an engine's | a long hall | by marched sight, `MergeByMarchedSight` | by the opening 0.823, middle 0.936, far end 0.978 | by the opening 0.837, middle 0.926, far end 0.961 | 7 | 0.486 | 0.098 | 0.178 |  | 1.6 | 16.9 |
 | an engine's | a long hall | about its own probe, `MergeAboutProbe` | by the opening 0.974, middle 0.972, far end 0.988 | by the opening 0.975, middle 0.963, far end 0.978 | 7 | 0.488 | 0.028 | 0.037 |  | 0.0 | 20.8 |
 | an engine's | a vestibule off a sunlit court | at the ray's end, `MergeAtRayEnd` | wall at -z 0.981, wall at +z 0.981, beside the door 0.996, floor 0.966, ceiling 0.983 | wall at -z 0.995, wall at +z 0.995, beside the door 0.984, floor 0.977, ceiling 0.978 | 7 | 0.448 | 0.014 | 0.024 |  | 0.5 | 15.2 |
-| an engine's | a vestibule off a sunlit court | by reach sight, `MergeByReachSight` | wall at -z 1.044, wall at +z 1.044, beside the door 1.059, floor 0.933, ceiling 0.999 | wall at -z 1.022, wall at +z 1.022, beside the door 1.027, floor 0.977, ceiling 0.983 | 7 | 0.445 | 0.022 | 0.027 |  | 1.2 | 15.3 |
+| an engine's | a vestibule off a sunlit court | by reach sight, `MergeByReachSight` | wall at -z 1.044, wall at +z 1.044, beside the door 1.059, floor 0.933, ceiling 0.999 | wall at -z 1.022, wall at +z 1.022, beside the door 1.027, floor 0.977, ceiling 0.983 | 7 | 0.445 | 0.022 | 0.027 |  | 2.1 | 15.3 |
 | an engine's | a vestibule off a sunlit court | by marched sight, `MergeByMarchedSight` | wall at -z 0.546, wall at +z 0.546, beside the door 0.391, floor 0.535, ceiling 0.721 | wall at -z 0.574, wall at +z 0.575, beside the door 0.463, floor 0.589, ceiling 0.672 | 7 | 0.440 | 0.561 | 0.770 |  | 1.3 | 12.6 |
 | an engine's | a vestibule off a sunlit court | about its own probe, `MergeAboutProbe` | wall at -z 0.742, wall at +z 0.742, beside the door 0.644, floor 0.634, ceiling 0.820 | wall at -z 0.761, wall at +z 0.762, beside the door 0.695, floor 0.718, ceiling 0.777 | 7 | 0.450 | 0.298 | 0.364 |  | 0.0 | 16.1 |
 | an engine's | a court lit in a strip between arcades | at the ray's end, `MergeAtRayEnd` | low wall 1.175, high wall 1.240 | low wall 1.137, high wall 1.177 | 6 | 0.392 | 0.146 | 0.163 |  | 0.9 | 13.1 |
-| an engine's | a court lit in a strip between arcades | by reach sight, `MergeByReachSight` | low wall 1.324, high wall 1.668 | low wall 1.240, high wall 1.440 | 6 | 0.382 | 0.290 | 0.365 |  | 1.3 | 15.4 |
+| an engine's | a court lit in a strip between arcades | by reach sight, `MergeByReachSight` | low wall 1.324, high wall 1.668 | low wall 1.240, high wall 1.440 | 6 | 0.382 | 0.290 | 0.365 |  | 2.2 | 15.4 |
 | an engine's | a court lit in a strip between arcades | by marched sight, `MergeByMarchedSight` | low wall 0.871, high wall 1.681 | low wall 0.871, high wall 1.454 | 6 | 0.395 | 0.256 | 0.374 |  | 1.4 | 13.8 |
 | an engine's | a court lit in a strip between arcades | about its own probe, `MergeAboutProbe` | low wall 0.899, high wall 1.780 | low wall 0.899, high wall 1.484 | 6 | 0.403 | 0.251 | 0.395 |  | 0.0 | 17.2 |
 | an engine's | a wall under a lamp | at the ray's end, `MergeAtRayEnd` | top left 1.041, top middle 1.505, top right 1.041, bottom left 0.609, bottom middle 0.766, bottom right 0.609 | top left 1.024, top middle 1.410, top right 1.025, bottom left 0.800, bottom middle 0.841, bottom right 0.802 | 6 | 0.489 | 0.168 | 0.344 |  | 0.3 | 15.4 |
-| an engine's | a wall under a lamp | by reach sight, `MergeByReachSight` | top left 1.096, top middle 1.507, top right 1.096, bottom left 0.844, bottom middle 0.795, bottom right 0.882 | top left 1.115, top middle 1.432, top right 1.120, bottom left 0.987, bottom middle 0.896, bottom right 1.017 | 6 | 0.486 | 0.120 | 0.359 |  | 1.2 | 15.5 |
+| an engine's | a wall under a lamp | by reach sight, `MergeByReachSight` | top left 1.096, top middle 1.507, top right 1.096, bottom left 0.844, bottom middle 0.795, bottom right 0.882 | top left 1.115, top middle 1.432, top right 1.120, bottom left 0.987, bottom middle 0.896, bottom right 1.017 | 6 | 0.486 | 0.120 | 0.359 |  | 2.1 | 15.5 |
 | an engine's | a wall under a lamp | by marched sight, `MergeByMarchedSight` | top left 1.096, top middle 1.507, top right 1.096, bottom left 0.839, bottom middle 0.795, bottom right 0.877 | top left 1.097, top middle 1.425, top right 1.102, bottom left 0.957, bottom middle 0.885, bottom right 0.988 | 6 | 0.479 | 0.120 | 0.354 |  | 1.3 | 12.6 |
 | an engine's | a wall under a lamp | about its own probe, `MergeAboutProbe` | top left 1.335, top middle 1.599, top right 1.335, bottom left 0.787, bottom middle 0.838, bottom right 0.825 | top left 1.293, top middle 1.515, top right 1.298, bottom left 0.974, bottom middle 0.942, bottom right 1.006 | 6 | 0.485 | 0.171 | 0.416 |  | 0.0 | 16.1 |
 | an engine's | held out, a room with a roof window and a pillar | at the ray's end, `MergeAtRayEnd` | floor 1.041, walls 1.017, ceiling 1.012, pillar 1.048 | floor 1.034, walls 1.026, ceiling 1.030, pillar 1.041 | 7 | 0.491 | 0.032 | 0.040 |  | 0.3 | 15.5 |
-| an engine's | held out, a room with a roof window and a pillar | by reach sight, `MergeByReachSight` | floor 1.013, walls 1.072, ceiling 1.004, pillar 1.045 | floor 1.029, walls 1.057, ceiling 1.036, pillar 1.048 | 7 | 0.491 | 0.041 | 0.055 |  | 1.2 | 15.4 |
+| an engine's | held out, a room with a roof window and a pillar | by reach sight, `MergeByReachSight` | floor 1.013, walls 1.072, ceiling 1.004, pillar 1.045 | floor 1.029, walls 1.057, ceiling 1.036, pillar 1.048 | 7 | 0.491 | 0.041 | 0.055 |  | 2.1 | 15.4 |
 | an engine's | held out, a room with a roof window and a pillar | by marched sight, `MergeByMarchedSight` | floor 0.619, walls 0.876, ceiling 1.002, pillar 0.886 | floor 0.769, walls 0.860, ceiling 0.933, pillar 0.875 | 7 | 0.487 | 0.154 | 0.262 |  | 1.3 | 12.7 |
 | an engine's | held out, a room with a roof window and a pillar | about its own probe, `MergeAboutProbe` | floor 0.637, walls 0.928, ceiling 1.025, pillar 0.895 | floor 0.803, walls 0.921, ceiling 0.968, pillar 0.903 | 7 | 0.497 | 0.109 | 0.219 |  | 0.0 | 16.1 |
 
@@ -161,7 +161,7 @@ Its two walls' light each round over the first round's, traced and by each merge
 
 ## The cones by roughness
 
-Measured on 2026-11-25 on the tree of d89a34b with the changes committed beside it, the cone a rough
+Measured on 2026-11-26 on the tree of 39d0a8a with the changes committed beside it, the cone a rough
 surface reflects read from the cascades by `ConeAtProbes` (`IConeRead`) over 12 scenes, the ladder's
 and two of their own, on the CPU at 2 configurations after one gather, as `dotnet test
 RadianceCascades.Tests` writes it with `RC_LADDER` naming this file. Each point of a scene reflects

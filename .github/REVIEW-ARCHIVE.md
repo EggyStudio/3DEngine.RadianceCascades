@@ -672,3 +672,24 @@ corner toward the opening, which see the sky and span the least solid angle, as 
     the door moved 0.014 to 0.026; ProbeMergeTests.Floors.cs holds the slab with the finest two at
     16 and the open box. No binding changed; a host keeps its finest two cascades at 16 texels a
     side, four times their merged-light memory, or keeps the excess.
+
+15. **The surface gather's light over the trace, and the points no probe sees.** From the engine's
+    item 313 on 2026-11-25, under Decision 9, after item 14. The gather at the engine's depth
+    points, in its sky form over the engine's merged images, reads 1.5 to 1.85 of the traced light
+    once settled on the door's wall where the module's own note gives 1.26 on an open box floor, and
+    at zero bounce 1.02 of the wall against the engine's faces at 0.63; and it gives 0 where no
+    probe passes the sight check at 0.125 spacing, a dither of black points on the wall. One reading
+    of where the surplus comes from, the merge, the weights or the levels, with a ladder scene that
+    holds a wall under a lamp settled, and a rule for a point no probe sees, the nearest seeing
+    probe or the coarser level, with its test. One commit. Done at `39d0a8a`, pushed at 20:18 on
+    2026-11-25, its run green. The surplus is where the probes stand. On the new ladder scene, a
+    wall under a lamp at the engine's configuration, the top middle reads 1.507 after one gather and
+    1.432 settled, its probe keeping 1.140 of its own place's trace while that place takes 1.834 of
+    what the wall point takes; the loop gains 0.486 a round against the trace's 0.489, so the
+    engine's growth to settled is its own face bounce, outside the module. On a flat wall every
+    point has a seeing probe; the few black corner points are probes whose texel ways miss the small
+    lamp. New rule, a point no probe of its level sees takes the level above's light and no further,
+    a 0.6 slot from 0 to 1.51 to 1.55 of its trace, while walking to the coarsest lent the sky into
+    a 0.2 slot. Ten ladder scenes, by reach and sight the engine's configuration 0.095 mean and the
+    module's 0.103, the worst parts unchanged; the default stays the merge at the ray's end. Nothing
+    an engine binds changed; 213 tests.
