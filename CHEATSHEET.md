@@ -188,7 +188,7 @@ int Cascades { get; init; }                              // The count of cascade
 float Reach { get; init; }                               // How far the finest level reaches from the eye along each axis, at most 128 spacings, 1 by default, which is 4 spacings as a dense level reaches
 int Age { get; init; }                                   // How many frames a probe no seen point asks for is kept before its entry is freed, 32 by default
 int Entries { get; }                                     // The entries of every pool
-int Uints { get; }                                       // The uints the store lays out, its counts, its table, its pools and its free lists, which the engine's buffer of uints holds
+int Uints { get; }                                       // The uints the store lays out, its counts, its table, its pools, its free lists and the sums the seen points' rays add to each way, five a way, which the engine's buffer of uints holds
 int Lights { get; }                                      // The float4 of light the store lays out, its probes' own light and the light merged from above, which the engine's buffer of light holds
 int PoolProbes(int cascade);                             // The entries of a cascade's pool, the slots over four for each cascade below it
 

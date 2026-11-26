@@ -250,7 +250,18 @@ pointer. One commit an engine, after item 3's first part.
     uints as atomic buffers since WGSL refuses an atomic add on a plain one. The Reply maps each
     declaration onto each engine's code; both lack the store and the hits, the engine lacks seenAt
     and hands frame modulo 16 alone, the bridge has no surface points over pixels. The ladder and
-    the suite open no device and run without the lock; 218 tests.
+    the suite open no device and run without the lock; 218 tests. Second commit `1245c78`, the
+    sparse store on the CPU, pushed at 07:39 on 2026-11-26, its run awaited. A key table of four
+    times the slots to pools a cascade, a quarter fewer each cascade up, with free lists, four
+    passes a frame, and the split gatherSurface with the level by the base-two logarithm of the
+    Chebyshev distance, the 0.9 start and the blend over the overlap; ProbeLayout defaults to Dense,
+    a test holding the store's shape to the Slang layout. The corridor's faces take 322, 108, 46 and
+    28 probes a cascade against the dense grid's 2,048 at the finest, each within 0.866 of its
+    spacing of what asked for it; over 16 eye steps 8,852 probes kept their entries, 368 were taken
+    and none moved; a probe stands for its age and is freed the frame after; the gather lies on the
+    levels' blend within 1e-6 and steps at most 0.050 between points 0.01 apart. Choices, a fresh
+    entry's light reads as none from the frame it is taken, the gather keeps no sky share, a key
+    keeps 9 bits an axis so a level reaches at most 128 spacings. 227 tests.
 
 ## Verdicts
 
@@ -1161,3 +1172,47 @@ read as none from the frame it is taken, the pool's third uint. The gather reads
 the 32 base ways by their cosines and keeps no share of the sky, and takes no field. A point whose
 level's probes stand but not the next's takes its own level alone. Read first for the third commit
 `askSplitProbe`, `splitLightAt` and `splitWay` in `rc_split.slang`.
+
+Item 18, its third commit, in the commit carrying this line. Each seen point sends one ray a frame
+(`traceSeenRays`), its way stepping along the plane's sequence of the plastic number from an offset
+hashed from the point's index, one step a frame, laid on the half its normal faces by the
+concentric map lifted by equal area, as the probes' ways are, and turned onto the normal. It starts
+a quarter of its level's spacing off the surface and is traced through its level's cascades'
+intervals one after another, the finest 1.6 spacings long and each above reaching four times as far
+past the one below, so 0 to 1.6, 1.6 to 8, 8 to 33.6 and 33.6 to 136 spacings. Each part goes to
+the probe of its cascade that the point's nearest probe of the level leads up to by the halving
+`askCascadeProbes` asks by, so that probe stands, at the way it falls in (`splitWayOf`, the
+concentric map taken back). A part adds its light, the share it lets through and a count of one to
+five uints a way laid after the free lists, in 1024ths, so it takes atomics on uints alone. A part
+that meets a surface lets none through, one that leaves the world adds the sky's light past what it
+crossed, and the ray ends there. A point over the overlap of two levels traces the same way again by
+the next level's intervals, two rays. `keepSplitLight`, a thread a way, takes the mean by count of
+light and of share, wholly where the way held none and toward it by 1 − 0.9^count where it held
+some, reads a probe taken this frame as holding none (w −1), keeps a way no ray reached, and empties
+the sums.
+
+What a binding does past a level's reach. Every level but the coarsest hands a point past its reach
+to the next, so a scene exceeds the store only past the coarsest level, whose keys' nine bits a cell
+along each axis hold 254 of its spacings from the eye before a cell reads back elsewhere. A point
+past them is not held (`splitHolds`), asks for no probe, sends no ray and gathers 0, and the binding
+gives that pixel its far light, the sky or a far field of its own, as it gives a pixel that sees the
+sky. A binding whose scene runs farther raises `Levels`, up to 7, each doubling the hold, or the
+spacing. At the defaults, a spacing of 0.25 and five levels, the hold is 1,016 units, and 4,064 at
+seven.
+
+Read on the CPU (`dotnet test RadianceCascades.Tests --filter FullyQualifiedName~SplitStoreTests`,
+ten tests in 3.8 seconds, 231 in the suite). Over 4,096 frames a point's rays all fall in the half
+its normal faces, each eighth of the half's height takes its share within 0.004 of it, their mean
+lies 0.0005 from half the normal, and facing up each of the 16 finest ways of the half takes its
+share within 0.020 of it. Each way of every cascade reads back as itself. In the corridor lit as the
+merge's tests light it, one frame's 20,997 rays from 18,985 seen points add 29,000 parts to 8,189
+ways, 20,997, 6,909, 855 and 239 reaching the cascades from the finest, every part finding its
+probe and every sum's uint equal to what the same rays traced whole and split where they ended give.
+Over two frames 10,777 ways took their rays' mean and 5,553 moved toward it, each within a millionth
+of the rule, and over 32 frames the rays reached 0.567 of the finest cascade's ways, the rest facing
+no seen point. A point at 250 of the coarsest spacings asks for its probe and one at 258 asks for
+none and gathers 0. Three things the fourth commit takes as given. A way no ray reached yet holds
+w −1 and no light. A part's interval is measured from the seen point that sent it, not from the
+probe it goes to. The way of texel (x, y) of a cascade holds the four of texels (2x, 2y) to
+(2x + 1, 2y + 1) of the same half above it. Read first for the fourth commit `keepSplitLight` and
+`splitWayOf` in `rc_split.slang`.

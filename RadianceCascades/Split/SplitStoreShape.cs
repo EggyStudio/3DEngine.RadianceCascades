@@ -11,7 +11,8 @@ namespace RadianceCascades;
 /// many for each above, since a probe of the cascade above stands for the four below it along a
 /// surface, and a table four times the finest pool's slots from each probe's key to its entry. Its
 /// light takes the same span for each cascade, a quarter as many probes with four times the ways,
-/// once for the probes' own light and once for the light merged from above.
+/// once for the probes' own light and once for the light merged from above, and the sums of the
+/// seen points' rays take five uints for each way of the probes' own light.
 /// </para>
 /// <para>
 /// A probe's key keeps the low nine bits of its cell along each axis, which tell apart the probes
@@ -73,10 +74,10 @@ public sealed record SplitStoreShape
     public int Entries => Enumerable.Range(0, Checked().Cascades).Sum(PoolProbes);
 
     /// <summary>
-    /// The uints the store lays out, its counts, its table, its pools and its free lists, which
-    /// the engine's buffer of uints holds.
+    /// The uints the store lays out, its counts, its table, its pools, its free lists and the sums
+    /// the seen points' rays add to each way, five a way, which the engine's buffer of uints holds.
     /// </summary>
-    public int Uints => Counts + 2 * 4 * Checked().Slots + 4 * Entries;
+    public int Uints => Counts + 2 * 4 * Checked().Slots + 4 * Entries + 5 * Cascades * BaseWays * Slots;
 
     /// <summary>
     /// The float4 of light the store lays out, its probes' own light and the light merged from

@@ -45,6 +45,11 @@ struct BufferUints : IStoreUints
     uint compareExchange(uint index, uint expected, uint desired) { return uints[index].compareExchange(expected, desired); }
 }
 
+struct OneSky : ISky
+{
+    float3 skyAlong(float3 way) { return float3(1.0); }
+}
+
 struct BufferLight : IStoreLight
 {
     float4 lightAt(uint index) { return light[index]; }
@@ -66,6 +71,9 @@ float4 handed<P : IVisiblePoints, H : IRayHits, W : IStoreUints, L : IStoreLight
     keepSplitProbes(store, frame, shape, index);
     askSeenProbes(seen, store, frame, shape, index);
     askCascadeProbes(store, frame, shape, 0u, index);
+    OneSky sky;
+    traceSeenRays(seen, hits, sky, store, frame, shape, index);
+    keepSplitLight(store, kept, frame, shape, index);
     gatherSurface(store, kept, frame, shape, seen, index);
     return float4(place - frame.eye, float(shape.levels + shape.cascades));
 }
