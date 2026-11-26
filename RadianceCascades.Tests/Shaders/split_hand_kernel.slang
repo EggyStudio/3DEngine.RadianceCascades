@@ -70,7 +70,7 @@ float4 handed<P : IVisiblePoints, H : IRayHits, W : IStoreUints, L : IStoreLight
     clearSplitTable(store, shape, index);
     keepSplitProbes(store, frame, shape, index);
     askSeenProbes(seen, hits, store, frame, shape, index);
-    askCascadeProbes(store, frame, shape, 0u, index);
+    askCascadeProbes(hits, store, frame, shape, 0u, index);
     OneSky sky;
     traceSeenRays(seen, hits, sky, store, frame, shape, index);
     keepSplitLight(store, kept, frame, shape, index);

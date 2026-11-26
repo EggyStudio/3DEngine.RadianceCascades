@@ -351,7 +351,29 @@ pointer. One commit an engine, after item 3's first part.
     dark room's split test and the walk's bounds at the readings with the regression named, and the
     symmetric cure next, a sight share per parent in the merge by a march a way or a pass a probe,
     since the step on movement is the first measure; the hand gains the rays' hits on askSeenProbes
-    and gatherSurface for both bindings.
+    and gatherSurface for both bindings. The thin wall's three changes at `8aa3e17`, pushed at 12:51
+    on 2026-11-26 with the dark room's split test, its run awaited; the ladder's full run 0.080 and
+    0.405 at the module's configuration and 0.080 and 0.402 at the engine's, the leak 0.00000 at
+    both, the closed box the farthest at 0.380 mean; the walk's worst step regressed to 0.495 and
+    0.229 on the whole walk at the module's and 0.859 and 0.251 at the engine's, the bounds at those
+    readings with the cause named. The hand gains the rays' hits on askSeenProbes and gatherSurface.
+    Ruled for the cure, a pass a probe inside askCascadeProbes storing a four-bit sight share for
+    each of the eight parents in a fifth uint an entry, about 37,000 marches a frame against 2.7
+    million for a march a way, the layout widening from four to five uints an entry; 240 tests. The
+    symmetric cure read on 2026-11-26 in the afternoon, the merge by each parent's sight with a lift
+    of the gather's march where it met a floor short of a probe on the floor's own plane below about
+    23 degrees. With it the whole walk's worst step falls to 0.360 and 0.220 at the module's
+    configuration and 0.609 and 0.249 at the engine's from 0.495 and 0.859, the leak stays 0 and the
+    lamp edge reads 0.983 and 1.006 from its own rays, but the ladder rises from 0.080 to 0.107 on
+    the mean and 0.405 to 0.459 at worst, the lintel 0.102 to 0.316, a seen parent still holding the
+    far parts of other children's rays past the lintel's edge; the lift with the chain parent alone
+    keeps the ladder but not the walk. The engine's leftover steps are far points at coarse levels
+    and a frame of fresh probes with few rays, not the merge's. Ruled, the parents' sight with the
+    lift taken, the walk first, the bounds down to its readings and the ladder's rise named, then
+    one reading of the non-chain parents at half weight, kept if it holds the walk and lowers the
+    rise; the lintel's 0.316 stands as the next fault, the far parts of other children's rays
+    carried by a seen parent. The hand's askCascadeProbes gains the hits and the entry widens to
+    four uints.
 
 ## Verdicts
 
@@ -792,3 +814,53 @@ test's comment names the cause, and the lamp's edge point fed by every face read
 of its trace at its own level, from the probes before the wall alone, its bound moved to a quarter.
 The symmetric cure, a sight share for each probe above about a probe in the merge, comes next, and
 the walk's bounds come back down with it.
+
+Item 18, the merge's probes above by their sight, in the commit carrying this line.
+`askCascadeProbes` asks for the probe above at half a probe's cell rounded up as before and keeps in
+the probe's entry the share of each of the eight probes of the cascade above about it that it sees
+from its place (`splitAboveSights`), four bits each in a fourth uint of the entry, its march
+starting an eighth of its spacing along so a probe on the plane of a face sees past it. The merge
+takes the light above a way from those probes, each weighed by its share, the one at half the cell
+rounded up, which the probe's rays go on into, by all of it. The gather marches to a probe that does
+not stand behind the point's face by half the slack lifted off the face as the ray's start is
+(`splitProbeSight`), since the field's march, which meets a surface at a tenth of a cell, met the
+floor short of a probe on the floor's own plane wherever it came in below about a quarter of a right
+angle, and a floor point's weight swung between 0.19 and 1 from one eye to the next. The hand's
+change, for both bindings, is the rays' hits on `askCascadeProbes`, first, the same `IRayHits`
+`traceSeenRays` takes, `askCascadeProbes(hits, uints, frame, shape, cascade, index)`, and the
+store's uints one more an entry, which `SplitStoreShape.Uints` gives, so a binding sizing its buffer
+of uints by it takes that with no line of its own. The merge's test holds the merge within 0.000000
+of its rule over the shares the entries keep, 429 probes above seen and 446 not among the corridor's
+walls (`dotnet test RadianceCascades.Tests --filter FullyQualifiedName~SplitStoreTests`).
+
+The walk. Over the whole walk a point steps 0.360 of its mean at worst and 0.220 at the 99th part at
+the module's configuration and 0.609 and 0.249 at an engine's, where it stepped 0.495 and 0.229 and
+0.859 and 0.251, and before the thin wall's commit 0.330 and 0.179 and 0.429 and 0.207, and over the
+build's short walk 0.548 and 0.218 and 0.348 and 0.200, the bounds set at these readings
+(`RC_LADDER=.github/LADDER.md dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~On_The_Split_Probes`). An engine's worst steps that stay are far points at coarse
+levels, by a reading not committed, a wall point 12 units from the eye stepping where its level
+changes and a floor point stepping once where a level's probes taken anew held few rays, neither the
+merge's. The lamp's edge point fed by every face reads 1.197 and 1.127 of its trace at its own
+level, and 0.983 and 0.988 and 0.983 and 1.006 from its own rays alone, so its bound stays at a
+quarter, the probes before the wall and those above them holding beside the point's rays those of
+the faces about it (`dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~At_The_Lamps_Edge`).
+
+The ladder's split rows read 0.107 from the trace on the mean and 0.459 at worst at the module's
+configuration and 0.108 and 0.459 at an engine's, where they read 0.080 and 0.405 and 0.080 and
+0.402, the leak 0.00000 at both and the held out room 0.021 and 0.062 and 0.019 and 0.053. The rise
+is the lintel's, 0.102 to 0.316 at both, its points between the opening and the deepest reading
+1.710 of their trace, since a probe above that a probe under the lintel sees holds the light of rays
+of points past the lintel's edge and lends it to points that see none of that light. The long hall
+reads 0.040 and 0.043 where it read 0.026 and 0.027, and the closed box 0.397 and 0.405
+(`RC_LADDER=.github/LADDER.md dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~The_Ladder`, 17 minutes on the desk). The lintel is the next fault, with its own
+reading.
+
+The half weight, by a reading not committed. The probes above but the one the rays go on into at
+half their share read the split ladder 0.101 on the mean and 0.415 at worst, the lintel 0.267, and
+step the whole walk 0.402 and 0.220 at the module's configuration and 0.652 and 0.249 at an
+engine's, so it lowers the rise and does not hold the walk, and is not taken. The lift with the one
+probe above alone keeps the ladder at 0.080 and 0.415 and steps the walk 0.519 and 0.859, so the
+lift helps the walk only beside the merge's sight.

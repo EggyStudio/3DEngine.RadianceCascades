@@ -188,7 +188,7 @@ void test(uint3 id : SV_DispatchThreadID)
     else if (pass == 2u && index < uint(setup[12]))
         askSeenProbes(points, hits, store, frame, shape, index);
     else if (pass == 3u)
-        askCascadeProbes(store, frame, shape, cascade, index);
+        askCascadeProbes(hits, store, frame, shape, cascade, index);
     else if (pass == 4u && index < uint(setup[12]))
         traceSeenRays(points, hits, sky, store, frame, shape, index);
     else if (pass == 5u)

@@ -92,20 +92,19 @@ public sealed partial class ProbeMergeTests
     [CpuKernelFact]
     public void The_Corridors_Wall_Point_At_The_Lamps_Edge_Reads_Within_A_Twentieth_Of_Its_Trace_On_Both_Split_Levels_From_Its_Own_Rays()
     {
-        // The point on the wall at the lamp's edge, the eye held still, the levels of spacing 2
-        // and 4. Fed by every face the eye sees, each level reads the light of the faces its
-        // probes about the point that it sees stand for, those before the wall, since those
-        // behind its face stand inside it. The finer's stand within 2 of it and read it within a
-        // quarter of the trace and above it, since the merge takes the light above a way of a
-        // probe at an odd cell along an axis from the rays of a patch a cell of its own past it
-        // along that axis, which here lies toward the lamp in the roof, as the walk's test has
-        // it. The coarser's spread over 4 to 8 along the corridor, the faces past the overlap's
-        // start alone feeding them, and read it over a third of the trace, which the test holds
-        // as its reading until the coarser level's probes stand nearer. Fed by the point's own
-        // rays alone each level holds none but its rays, which start from one place whichever
-        // level takes them (splitRayOrigin) and go to the nearest probe the point sees
-        // (splitSeenCell), so both read within a twentieth of the trace and of each other, the
-        // levels' intervals, ways and merge giving the point its light.
+        // The point on the wall at the lamp's edge, the eye held still, the levels of spacing 2 and
+        // 4. Fed by every face the eye sees, each level reads the light of the faces its probes
+        // about the point that it sees stand for, those before the wall, since those behind its
+        // face stand inside it. The finer's stand within 2 of it and read it within a quarter of
+        // the trace and above it, they and the probes above them holding beside the point's rays
+        // those of the faces about it, which the point's own rays alone, read below, leave out. The
+        // coarser's spread over 4 to 8 along the corridor, the faces past the overlap's start alone
+        // feeding them, and read it over a third of the trace, which the test holds as its reading
+        // until the coarser level's probes stand nearer. Fed by the point's own rays alone each
+        // level holds none but its rays, which start from one place whichever level takes them
+        // (splitRayOrigin) and go to the nearest probe the point sees (splitSeenCell), so both read
+        // within a twentieth of the trace and of each other, the levels' intervals, ways and merge
+        // giving the point its light.
         var failed = new List<string>();
         var cascades = new ConcurrentDictionary<Vector4, float[]>();
         var eye = new Vector3(CorridorApartEye, 1.5f, 0);

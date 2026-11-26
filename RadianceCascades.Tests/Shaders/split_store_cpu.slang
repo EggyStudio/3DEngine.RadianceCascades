@@ -130,7 +130,7 @@ void test(uint3 id : SV_DispatchThreadID)
     else if (pass == 2u && index < uint(setup[12]))
         askSeenProbes(seen, hits, store, frame, shape, index);
     else if (pass == 3u)
-        askCascadeProbes(store, frame, shape, uint(setup[11]), index);
+        askCascadeProbes(hits, store, frame, shape, uint(setup[11]), index);
     else if (pass == 4u && index < uint(setup[12]))
         gatherSurface(store, kept, hits, frame, shape, seen, index);
     else if (pass == 5u && index == 0u)
@@ -155,7 +155,7 @@ void test(uint3 id : SV_DispatchThreadID)
     else if (pass == 7u && index < splitEntries(shape))
     {
         // Each entry's probe, its place and its level and cascade, or -1 where it holds none.
-        uint key = uints[splitPoolAt(shape) + 3u * index];
+        uint key = uints[splitPoolAt(shape) + 4u * index];
         uint level = splitLevelOf(key), cascade = splitCascadeOfKey(key);
         float3 place = float3(splitCellOf(frame, shape, key)) * splitSpacing(shape, level, cascade);
         taken[index] = float4(place, key == 0u ? -1.0 : float(level * 4u + cascade));

@@ -77,7 +77,7 @@ public sealed record SplitStoreShape
     /// The uints the store lays out, its counts, its table, its pools, its free lists and the sums
     /// the seen points' rays add to each way, five a way, which the engine's buffer of uints holds.
     /// </summary>
-    public int Uints => Counts + 2 * 4 * Checked().Slots + 4 * Entries + 5 * Cascades * BaseWays * Slots;
+    public int Uints => Counts + 2 * 4 * Checked().Slots + 5 * Entries + 5 * Cascades * BaseWays * Slots;
 
     /// <summary>
     /// The float4 of light the store lays out, its probes' own light and the light merged from
