@@ -5,11 +5,10 @@
 // split_hand_kernel.slang's do.
 //
 // The setup holds the pass first, the eye from 1, the frame's count at 4, the store's slots,
-// spacing, levels, cascades, reach and age from 5, the cascade a pass of the cascades asks above
-// at 11, the count of points at 12, the count of boxes at 13, the world's half width about its
-// middle at 14 and the sky's light at 15. A point is two float4, its place with 1 in w where the
-// eye sees it, then its normal, and a box two, its low corner with the light it sends in w, then
-// its high corner.
+// spacing and cascades from 5, the cascade a pass of the cascades asks above at 11, the count of
+// points at 12, the count of boxes at 13, the world's half width about its middle at 14 and the
+// sky's light at 15. A point is two float4, its place with 1 in w where the eye sees it, then its
+// normal, and a box two, its low corner with the light it sends in w, then its high corner.
 import rc_split;
 
 RWStructuredBuffer<float> setup;
@@ -113,10 +112,7 @@ void test(uint3 id : SV_DispatchThreadID)
     SplitStore shape;
     shape.slots = uint(setup[5]);
     shape.spacing = setup[6];
-    shape.levels = uint(setup[7]);
-    shape.cascades = uint(setup[8]);
-    shape.reach = setup[9];
-    shape.age = uint(setup[10]);
+    shape.cascades = uint(setup[7]);
     uint pass = uint(setup[0]), index = id.x;
     BufferPoints seen;
     PlainUints store;
@@ -124,7 +120,7 @@ void test(uint3 id : SV_DispatchThreadID)
     BoxHits hits;
     EvenSky sky;
     if (pass == 0u)
-        clearSplitTable(store, shape, index);
+        clearSplitTable(store, frame, shape, index);
     else if (pass == 1u)
         keepSplitProbes(store, frame, shape, index);
     else if (pass == 2u && index < uint(setup[12]))
@@ -138,27 +134,25 @@ void test(uint3 id : SV_DispatchThreadID)
         // The layout, which the tests hold the library's sizes to.
         taken[0] = float4(float(splitUints(shape)), float(splitLights(shape)), float(splitEntries(shape)), float(splitTableSlots(shape)));
         taken[1] = float4(float(splitTableAt(shape)), float(splitPoolAt(shape)), float(splitFreeAt(shape)), float(splitSumsAt(shape)));
+        taken[2] = float4(float(splitAgesAt(shape, 0u)), float(splitAgesAt(shape, 1u)), 0.0, 0.0);
     }
     else if (pass == 6u && index < uint(setup[12]))
     {
-        // Each point's level, its share of the next, and the entries of the probes of both it adds
-        // its rays to.
-        float next;
+        // The place of the finest probe each point adds its rays to, and its entry, -1 where the
+        // store holds none.
         float3 p = seen.placeAt(index);
         float3 origin = splitRayOrigin(frame, shape, p, seen.normalAt(index));
-        uint level = splitLevelAt(frame, shape, p, next);
-        uint entry = findSplitProbe(store, shape, splitKey(level, 0u, splitSeenCell(hits, shape, level, p, origin)));
-        uint above = level + 1u < shape.levels ? findSplitProbe(store, shape, splitKey(level + 1u, 0u, splitSeenCell(hits, shape, level + 1u, p, origin)))
-            : SplitNone;
-        taken[index] = float4(float(level), next, entry == SplitNone ? -1.0 : float(entry), above == SplitNone ? -1.0 : float(above));
+        int3 cell = splitSeenCell(hits, shape, p, origin);
+        uint entry = findSplitProbe(store, shape, splitKey(0u, cell));
+        taken[index] = float4(float3(cell) * shape.spacing, entry == SplitNone ? -1.0 : float(entry));
     }
     else if (pass == 7u && index < splitEntries(shape))
     {
-        // Each entry's probe, its place and its level and cascade, or -1 where it holds none.
-        uint key = uints[splitPoolAt(shape) + 4u * index];
-        uint level = splitLevelOf(key), cascade = splitCascadeOfKey(key);
-        float3 place = float3(splitCellOf(frame, shape, key)) * splitSpacing(shape, level, cascade);
-        taken[index] = float4(place, key == 0u ? -1.0 : float(level * 4u + cascade));
+        // Each entry's probe, its place and its cascade, or -1 where it holds none.
+        uint key = uints[splitPoolAt(shape) + SplitEntryUints * index];
+        uint cascade = splitCascadeOfKey(key);
+        float3 place = float3(splitCellOf(frame, shape, key)) * splitSpacing(shape, cascade);
+        taken[index] = float4(place, key == 0u ? -1.0 : float(cascade));
     }
     else if (pass == 8u && index < 160u)
     {
@@ -181,31 +175,24 @@ void test(uint3 id : SV_DispatchThreadID)
         taken[index] = float4(float(splitWayOf(uint(setup[11]), splitWay(uint(setup[11]), index))), 0.0, 0.0, 0.0);
     else if (pass == 13u && index < uint(setup[12]))
     {
-        // Each point's ray of the frame traced whole across every interval of its level and of
-        // the next where it stands in their overlap, five float4 a level, its light and how it
-        // ended, then the entry and the way of each cascade's probe its parts go to with the end of
-        // that cascade's interval, the finest's w where the ray ended, the next level's entries -2
-        // where it takes none.
-        float next;
+        // Each point's ray of the frame traced whole across every interval, 1 float4 and one a
+        // cascade, its light and how it ended, then the entry and the way of each cascade's probe
+        // its parts go to with the end of that cascade's interval, the finest's w where the ray
+        // ended.
         float3 p = seen.placeAt(index), n = seen.normalAt(index);
-        uint level = splitLevelAt(frame, shape, p, next);
         float3 way = splitRayWay(n, index, frame.frame);
-        for (uint j = 0u; j < 2u; j++)
+        uint at = index * (1u + shape.cascades);
+        float3 origin = splitRayOrigin(frame, shape, p, n);
+        ProbeRay whole = hits.along(origin, way, 0.0, splitIntervalEnd(shape, shape.cascades - 1u));
+        float3 light = whole.light + (whole.ended == RayLeft ? whole.carried * sky.skyAlong(way) : float3(0.0));
+        taken[at] = float4(light, float(whole.ended));
+        int3 cell = splitSeenCell(hits, shape, p, origin);
+        for (uint c = 0u; c < shape.cascades; c++)
         {
-            uint at = index * 10u + j * 5u;
-            uint l = level + j;
-            float far = splitIntervalEnd(shape, l, shape.cascades - 1u);
-            ProbeRay whole = hits.along(splitRayOrigin(frame, shape, p, n), way, 0.0, far);
-            float3 light = whole.light + (whole.ended == RayLeft ? whole.carried * sky.skyAlong(way) : float3(0.0));
-            taken[at] = float4(light, float(whole.ended));
-            int3 cell = splitSeenCell(hits, shape, l, p, splitRayOrigin(frame, shape, p, n));
-            for (uint c = 0u; c < shape.cascades; c++)
-            {
-                uint entry = findSplitProbe(store, shape, splitKey(l, c, cell));
-                float name = j == 1u && !(next > 0.0) ? -2.0 : entry == SplitNone ? -1.0 : float(entry);
-                taken[at + 1u + c] = float4(name, float(splitWayOf(c, way)), splitIntervalEnd(shape, l, c), c == 0u ? whole.t : 0.0);
-                cell = (cell + 1) >> 1;
-            }
+            uint entry = findSplitProbe(store, shape, splitKey(c, cell));
+            taken[at + 1u + c] = float4(entry == SplitNone ? -1.0 : float(entry), float(splitWayOf(c, way)), splitIntervalEnd(shape, c),
+                c == 0u ? whole.t : 0.0);
+            cell = (cell + 1) >> 1;
         }
     }
 }

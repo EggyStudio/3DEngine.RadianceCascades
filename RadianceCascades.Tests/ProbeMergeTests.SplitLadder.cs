@@ -20,9 +20,11 @@ public sealed partial class ProbeMergeTests
     // The split store's reading of a scene at a configuration, each part's light over the light
     // traced there after one gather (First) and at the steady state of the bounce (Ratios), as a
     // merge's LadderRow reads it, the rounds its loop took and whether it settled within
-    // MostRounds, the gain a round and the leak at the steady state.
+    // MostRounds, the gain a round, the leak at the steady state and the store at the last round's
+    // last frame, the probes standing in each cascade, the finest asked for and the rays a frame
+    // each of those takes at the mean.
     private sealed record SplitRow(Configuration Configuration, LadderScene Scene, float[] First, float[] Ratios, int Rounds, bool Settles, float Gain,
-        float Leak)
+        float Leak, (int[] Standing, int Asked, float Rays) Store)
     {
         public float[] Distances => Ratios.Select(r => MathF.Abs(MathF.Log(r))).ToArray();
         public float Mean => Distances.Average();
@@ -35,10 +37,13 @@ public sealed partial class ProbeMergeTests
     // with every hit lit by its surface's own light and the light its bounce cell took of the round
     // before's gather, reflected, and gathers at the same points, until the first lit points' light
     // changes by under a hundredth, with the first round's light, each point's light at the last,
-    // the rounds it took, whether it settled within MostRounds, the gain a round and the points'
-    // light each round.
-    private static (float[] First, float[] Light, int Rounds, bool Settles, float Gain, List<float[]> EachRound) SplitLoop(LadderScene scene, Transport transport,
-        (Vector3, Vector3)[] points, int lit)
+    // the rounds it took, whether it settled within MostRounds, the gain a round and the store at
+    // the last round's last frame, the probes standing in each cascade, the finest asked for and
+    // the rays a frame each of those takes at the mean. The store takes the walk's shape unless
+    // another is given.
+    private static (float[] First, float[] Light, int Rounds, bool Settles, float Gain, (int[] Standing, int Asked, float Rays) Store) SplitLoop(
+        LadderScene scene, Transport transport,
+        (Vector3, Vector3)[] points, int lit, SplitStoreShape? shape = null)
     {
         (Vector3, Vector3)[] all = [.. points.Select(p => (scene.Bounce!.From(p.Item1), p.Item2)), .. transport.Places];
         var seen = SplitRun.Floats(all);
@@ -47,7 +52,7 @@ public sealed partial class ProbeMergeTests
         float[]? bounce = null;
         while (true)
         {
-            var store = new SplitRun(CorridorSplitShape, all, scene.Setting.CellLight!, scene.Setting.SkyLight, scene.Bounce!.Grid)
+            var store = new SplitRun(shape ?? CorridorSplitShape, all, scene.Setting.CellLight!, scene.Setting.SkyLight, scene.Bounce!.Grid)
             {
                 FieldCellLight = scene.Setting.FieldCascades is not null && !scene.Setting.LightByPlace,
             };
@@ -61,7 +66,10 @@ public sealed partial class ProbeMergeTests
             sums.Add(light[..lit].Sum());
             each.Add(light);
             if (sums.Count == MostRounds || HasSettled(sums))
-                return (each[0], light, sums.Count, HasSettled(sums), Gain(sums), each);
+            {
+                var asked = store.Asked();
+                return (each[0], light, sums.Count, HasSettled(sums), Gain(sums), (store.Standing(), asked, store.SeenCount / (float)Math.Max(asked, 1)));
+            }
             bounce = Spread(transport, taken[points.Length..]);
         }
     }
@@ -78,11 +86,13 @@ public sealed partial class ProbeMergeTests
         foreach (var line in Wrapped(
             "The split store, `ProbeLayout.Split`, runs over each scene at each configuration on the field, the light and the bounce the "
             + $"merges run on, at its default shape with {CorridorSplitShape.Slots.ToString("N0", CultureInfo.InvariantCulture)} slots to its "
-            + "finest pool, its levels laid about the place an engine's field is about. Each round a store anew sees the scene's points and "
+            + $"finest pool and {CorridorSplitShape.Cascades} cascades on grids fixed in the world, the finest {Number(CorridorSplitShape.Spacing, "0.00")} "
+            + $"apart and each above twice as far, in {Number(CorridorSplitShape.Bytes / 1048576f, "0.0")} MB. Each round a store anew sees the scene's points and "
             + $"the places of the bounce's cells, runs {LadderSplitFrames} frames with each hit taking its surface's own light and what the "
             + "surface reflects of the light gathered at its cell the round before, and gathers at the same points, the irradiance the dense "
             + "passes' gather keeps. Its parts are read as the merges' are, the dense grid's by the default merge, "
-            + $"{MergeName(dense).Split(',')[0]}, beside them."))
+            + $"{MergeName(dense).Split(',')[0]}, beside them, and the store's probes standing in each cascade at the last round's last frame, "
+            + "the finest asked for at that frame and the rays a frame each of those takes, a ray a seen point, at the mean."))
             file.AppendLine(line);
         file.AppendLine();
         file.AppendLine("| Configuration | Merge | Mean distance | Worst part | Leak | Most gain a round | Held out, mean and worst |");
@@ -101,8 +111,8 @@ public sealed partial class ProbeMergeTests
         }
         file.AppendLine();
         file.AppendLine("| Configuration | Scene | Each part's ratio after one gather | Each part's ratio at the steady state | Rounds | Gain a round "
-            + "| Mean distance | Worst part | Leak | The dense grid's mean and worst |");
-        file.AppendLine("|---|---|---|---|---|---|---|---|---|---|");
+            + "| Mean distance | Worst part | Leak | The dense grid's mean and worst | Probes standing by cascade | The finest asked | Rays a probe |");
+        file.AppendLine("|---|---|---|---|---|---|---|---|---|---|---|---|---|");
         string Each(SplitRow r, float[] ratios) => string.Join(", ", r.Scene.Parts.Select((part, p) => $"{part.Name} {Number(ratios[p], "0.000")}"));
         foreach (var r in split)
         {
@@ -110,7 +120,8 @@ public sealed partial class ProbeMergeTests
             file.AppendLine($"| {ConfigurationName(r.Configuration)} | {r.Scene.Name} | {Each(r, r.First)} | {Each(r, r.Ratios)} | "
                 + $"{(r.Settles ? r.Rounds.ToString(CultureInfo.InvariantCulture) : $"{r.Rounds}, unsettled")} | {Number(r.Gain, "0.000")} | "
                 + $"{Number(r.Mean, "0.000")} | {Number(r.Worst, "0.000")} | {(r.Scene.Dark is null ? "" : Number(r.Leak, "0.00000"))} | "
-                + $"{Number(d.Mean, "0.000")} and {Number(d.Worst, "0.000")} |");
+                + $"{Number(d.Mean, "0.000")} and {Number(d.Worst, "0.000")} | {string.Join(", ", r.Store.Standing)} | {r.Store.Asked} | "
+                + $"{Number(r.Store.Rays, "0.0")} |");
         }
     }
 }

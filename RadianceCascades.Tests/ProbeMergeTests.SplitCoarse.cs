@@ -5,8 +5,8 @@ namespace RadianceCascades.Tests;
 
 /// <summary>
 /// The ladder's closed box, every face of it sending the same light, read on the split probes over
-/// fields coarser than the module's own, where points by the room's edges see none of their
-/// level's probes and still take that light.
+/// fields coarser than the module's own, where points by the room's edges see none of the finest
+/// probes about them and still take that light.
 /// </summary>
 public sealed partial class ProbeMergeTests
 {
@@ -52,11 +52,9 @@ public sealed partial class ProbeMergeTests
             }
         var line = $"the closed room's {points.Length} points over each field and eye, {string.Join("; ", said)}";
         output.WriteLine(line);
-        // 1.0000 at every point. A gather that took none from a point that sees none of its
-        // level's probes would leave points along the room's edges dark from the eye by the wall
-        // over the finer field and from both eyes over the coarser, where the march from a ray's
-        // start meets a face at once along every way. The next level's probes about them do not
-        // stand, since no point asks for them there, and they take their own level's by their
+        // 1.0000 at every point. Over a field whose cells are coarse beside the lift of the rays'
+        // start, the march from that start can meet a face at once along every way, and a point
+        // by the room's edges that so sees none of the finest probes about it takes them by their
         // trilinear weights alone.
         Assert.True(dark == 0, line);
     }

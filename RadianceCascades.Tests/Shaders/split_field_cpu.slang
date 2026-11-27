@@ -10,16 +10,15 @@ import rc_split;
 // probe_field_cpu.slang builds them, the field's cascades one after another, finest first.
 RWStructuredBuffer<float> cells;
 
-// The pass at 0, the eye from 1, the frame's count at 4, the store's slots, spacing, levels,
-// cascades, reach and age from 5, the cascade a pass of the cascades runs on at 11, the counts of
-// seen points and of points gathered at 12 and 13, the field's cells along a side at 14 and the
-// count of its cascades at 15, each one's least corner and cell from 16, four floats each, the
-// sky's light at 48, the least corner, the cell and the cells along a side of the grid cellLight
-// holds from 49, the cap of steps a ray's part takes at 54, none where 0, the level and the
-// gathered point whose probes' ways pass 9 reads at 55 and 56, at 57 whether a hit takes the light
-// of the field's cell it lies in rather than the light of its place, at 58 where the bounce a hit
-// takes begins in cellLight, none where 0, and from 59 the least corner of the bounce's grid, its
-// cell and its cells along a side.
+// The pass at 0, the eye from 1, the frame's count at 4, the store's slots, spacing and cascades
+// from 5, the cascade a pass of the cascades runs on at 11, the counts of seen points and of points
+// gathered at 12 and 13, the field's cells along a side at 14 and the count of its cascades at 15,
+// each one's least corner and cell from 16, four floats each, the sky's light at 48, the least
+// corner, the cell and the cells along a side of the grid cellLight holds from 49, the cap of steps
+// a ray's part takes at 54, none where 0, at 57 whether a hit takes the light of the field's cell
+// it lies in rather than the light of its place, at 58 where the bounce a hit takes begins in
+// cellLight, none where 0, and from 59 the least corner of the bounce's grid, its cell and its
+// cells along a side.
 RWStructuredBuffer<float> setup;
 
 // The light of each cell of the grid the setup gives from 49, x fastest, or of each cell of the
@@ -169,10 +168,7 @@ void test(uint3 id : SV_DispatchThreadID)
     SplitStore shape;
     shape.slots = uint(setup[5]);
     shape.spacing = setup[6];
-    shape.levels = uint(setup[7]);
-    shape.cascades = uint(setup[8]);
-    shape.reach = setup[9];
-    shape.age = uint(setup[10]);
+    shape.cascades = uint(setup[7]);
     uint cascade = uint(setup[11]);
     SeenPoints points;
     GatheredPoints surfaces;
@@ -182,7 +178,7 @@ void test(uint3 id : SV_DispatchThreadID)
     FieldHits<FieldCells> hits;
     hits.cap = uint(setup[54]);
     if (pass == 0u)
-        clearSplitTable(store, shape, index);
+        clearSplitTable(store, frame, shape, index);
     else if (pass == 1u)
         keepSplitProbes(store, frame, shape, index);
     else if (pass == 2u && index < uint(setup[12]))
@@ -199,35 +195,14 @@ void test(uint3 id : SV_DispatchThreadID)
         gatherSurface(store, kept, hits, frame, shape, surfaces, index);
     else if (pass == 8u && index < uint(setup[13]))
     {
-        // Each point's light from its level and from the next over the overlap, and the weights
-        // of the probes standing about it of each.
+        // Each point's light from the probes about it it sees and from those standing by their
+        // trilinear weights alone, and the weights of each.
         float3 p = surfaces.placeAt(index);
-        float next, weights, nextWeights = 0.0;
-        uint level = splitLevelAt(frame, shape, p, next);
+        float weights, plainWeights;
         float3 n = surfaces.normalAt(index);
         float3 origin = splitRayOrigin(frame, shape, p, n);
-        float3 own = splitLevelLight(store, kept, hits, shape, level, p, n, origin, weights);
-        float3 above = next > 0.0 ? splitLevelLight(store, kept, hits, shape, level + 1u, p, n, origin, nextWeights) : float3(0.0);
-        taken[index] = float4(own.x, above.x, weights, nextWeights);
-    }
-    else if (pass == 9u && index < 2u * 8u * SplitBaseWays)
-    {
-        // The ways of the eight probes about the gathered point at 56 of the level at 55 and of
-        // the next, a thread a way, each its merged light and share let through, then its own
-        // light and share, the rays its kept light is the mean of and 1 where its probe stands.
-        uint level = uint(setup[55]) + index / (8u * SplitBaseWays);
-        uint corner = (index / SplitBaseWays) % 8u, way = index % SplitBaseWays;
-        float3 q = surfaces.placeAt(uint(setup[56])) / splitSpacing(shape, level, 0u);
-        int3 cell = int3(floor(q)) + int3(int(corner & 1u), int((corner >> 1) & 1u), int(corner >> 2));
-        uint entry = findSplitProbe(store, shape, splitKey(level, 0u, cell));
-        taken[2u * index] = float4(0.0, -1.0, 0.0, -1.0);
-        taken[2u * index + 1u] = float4(0.0);
-        if (entry != SplitNone)
-        {
-            uint at = splitLightAt(shape, entry, way, false);
-            float4 own = kept.lightAt(at);
-            taken[2u * index] = kept.lightAt(splitLightAt(shape, entry, way, true));
-            taken[2u * index + 1u] = float4(own.x, own.w, float(store.load(splitSumsAt(shape) + 5u * at + 4u) >> SplitCountBits), 1.0);
-        }
+        float3 seenLight = splitFinestLight(store, kept, hits, shape, p, n, origin, true, weights);
+        float3 plain = splitFinestLight(store, kept, hits, shape, p, n, origin, false, plainWeights);
+        taken[index] = float4(seenLight.x, plain.x, weights, plainWeights);
     }
 }

@@ -4,16 +4,14 @@ using Xunit.Abstractions;
 
 namespace RadianceCascades.Tests;
 
-/// <summary>
-/// The split cascades' store run on the CPU over the frames of a walk, read as which probes it
-/// keeps, where they stand, whether a probe keeps its entry while the eye moves, when it is freed,
-/// and how a point takes the light of two levels over their overlap.
+/// <summary> The split cascades' store run on the CPU over the frames of a walk, read as which
+/// probes it keeps, where they stand, whether a probe keeps its entry while the eye moves, which go
+/// first when a pool fills, and how a point takes the same light from wherever the eye stands.
 /// </summary>
 public sealed class SplitStoreTests(ITestOutputHelper output)
 {
-    // A store the tests can run in a moment, the finest level's probes half a unit apart reaching 4
-    // spacings, as a dense level of 8 a side reaches.
-    private static readonly SplitStoreShape Shape = new() { Slots = 4096, Spacing = 0.5f, Levels = 4, Cascades = 4, Reach = 2, Age = 8 };
+    // A store the tests can run in a moment, the finest cascade's probes half a unit apart.
+    private static readonly SplitStoreShape Shape = new() { Slots = 4096, Spacing = 0.5f, Cascades = 4 };
 
     // A store's buffers kept from frame to frame and the passes of a frame run over them, its rays
     // traced among boxes, each its low corner and its light then its high corner, in a world's cube
@@ -29,9 +27,9 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
         {
             var count = points.Length / 8;
             (setup[0], setup[1], setup[2], setup[3], setup[4]) = (pass, eye.X, eye.Y, eye.Z, frame);
-            (setup[5], setup[6], setup[7], setup[8], setup[9], setup[10]) = (shape.Slots, shape.Spacing, shape.Levels, shape.Cascades, shape.Reach, shape.Age);
+            (setup[5], setup[6], setup[7]) = (shape.Slots, shape.Spacing, shape.Cascades);
             (setup[11], setup[12], setup[13], setup[14], setup[15]) = (cascade, count, boxes.Length / 8, 64, 1);
-            var taken = new float[4 * Math.Max(Math.Max(10 * count, shape.Entries), Math.Max(160, threads))];
+            var taken = new float[4 * Math.Max(Math.Max((1 + shape.Cascades) * count, shape.Entries), Math.Max(160, threads))];
             CpuKernel.Run("split_store_cpu.slang", ((uint)(threads + 63) / 64, 1, 1), setup, points.Length == 0 ? new float[8] : points, Uints, Light, taken, boxes);
             return taken;
         }
@@ -68,20 +66,21 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
         // The first uint of the sums.
         public int SumsAt => (int)Run(5, Vector3.Zero, 0, [], 1)[7];
 
-        // Each entry's probe standing, its place, its level and its cascade.
-        public List<(int Entry, Vector3 Place, int Level, int Cascade)> Probes(Vector3 eye, uint frame)
+        // Each entry's probe standing, its place and its cascade.
+        public List<(int Entry, Vector3 Place, int Cascade)> Probes(Vector3 eye, uint frame)
         {
             var taken = Run(7, eye, frame, [], shape.Entries);
             return Enumerable.Range(0, shape.Entries).Where(e => taken[4 * e + 3] >= 0)
-                .Select(e => (e, new Vector3(taken[4 * e], taken[4 * e + 1], taken[4 * e + 2]), (int)taken[4 * e + 3] / 4, (int)taken[4 * e + 3] % 4)).ToList();
+                .Select(e => (e, new Vector3(taken[4 * e], taken[4 * e + 1], taken[4 * e + 2]), (int)taken[4 * e + 3])).ToList();
         }
 
         // Each entry's key and the frame it was taken, by key.
         public Dictionary<uint, (int Entry, uint Taken)> Keys()
         {
             var pool = (int)Run(5, Vector3.Zero, 0, [], 1)[5];
-            return Enumerable.Range(0, shape.Entries).Where(e => Uints[pool + 4 * e] != 0)
-                .ToDictionary(e => Uints[pool + 4 * e], e => (e, Uints[pool + 4 * e + 2]));
+            const int stride = SplitStoreShape.EntryUints;
+            return Enumerable.Range(0, shape.Entries).Where(e => Uints[pool + stride * e] != 0)
+                .ToDictionary(e => Uints[pool + stride * e], e => (e, Uints[pool + stride * e + 2]));
         }
     }
 
@@ -118,19 +117,24 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
             Assert.Equal(shape.Uints, (int)layout[0]);
             Assert.Equal(shape.Lights, (int)layout[1]);
             Assert.Equal(shape.Entries, (int)layout[2]);
+            Assert.Equal(32 + SplitStoreShape.AgeBins * shape.Cascades, (int)layout[9]);
         }
+        var defaults = new SplitStoreShape();
+        output.WriteLine($"the default shape, {defaults.Slots} slots to its finest pool, its spacing {defaults.Spacing} and {defaults.Cascades} cascades, "
+            + $"holds {defaults.Entries} probes in {defaults.Uints} uints and {defaults.Lights} float4 of light, {defaults.Bytes / 1048576.0:0.0} MB");
         Assert.Throws<ArgumentOutOfRangeException>(() => (Shape with { Slots = 4000 }).Uints);
         Assert.Throws<ArgumentOutOfRangeException>(() => (Shape with { Slots = 32 }).Uints);
-        Assert.Throws<ArgumentOutOfRangeException>(() => (Shape with { Reach = 65 }).Lights);
+        Assert.Throws<ArgumentOutOfRangeException>(() => (Shape with { Cascades = 9, Slots = 1 << 16 }).Lights);
+        Assert.Throws<ArgumentOutOfRangeException>(() => (Shape with { Spacing = 0 }).Lights);
     }
 
     [CpuKernelFact]
     public void A_Split_Store_Holds_Probes_Only_Beside_The_Points_The_Eye_Sees()
     {
-        // Each seen point asks for its nearest probe of its level, so every probe of the finest
-        // cascade stands within half a cell's diagonal of a point, and each above within half its
-        // own of a probe below. A dense grid stands every probe of its levels, 8 a side each,
-        // where the store stands those beside the corridor's faces.
+        // Each seen point asks for its nearest probe of the finest cascade, so every probe of it
+        // stands within half a cell's diagonal of a point, and each above within half its own of a
+        // probe below. A dense grid over the faces' bounds stands every probe of the finest
+        // spacing within them, where the store stands those beside the corridor's faces.
         var points = CorridorFaces();
         var eye = new Vector3(0.3f, 1.5f, 0);
         var store = new Store(Shape);
@@ -138,22 +142,24 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
         var probes = store.Probes(eye, 1);
         var near = store.Run(6, eye, 1, points, points.Length / 8);
         for (int k = 0; k < points.Length / 8; k++)
-            Assert.True(near[4 * k + 2] >= 0 && (near[4 * k + 1] <= 0 || near[4 * k + 3] >= 0), $"point {k} at {PlaceOf(points, k)} finds no probe of its level");
+            Assert.True(near[4 * k + 3] >= 0, $"point {k} at {PlaceOf(points, k)} finds no probe of the finest cascade");
         var seen = Enumerable.Range(0, points.Length / 8).Select(k => PlaceOf(points, k)).ToArray();
         var far = 0f;
-        foreach (var (_, place, level, cascade) in probes)
+        foreach (var (_, place, cascade) in probes)
         {
-            var spacing = Shape.Spacing * MathF.Pow(2, level + cascade);
+            var spacing = Shape.Spacing * MathF.Pow(2, cascade);
             var nearest = cascade == 0
                 ? seen.Min(p => Vector3.Distance(p, place))
-                : probes.Where(p => p.Level == level && p.Cascade == cascade - 1).Min(p => Vector3.Distance(p.Place, place));
+                : probes.Where(p => p.Cascade == cascade - 1).Min(p => Vector3.Distance(p.Place, place));
             far = MathF.Max(far, nearest / spacing);
         }
         var counts = Enumerable.Range(0, Shape.Cascades).Select(c => probes.Count(p => p.Cascade == c)).ToArray();
         var standing = Enumerable.Range(0, Shape.Cascades).Select(c => (int)store.Uints[4 * c + 2]).ToArray();
-        var dense = Shape.Levels * 8 * 8 * 8;
-        var said = $"the store holds {string.Join(", ", counts)} probes by cascade against a dense grid's {dense} of the finest, "
-            + $"each at most {far:0.000} of its spacing from what asked for it";
+        var (low, high) = (seen.Aggregate(Vector3.Min), seen.Aggregate(Vector3.Max));
+        var cells = (high - low) / Shape.Spacing + Vector3.One * 2;
+        var dense = (int)cells.X * (int)cells.Y * (int)cells.Z;
+        var said = $"the store holds {string.Join(", ", counts)} probes by cascade against a dense grid's {dense} of the finest over "
+            + $"the faces' bounds, each at most {far:0.000} of its spacing from what asked for it";
         output.WriteLine(said);
         Assert.Equal(counts, standing);
         Assert.True(far <= MathF.Sqrt(3) / 2 + 1e-4f && counts[0] < dense / 2, said);
@@ -164,8 +170,8 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
     {
         // The eye walks the corridor in quarter steps. A probe asked for at one step and the next
         // keeps its key and its entry, and the frame it was taken, so the light it keeps stays with
-        // it. A probe the eye leaves outside its level's reach is freed, and the point that asked
-        // for it asks for one of the level above.
+        // it, and since each probe stands on a grid fixed in the world, every point asks for the
+        // same probe from every step and no probe is taken after the first.
         var points = CorridorFaces();
         var store = new Store(Shape);
         Dictionary<uint, (int Entry, uint Taken)>? before = null;
@@ -188,68 +194,94 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
         }
         var said = $"over 16 steps of the eye {kept} probes kept their entries, {fresh} were taken and {moved} moved";
         output.WriteLine(said);
-        Assert.True(moved == 0 && kept > 10 * fresh, said);
+        Assert.True(moved == 0 && fresh == 0 && kept > 0, said);
     }
 
     [CpuKernelFact]
-    public void A_Split_Stores_Probe_No_Point_Asks_For_Is_Freed_Past_Its_Age()
+    public void A_Split_Stores_Probe_Is_Kept_Until_Its_Pool_Fills_And_Those_Asked_For_Longest_Ago_Go_First()
     {
-        // The points ask for their probes once, then see nothing. Every probe stands for the
-        // store's age of frames and is freed at the frame after, every pool's entries free again.
-        var points = CorridorFaces();
-        var eye = new Vector3(0, 1.5f, 0);
-        var store = new Store(Shape);
-        store.Frame(eye, 1, points);
-        var first = store.Probes(eye, 1).Count;
-        var none = Floats([]);
-        for (uint frame = 2; frame <= 1 + (uint)Shape.Age; frame++)
-            store.Frame(eye, frame, none);
-        var aged = store.Probes(eye, 1 + (uint)Shape.Age).Count;
-        store.Frame(eye, 2 + (uint)Shape.Age, none);
-        var freed = store.Probes(eye, 2 + (uint)Shape.Age).Count;
-        var free = Enumerable.Range(0, Shape.Cascades).Select(c => (int)store.Uints[4 * c]).ToArray();
-        Assert.Equal(first, aged);
-        Assert.Equal(0, freed);
-        Assert.Equal(Enumerable.Range(0, Shape.Cascades).Select(Shape.PoolProbes), free);
+        // A pool of 1,024 probes of one cascade. A group of 200 points asks for its probes once,
+        // and they stand through 200 frames no point asks for any. Then eleven groups of 200 ask in
+        // turn, a group a frame, and the pool, keeping room for twice the probes the frame before
+        // took, sheds those asked for longest ago first, so the groups standing are the latest
+        // ones, each whole, and once the pool presses at least three stand. The frame after the
+        // last group sheds what leaves room for twice its probes, and through 300 frames more with
+        // no point asking every probe that stood then still does.
+        var shape = new SplitStoreShape { Slots = 1024, Spacing = 0.5f, Cascades = 1 };
+        const int group = 200, groups = 12;
+        var cells = Enumerable.Range(0, group * groups).Select(k => new Vector3(k % 50 * 0.5f + 0.1f, 0, k / 50 * 0.5f + 0.1f)).ToArray();
+        float[] Group(int g) => Floats(cells[(g * group)..((g + 1) * group)].Select(c => (c, Vector3.UnitY)));
+        static int GroupOf(Vector3 place) => ((int)MathF.Round(place.Z / 0.5f) * 50 + (int)MathF.Round(place.X / 0.5f)) / group;
+        var eye = new Vector3(12, 1.5f, 12);
+        var store = new Store(shape);
+        // The groups standing, each by its number where all of its probes stand and by its number
+        // less one, negated, where some do.
+        int[] Standing(uint frame) => [.. store.Probes(eye, frame).GroupBy(p => GroupOf(p.Place)).OrderBy(g => g.Key)
+            .Select(g => g.Count() == group ? g.Key : -1 - g.Key)];
+        uint frame = 1;
+        store.Frame(eye, frame, Group(0));
+        while (frame < 201)
+            store.Frame(eye, ++frame, Floats([]));
+        var idle = Standing(frame);
+        var said = new List<string> { $"after 200 frames unasked {string.Join(", ", idle)} stand" };
+        var (ordered, least) = (true, groups);
+        for (int g = 1; g < groups; g++)
+        {
+            store.Frame(eye, ++frame, Group(g));
+            var standing = Standing(frame);
+            said.Add(string.Join(" ", standing));
+            ordered &= standing.SequenceEqual(Enumerable.Range(g - standing.Length + 1, standing.Length));
+            if (g >= 6)
+                least = Math.Min(least, standing.Length);
+        }
+        store.Frame(eye, ++frame, Floats([]));
+        var settled = Standing(frame);
+        for (int k = 0; k < 300; k++)
+            store.Frame(eye, ++frame, Floats([]));
+        var after = Standing(frame);
+        var free = (int)store.Uints[0];
+        var message = $"{string.Join("; ", said)}, the frame after {string.Join(" ", settled)}, after 300 frames more "
+            + $"{string.Join(" ", after)}, {free} entries free";
+        output.WriteLine(message);
+        Assert.True(idle.SequenceEqual([0]) && ordered && least >= 3 && settled.Length >= 3 && settled[^1] == groups - 1
+            && settled.SequenceEqual(Enumerable.Range(groups - settled.Length, settled.Length)) && after.SequenceEqual(settled)
+            && free == shape.Slots - group * settled.Length, message);
     }
 
     [CpuKernelFact]
-    public void A_Split_Gather_Blends_Two_Levels_Over_Their_Overlap_And_Steps_Nowhere()
+    public void A_Split_Gather_Takes_The_Same_Light_At_A_Point_From_Wherever_The_Eye_Stands()
     {
-        // Points along a line from the eye out past every level's reach, each level's probes
-        // holding a light of 2 to its level along every way, so a point takes pi times its level's
-        // light where it stands in one and the two blended by its share over the last tenth of a
-        // reach, and its light climbs smoothly where the eye's distance takes it from a level to
-        // the next.
+        // Points along a line out to 16 from the eye, each finest probe holding along every way a
+        // light that rises with its place, so a point takes pi times the probes' light about it by
+        // their trilinear weights. The eye at the line's start, at its middle and past its end
+        // reads each point the same, the probes standing on a grid fixed in the world, and the
+        // light steps nowhere along the line.
         var line = Enumerable.Range(0, 1601).Select(i => (new Vector3(i * 0.01f, 1.5f, 0.2f), Vector3.UnitY)).ToArray();
         var points = Floats(line);
-        var eye = new Vector3(0, 1.5f, 0);
+        var eyes = new Vector3[] { new(0, 1.5f, 0), new(8, 1.5f, 0), new(20, 1.5f, 0) };
         var store = new Store(Shape);
-        store.Frame(eye, 1, points);
-        foreach (var (entry, _, level, cascade) in store.Probes(eye, 1).Where(p => p.Cascade == 0))
+        store.Frame(eyes[0], 1, points);
+        foreach (var (entry, place, _) in store.Probes(eyes[0], 1).Where(p => p.Cascade == 0))
             for (int way = 0; way < SplitStoreShape.BaseWays; way++)
             {
                 var at = 4 * (Shape.Cascades * SplitStoreShape.BaseWays * Shape.Slots + entry * SplitStoreShape.BaseWays + way);
-                (store.Light[at], store.Light[at + 1], store.Light[at + 2]) = (MathF.Pow(2, level), MathF.Pow(2, level), MathF.Pow(2, level));
+                var light = 1 + place.X / 4;
+                (store.Light[at], store.Light[at + 1], store.Light[at + 2]) = (light, light, light);
             }
-        var taken = store.Run(4, eye, 1, points, line.Length);
-        float worst = 0, steepest = 0;
+        var taken = eyes.Select(eye => store.Run(4, eye, 1, points, line.Length)).ToArray();
+        float worst = 0, apart = 0, steepest = 0;
         for (int k = 0; k < line.Length; k++)
         {
-            var d = MathF.Max(line[k].Item1.X, 0.2f);
-            var (level, reach) = (0, Shape.Reach);
-            while (d >= reach && level + 1 < Shape.Levels)
-                (level, reach) = (level + 1, reach * 2);
-            var next = level + 1 < Shape.Levels ? Math.Clamp((d / reach - 0.9f) / 0.1f, 0, 1) : 0;
-            var expected = MathF.PI * MathF.Pow(2, level) * (1 + next);
-            worst = MathF.Max(worst, MathF.Abs(taken[4 * k] - expected) / expected);
+            var expected = MathF.PI * (1 + line[k].Item1.X / 4);
+            worst = MathF.Max(worst, MathF.Abs(taken[0][4 * k] - expected) / expected);
+            apart = MathF.Max(apart, taken.Max(t => MathF.Abs(t[4 * k] - taken[0][4 * k])) / expected);
             if (k > 0)
-                steepest = MathF.Max(steepest, MathF.Abs(taken[4 * k] - taken[4 * k - 4]) / taken[4 * k - 4]);
+                steepest = MathF.Max(steepest, MathF.Abs(taken[0][4 * k] - taken[0][4 * k - 4]) / taken[0][4 * k - 4]);
         }
-        var said = $"the gathered light lies {worst:0.000000} of the levels' blend off it at worst and steps {steepest:0.000} of itself "
-            + "between points a hundredth of a unit apart at most";
+        var said = $"the gathered light lies {worst:0.000000} of the probes' blend off it at worst, the three eyes read it "
+            + $"{apart:0.000000} apart and it steps {steepest:0.0000} of itself between points a hundredth of a unit apart at most";
         output.WriteLine(said);
-        Assert.True(worst < 1e-4f && steepest < 0.06f, said);
+        Assert.True(worst < 1e-4f && apart < 1e-6f && steepest < 0.01f, said);
     }
 
     [CpuKernelFact]
@@ -324,7 +356,7 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
     [CpuKernelFact]
     public void A_Split_Points_Rays_Add_Each_Part_To_The_Probe_Of_The_Interval_It_Lies_In()
     {
-        // Each seen point's ray in the lit corridor adds to the probe of each cascade its level's
+        // Each seen point's ray in the lit corridor adds to the probe of each cascade its finest
         // probe leads up to the part of it within that cascade's interval, the light it met there
         // or the sky's past where it left the world with no share let through, or none and all of
         // it let through where it passed, and nothing past where it ended, as the same ray traced
@@ -341,32 +373,29 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
         var reached = new int[Shape.Cascades];
         static uint Parts(float light) => (uint)(Math.Clamp(light, 0, 16384) * 1024 + 0.5f);
         for (int k = 0; k < count; k++)
-            for (int j = 0; j < 2; j++)
+        {
+            var at = 4 * (1 + Shape.Cascades) * k;
+            rays++;
+            var (ended, t) = ((uint)whole[at + 3], whole[at + 7]);
+            for (int c = 0; c < Shape.Cascades; c++)
             {
-                var at = 4 * (10 * k + 5 * j);
-                if (whole[at + 4] == -2)
-                    continue;
-                rays++;
-                var (ended, t) = ((uint)whole[at + 3], whole[at + 7]);
-                for (int c = 0; c < Shape.Cascades; c++)
+                var (entry, way, end) = ((int)whole[at + 4 + 4 * c], (int)whole[at + 5 + 4 * c], whole[at + 6 + 4 * c]);
+                var passed = ended == 1 || t >= end;
+                reached[c]++;
+                if (entry < 0)
+                    missing++;
+                else
                 {
-                    var (entry, way, end) = ((int)whole[at + 4 + 4 * c], (int)whole[at + 5 + 4 * c], whole[at + 6 + 4 * c]);
-                    var passed = ended == 1 || t >= end;
-                    reached[c]++;
-                    if (entry < 0)
-                        missing++;
-                    else
-                    {
-                        var sums = 5 * LightAt(c, entry, way);
-                        for (int i = 0; i < 3; i++)
-                            expected[sums + i] += passed ? 0 : Parts(whole[at + i]);
-                        expected[sums + 3] += passed ? 1024u : 0;
-                        expected[sums + 4]++;
-                    }
-                    if (!passed)
-                        break;
+                    var sums = 5 * LightAt(c, entry, way);
+                    for (int i = 0; i < 3; i++)
+                        expected[sums + i] += passed ? 0 : Parts(whole[at + i]);
+                    expected[sums + 3] += passed ? 1024u : 0;
+                    expected[sums + 4]++;
                 }
+                if (!passed)
+                    break;
             }
+        }
         var sumsAt = store.SumsAt;
         var off = Enumerable.Range(0, expected.Length).Count(i => store.Uints[sumsAt + i] != expected[i]);
         var touched = Enumerable.Range(0, Shape.Cascades * span).Count(i => expected[5 * i + 4] > 0);
@@ -401,7 +430,7 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
             var keys = store.Keys();
             var takenNow = keys.Values.Where(v => v.Taken == frame).Select(v => v.Entry).ToHashSet();
             store.Keep(eye, frame);
-            foreach (var (entry, _, _, cascade) in probes)
+            foreach (var (entry, _, cascade) in probes)
                 for (int way = 0; way < SplitStoreShape.BaseWays << 2 * cascade; way++)
                 {
                     var i = LightAt(cascade, entry, way);
@@ -464,28 +493,33 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
     }
 
     [CpuKernelFact]
-    public void A_Split_Store_Holds_No_Probe_Past_What_Its_Coarsest_Level_Reaches()
+    public void A_Split_Store_Holds_No_Probe_Past_What_Its_Keys_Tell_Apart()
     {
-        // A point within 254 of the coarsest level's spacings of the eye asks for its probe, and
-        // one past them asks for none and gathers no light, so no probe's key stands for a cell
-        // its bits would read back elsewhere, each probe within 255 of its own spacings.
-        var coarsest = Shape.Spacing * (1 << Shape.Levels - 1);
-        var points = Floats([(new(250 * coarsest, 0, 0), Vector3.UnitY), (new(258 * coarsest, 0, 0), Vector3.UnitY)]);
+        // A point within 254 of the finest spacings of the eye asks for its probe, and one past
+        // them asks for none and gathers no light, so no probe's key stands for a cell its bits
+        // would read back elsewhere, each probe within 255 of its own spacings. A probe kept as the
+        // eye walks away from it is freed once its key would read back as another cell.
+        var points = Floats([(new(250 * Shape.Spacing, 0, 0), Vector3.UnitY), (new(258 * Shape.Spacing, 0, 0), Vector3.UnitY)]);
         var store = new Store(Shape);
         store.Frame(Vector3.Zero, 1, points);
         var asked = store.Run(6, Vector3.Zero, 1, points, 2);
         var gathered = store.Run(4, Vector3.Zero, 1, points, 2);
-        var far = store.Probes(Vector3.Zero, 1).Max(p => MathF.Abs(p.Place.X) / (Shape.Spacing * (1 << p.Level + p.Cascade)));
-        var said = $"the near point's probe is entry {asked[2]}, the far point's {asked[6]}, the far point gathers {gathered[4]} and "
-            + $"the farthest probe stands {far:0.0} of its spacings from the eye";
+        var probes = store.Probes(Vector3.Zero, 1);
+        var far = probes.Max(p => MathF.Abs(p.Place.X) / (Shape.Spacing * (1 << p.Cascade)));
+        var back = new Vector3(-10 * Shape.Spacing, 0, 0);
+        store.Frame(back, 2, Floats([]));
+        var left = store.Probes(back, 2).Count(p => p.Cascade == 0);
+        var said = $"the near point's probe is entry {asked[3]}, the far point's {asked[7]}, the far point gathers {gathered[4]}, "
+            + $"the farthest of {probes.Count} probes stands {far:0.0} of its spacings from the eye, and {left} of the finest stand "
+            + "once the eye steps ten spacings back";
         output.WriteLine(said);
-        Assert.True(asked[2] >= 0 && asked[6] < 0 && gathered[4] == 0 && far <= 255, said);
+        Assert.True(asked[3] >= 0 && asked[7] < 0 && gathered[4] == 0 && far <= 255 && left == 0, said);
     }
 
     // A probe's cell, its place over its spacing.
-    private static (int, int, int) CellOf((int Entry, Vector3 Place, int Level, int Cascade) p)
+    private static (int, int, int) CellOf((int Entry, Vector3 Place, int Cascade) p)
     {
-        var q = p.Place / (Shape.Spacing * (1 << p.Level + p.Cascade));
+        var q = p.Place / (Shape.Spacing * (1 << p.Cascade));
         return ((int)MathF.Round(q.X), (int)MathF.Round(q.Y), (int)MathF.Round(q.Z));
     }
 
@@ -496,9 +530,9 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
     // that do not stand, and of the others about a probe that it sees some of and that it sees none
     // of.
     private static (Dictionary<(int, int), Vector4[]> Merged, int Missing, int Seen, int Unseen) MergedBy(Store store,
-        List<(int Entry, Vector3 Place, int Level, int Cascade)> probes, bool through = false)
+        List<(int Entry, Vector3 Place, int Cascade)> probes, bool through = false)
     {
-        var standing = probes.ToDictionary(p => (p.Level, p.Cascade, CellOf(p)), p => p.Entry);
+        var standing = probes.ToDictionary(p => (p.Cascade, CellOf(p)), p => p.Entry);
         var merged = new Dictionary<(int, int), Vector4[]>();
         var (missing, seen, unseen) = (0, 0, 0);
         var pool = (int)store.Run(5, Vector3.Zero, 0, [], 1)[5];
@@ -509,7 +543,7 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
                 var (x, y, z) = CellOf(p);
                 var corners = new List<(float Weight, int Entry)>();
                 var (low, high) = ((x >> 1, y >> 1, z >> 1), ((x + 1) >> 1, (y + 1) >> 1, (z + 1) >> 1));
-                var sights = store.Uints[pool + 4 * p.Entry + 3];
+                var sights = store.Uints[pool + SplitStoreShape.EntryUints * p.Entry + 3];
                 for (int corner = 0; c + 1 < Shape.Cascades && corner < 8; corner++)
                 {
                     var (ox, oy, oz) = (corner & 1, corner >> 1 & 1, corner >> 2);
@@ -518,7 +552,7 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
                     var place = (low.Item1 + ox, low.Item2 + oy, low.Item3 + oz);
                     var weight = place == high ? 1f : (sights >> 4 * corner & 15) / 15f;
                     (seen, unseen) = place == high ? (seen, unseen) : weight > 0 ? (seen + 1, unseen) : (seen, unseen + 1);
-                    if (weight > 0 && standing.TryGetValue((p.Level, c + 1, place), out var above))
+                    if (weight > 0 && standing.TryGetValue((c + 1, place), out var above))
                         corners.Add((weight, above));
                     else if (place == high)
                         missing++;
@@ -600,7 +634,7 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
         store.Frame(eye, 1, points);
         var probes = store.Probes(eye, 1);
         var unknown = 0;
-        foreach (var (entry, _, _, cascade) in probes)
+        foreach (var (entry, _, cascade) in probes)
             for (int w = 0; w < SplitStoreShape.BaseWays << 2 * cascade; w++)
             {
                 var i = 4 * LightAt(cascade, entry, w);

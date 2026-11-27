@@ -71,10 +71,10 @@ public sealed partial class ProbeMergeTests
 
     // The split store over the same rooms as the ladder lays them, the lit room's points, the dark
     // room's and the places of the bounce's cells seen for the frames of a ladder's round from the
-    // eye the ladder reads it from, at the module's configuration. The probes of the levels the
-    // dark room's points read stand a unit and two apart, four and eight times the wall, so a
-    // probe in the lit face's plane holds the rays of the places off that face, and a probe of the
-    // cascade above holds the far parts of the rays of points past the wall as well. A point adds
+    // eye the ladder reads it from, at the module's configuration. The finest probes, which the
+    // dark room's points read, stand 0.25 apart, the wall's own width, so a probe in the lit
+    // face's plane holds the rays of the places off that face, and a probe of a cascade above
+    // holds the far parts of the rays of points past the wall as well. A point adds
     // its rays to the nearest probe it sees and gathers from the probes it sees, and the merge
     // takes the light above a way from the one probe its rays go on into, so the dark room's
     // points take none of the lit room's light and the lit room's points read their trace.

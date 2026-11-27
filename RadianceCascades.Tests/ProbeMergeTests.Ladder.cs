@@ -18,7 +18,7 @@ public sealed partial class ProbeMergeTests
     // beside a lit one whose light is the leak through the wall between them. AtEngine builds the
     // scene again at an engine's configuration, its field, setting and levels, Bounce is how its
     // surfaces pass light between them round after round, whatever the configuration, and Eye is
-    // where the split store's levels are laid about, the place an engine's field is about.
+    // where the split store sees its points from, the place an engine's field is about.
     private sealed record LadderScene(string Name, float[] Cells, Setting Setting, Level[] Levels, Vector3 Place,
         (string Name, (Vector3, Vector3)[] Points)[] Parts, Func<Vector3, Vector3, float> Traced, bool HeldOut = false,
         (Vector3, Vector3)[]? Dark = null)
@@ -445,10 +445,10 @@ public sealed partial class ProbeMergeTests
             var (points, lit) = LadderPoints(scene);
             var reference = traced[each.Name];
             var (tracedFirst, tracedSteady) = (ByPart(scene, reference.First), ByPart(scene, reference.Steady));
-            var (first, light, rounds, settles, gain, _) = SplitLoop(scene, reference.Transport, points, lit);
+            var (first, light, rounds, settles, gain, store) = SplitLoop(scene, reference.Transport, points, lit);
             split[j] = new(configuration, each, ByPart(scene, first).Select((sum, p) => sum / tracedFirst[p]).ToArray(),
                 ByPart(scene, light).Select((sum, p) => sum / tracedSteady[p]).ToArray(), rounds, settles, gain,
-                scene.Dark is null ? 0 : light[lit..].Average() / reference.Steady[..lit].Average());
+                scene.Dark is null ? 0 : light[lit..].Average() / reference.Steady[..lit].Average(), store);
         });
         foreach (var r in split)
             output.WriteLine($"{r.Configuration}, {r.Scene.Name}, split, {string.Join(", ", r.First.Select(q => Invariant(q, "0.000")))} after one gather, "
@@ -588,7 +588,7 @@ public sealed partial class ProbeMergeTests
             + "about it within half its spacing past its edge probes. The swing is each point's light at every eye over its mean over the walk, "
             + "taken whole, and the step each step's change over that mean, each the worst and the 99th part. At an engine's configuration by "
             + "reach sight the walk is read again with the levels and then the field held still about its middle. On the split probes the store "
-            + $"runs {CorridorSplitWarm} frames at the first eye and {CorridorSplitFrames} at each step after, its levels laid about the eye, "
+            + $"runs {CorridorSplitWarm} frames at the first eye and {CorridorSplitFrames} at each step after, its cascades on grids fixed in the world, "
             + "the points it sees the corridor's faces within 16 of the eye along it."))
             file.AppendLine(line);
         file.AppendLine();

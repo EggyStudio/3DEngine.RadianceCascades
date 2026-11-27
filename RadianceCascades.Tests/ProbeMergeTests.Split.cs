@@ -11,9 +11,10 @@ namespace RadianceCascades.Tests;
 /// </summary>
 public sealed partial class ProbeMergeTests
 {
-    // The store of the corridor's walk, the finest pool large enough for every probe the walk
-    // stands at once with room to spare in every cascade's.
-    private static readonly SplitStoreShape CorridorSplitShape = new() { Slots = 4096 };
+    // The store of the corridor's walk and of the ladder's split rows, half the default's slots,
+    // whose finest pool holds every probe the walk asks for at an eye and keeps those of the eyes
+    // before until it presses.
+    private static readonly SplitStoreShape CorridorSplitShape = new() { Slots = 8192 };
 
     // The frames the store runs at the walk's first eye before its first reading, so its ways have
     // taken a few tens of rays each, and the frames at each eye after.
@@ -64,8 +65,8 @@ public sealed partial class ProbeMergeTests
     // keeps them. Its rays are traced through the field Field gives about the eye and lit by the
     // light given, by the hit's place in the test's one cascade or, where FieldCellLight is set, by
     // the field's own cell, under an even sky, and, where a bounce's grid is given, by the bounce
-    // Bounce holds, read a cell back along the ray. The points gathered are given, with room in
-    // Taken for the probes' ways pass 9 reads, and the points seen are given by Seen.
+    // Bounce holds, read a cell back along the ray. The points gathered are given, and the points
+    // seen are given by Seen.
     private class SplitRun
     {
         private readonly float[] cellLight, gathered;
@@ -79,8 +80,8 @@ public sealed partial class ProbeMergeTests
             Shape = shape;
             cellLight = bounceGrid is null ? light : [.. light, .. new float[Size * Size * Size]];
             gathered = Floats(points);
-            (Uints, Light, Taken) = (new uint[Shape.Uints], new float[4 * Shape.Lights], new float[4 * Math.Max(points.Length, 4 * 8 * SplitStoreShape.BaseWays)]);
-            (setup[5], setup[6], setup[7], setup[8], setup[9], setup[10]) = (Shape.Slots, Shape.Spacing, Shape.Levels, Shape.Cascades, Shape.Reach, Shape.Age);
+            (Uints, Light, Taken) = (new uint[Shape.Uints], new float[4 * Shape.Lights], new float[4 * points.Length]);
+            (setup[5], setup[6], setup[7]) = (Shape.Slots, Shape.Spacing, Shape.Cascades);
             (setup[13], setup[14], setup[48]) = (points.Length, Size, sky);
             (setup[49], setup[50], setup[51], setup[52], setup[53]) = (Corner.X, Corner.Y, Corner.Z, Cell, Size);
             if (bounceGrid is { } grid)
@@ -112,11 +113,10 @@ public sealed partial class ProbeMergeTests
         // The light each cell of the bounce's grid lends a hit, x fastest.
         public void Bounce(float[] grid) => grid.CopyTo(cellLight, (int)setup[58]);
 
-        // Runs a pass over threads, for a cascade, a level and a point where it takes them.
-        public void Run(int pass, int threads, int cascade = 0, int level = 0, int point = 0)
+        // Runs a pass over threads, for a cascade where it takes one.
+        public void Run(int pass, int threads, int cascade = 0)
         {
             (setup[0], setup[1], setup[2], setup[3], setup[4], setup[11]) = (pass, eye.X, eye.Y, eye.Z, frame, cascade);
-            (setup[55], setup[56]) = (level, point);
             CpuKernel.Run("split_field_cpu.slang", ((uint)(threads + 63) / 64, 1, 1), cells, setup, cellLight, seen, gathered, Uints, Light, Taken);
         }
 
@@ -145,22 +145,40 @@ public sealed partial class ProbeMergeTests
             return Enumerable.Range(0, (int)setup[13]).Select(k => Taken[4 * k]).ToArray();
         }
 
-        // Each point's light from its level and from the next, and the weights of the probes of
-        // each standing about it, four floats a point.
-        public float[] Levels()
+        // Each point's light from the probes about it that it sees and from those standing by their
+        // trilinear weights alone, and the weights of each, four floats a point.
+        public float[] Lights()
         {
             Run(8, (int)setup[13]);
             return Taken[..(4 * (int)setup[13])];
         }
+
+        // The probes standing in each cascade, the store's count of them.
+        public int[] Standing() => [.. Enumerable.Range(0, Shape.Cascades).Select(c => (int)Uints[4 * c + 2])];
+
+        // The probes of the finest cascade the seen points asked for at the last frame, read from
+        // the pool's entries, which begin past the counts, the ages' counts of both parities and
+        // the table, as splitPoolAt lays them.
+        public int Asked()
+        {
+            var pool = 32 + 2 * SplitStoreShape.AgeBins * Shape.Cascades + 2 * 4 * Shape.Slots;
+            return Enumerable.Range(0, Shape.PoolProbes(0)).Count(e => Uints[pool + SplitStoreShape.EntryUints * e] != 0
+                && Uints[pool + SplitStoreShape.EntryUints * e + 1] == frame);
+        }
+
+        // The points seen at a frame, each sending one ray.
+        public int SeenCount => seen.Length / 8;
     }
 
     // The split store over the corridor's field at a configuration. At places the eye, the field
     // about it at an engine's configuration or the module's one cascade, which holds still, and the
     // faces the eye sees, the corridor's within 16 of it along the corridor and inside the field
-    // unless others are given. Its hits are lit by light by place.
+    // unless others are given. Its hits are lit by light by place, and its store takes the walk's
+    // shape unless another is given.
     private sealed class SplitCorridor(Configuration configuration, (Vector3 Place, Vector3 Normal)[] points,
-        ConcurrentDictionary<Vector4, float[]>? cascades = null, Func<Vector3, float>? light = null, float sky = 1)
-        : SplitRun(CorridorSplitShape, points, CellLightBy(light ?? CorridorLight), sky)
+        ConcurrentDictionary<Vector4, float[]>? cascades = null, Func<Vector3, float>? light = null, float sky = 1,
+        SplitStoreShape? shape = null)
+        : SplitRun(shape ?? CorridorSplitShape, points, CellLightBy(light ?? CorridorLight), sky)
     {
         private readonly List<Triangle> triangles = CorridorBoxes.SelectMany((box, i) => Cuboid(box.Low, box.High, i + 1)).ToList();
         private readonly ConcurrentDictionary<Vector4, float[]> cascades = cascades ?? new();
@@ -178,13 +196,13 @@ public sealed partial class ProbeMergeTests
     // Each corridor point's gathered light at each eye of a walk by the split store, kept over the
     // walk as an engine keeps it (SplitCorridor). The store runs warm frames at the first eye and
     // CorridorSplitFrames at each, and each point is gathered after an eye's last frame, with still
-    // readings at the first eye and, for each point whose level and the next both stand about it,
-    // the next's light over its own.
-    private static (float[][] Walk, float[][] Still, List<float> Levels) CorridorSplitWalk(Configuration configuration, float[] eyes,
-        int warm = CorridorSplitWarm, int stillReadings = CorridorSplitStill)
+    // readings at the first eye, and at the last eye the probes standing in each cascade, the
+    // finest asked for at its last frame and the rays a frame each takes at the mean.
+    private static (float[][] Walk, float[][] Still, int[] Standing, int Asked, float Rays) CorridorSplitWalk(Configuration configuration,
+        float[] eyes, int warm = CorridorSplitWarm, int stillReadings = CorridorSplitStill)
     {
         var store = new SplitCorridor(configuration, CorridorPoints);
-        var (walk, still, levels) = (new float[eyes.Length][], new List<float[]>(), new List<float>());
+        var (walk, still) = (new float[eyes.Length][], new List<float[]>());
         for (int e = 0; e < eyes.Length; e++)
         {
             store.At(new(eyes[e], 1.5f, 0));
@@ -198,14 +216,10 @@ public sealed partial class ProbeMergeTests
                 }
             }
             store.Frames(CorridorSplitFrames);
-            var taken = store.Levels();
-            for (int k = 0; k < CorridorPoints.Length; k++)
-                if (taken[4 * k + 2] > 0 && taken[4 * k + 3] > 0)
-                    levels.Add(taken[4 * k + 1] / taken[4 * k]);
             walk[e] = store.Gather();
         }
-        levels.Sort();
-        return (walk, [.. still], levels);
+        var asked = store.Asked();
+        return (walk, [.. still], store.Standing(), asked, store.SeenCount / (float)Math.Max(asked, 1));
     }
 
     [CpuKernelFact]
@@ -213,47 +227,41 @@ public sealed partial class ProbeMergeTests
     {
         // The split probes walked as the dense levels are, at both configurations. With the eye
         // held at the walk's first place the rays' noise alone moves a point between readings, each
-        // way's light the mean of the few tens of rays it took over the warm frames, short of the
-        // cap of 256. As the eye walks a point moves most where its level steps to the next, since
-        // the two levels read it apart, a coarser level's probes standing for the rays of a wider
-        // patch of the corridor about the lamp and the gap, and the overlap over which the gather
-        // blends them is the last tenth of a level's reach, narrower than a quarter step below the
-        // fourth level. The merge weighs the probes of the cascade above about a probe by the share
-        // of each it sees from its place, the one at half its cell rounded up, which its rays go on
-        // into, by all of it, so a probe at an odd cell along an axis takes the light of the rays
-        // on both sides of it where it sees them. Read through that one probe alone, it took the
-        // light of a patch a cell of its own past it, and on the wall under the lamp the finer of
-        // two levels read a point up to half again its trace, so the eye's step from one level to
-        // the other stepped it most. A far point at a coarse level still steps where its level
-        // changes, and a level's probes taken anew hold few rays at the frame they are first
-        // gathered. The test holds each at its reading, the step under the dense levels' 3.558 and
-        // 1.299, and the merge's eight probes cost the ladder's split rows the light a seen probe
-        // above lends from rays of points past the lintel's edge (RC_LADDER=.github/LADDER.md
-        // dotnet test RadianceCascades.Tests --filter FullyQualifiedName~The_Ladder). The whole
-        // walk runs where RC_LADDER is set, as in the ladder's run, in 6 minutes on a desktop
+        // way's light the mean of the rays it took over the warm frames. A point reads the finest
+        // probes about it alone, on a grid fixed in the world and kept while points ask for them,
+        // and through them the chain of the cascades above, so the probes it reads and the light
+        // they hold stay as the eye walks, and at the module's configuration, whose field holds
+        // still, a point moves between steps of the eye by about the rays' noise. At an engine's
+        // configuration the field's cascades snap about the eye, and a point steps most where a
+        // coarse cascade of the field steps past the hits of its probes' rays, on the wall low
+        // below the lamp's edge. The test holds each at its reading, the step under the dense
+        // levels' 3.558 and 1.299, and the merge's eight probes cost the ladder's split rows the
+        // light a seen probe above lends from rays of points past the lintel's edge
         // (RC_LADDER=.github/LADDER.md dotnet test RadianceCascades.Tests --filter
-        // FullyQualifiedName~On_The_Split_Probes). Elsewhere, as in the build's run, the walk warms
-        // 64 frames, reads 4 times with the eye still and walks the first 2 units at an engine's
-        // configuration, in 81 seconds (the same without RC_LADDER), since the build's slowest
-        // system takes several times what a desktop takes and an engine's field is built anew at
-        // each eye.
+        // FullyQualifiedName~The_Ladder). The whole walk runs where RC_LADDER is set, as in the
+        // ladder's run, in 5 minutes on a desktop (RC_LADDER=.github/LADDER.md dotnet test
+        // RadianceCascades.Tests --filter FullyQualifiedName~On_The_Split_Probes). Elsewhere, as in
+        // the build's run, the walk warms 64 frames, reads 4 times with the eye still and walks the
+        // first 2 units at an engine's configuration, in 108 seconds (the same without RC_LADDER),
+        // since the build's slowest system takes several times what a desktop takes and an
+        // engine's field is built anew at each eye.
         var whole = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RC_LADDER"));
         var bounds = whole
-            ? new[] { (Configuration.Engine, 0.65f, 0.27f, 0.095f, 0.085f), (Configuration.Module, 0.39f, 0.24f, 0.085f, 0.065f) }
-            : new[] { (Configuration.Engine, 0.38f, 0.22f, 0.115f, 0.07f), (Configuration.Module, 0.58f, 0.24f, 0.055f, 0.04f) };
+            ? new[] { (Configuration.Engine, 0.1f, 0.008f, 0.016f, 0.009f), (Configuration.Module, 0.011f, 0.006f, 0.01f, 0.007f) }
+            : new[] { (Configuration.Engine, 0.045f, 0.026f, 0.048f, 0.038f), (Configuration.Module, 0.038f, 0.019f, 0.046f, 0.027f) };
         var failed = new List<string>();
         foreach (var (configuration, bound, partBound, stillBound, stillPartBound) in bounds)
         {
             var eyes = CorridorEyes(configuration);
-            var (walk, still, levels) = whole ? CorridorSplitWalk(configuration, eyes)
+            var (walk, still, standing, asked, rays) = whole ? CorridorSplitWalk(configuration, eyes)
                 : CorridorSplitWalk(configuration, configuration == Configuration.Engine ? eyes[..CorridorShortEngineEyes] : eyes, CorridorShortWarm, CorridorShortStill);
             var (worst, part, worstStep, stepPart) = CorridorSwings(walk);
             var (_, _, stillStep, stillPart) = CorridorSwings(still);
             var said = $"{(whole ? "over the whole walk" : "over the short walk")} at {configuration}'s configuration a fixed point's light on the split probes moves over the walk {worst:0.000} of its mean "
                 + $"at worst and {part:0.000} at the 99th part, between steps {worstStep:0.000} at worst and {stepPart:0.000} at the 99th part, "
-                + $"with the eye still between readings {stillStep:0.000} at worst and {stillPart:0.000} at the 99th part, and where two levels "
-                + $"stand about a point the next reads {levels[levels.Count / 2]:0.000} of its own at the median, {levels[levels.Count / 20]:0.000} "
-                + $"at the 5th part and {levels[levels.Count * 19 / 20]:0.000} at the 95th";
+                + $"with the eye still between readings {stillStep:0.000} at worst and {stillPart:0.000} at the 99th part, the store standing "
+                + $"{string.Join(", ", standing)} probes by cascade at the last eye, {asked} of the finest asked for at its last frame and "
+                + $"taking {rays:0.0} rays a frame each at the mean, in {CorridorSplitShape.Bytes / 1048576.0:0.0} MB";
             output.WriteLine(said);
             if (!(worstStep < bound && stepPart < partBound && stillStep < stillBound && stillPart < stillPartBound))
                 failed.Add(said);

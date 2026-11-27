@@ -35,7 +35,8 @@ package; item 3 is the session's that owns the code today; item 4 is each engine
 the six this module comes last, after the GI items of 3DEngine's Decision 75, since the cascades
 change daily until then. By the direction of 2026-11-25 the cascades come before everything else in
 both engines, and this module's next item is the gather's shared step the bridge waits on, proposed
-by the session and written here; item 10 follows the probe passes.
+by the session and written here; item 10 follows the probe passes. On 2026-11-27 the order after
+19's first change is 20, 21, 22, 23 and 24, then the lintel's carry-over and item 10.
 
 1. **The documents, one commit.** AGENTS.md on the game's shape (one paragraph saying what the
     module is and that no engine is referenced, N 2.1; the documents table with STYLE, COMMITS,
@@ -393,7 +394,14 @@ pointer. One commit an engine, after item 3's first part.
     but none passing the sight march through the engine's coarse field; a fallback for a point none
     of whose probes are seen at the coarsest level it has, the probes taken unweighted by sight or
     the level above, with a ladder test at a coarse field, before the lintel if small; the engine's
-    pin waits on it.
+    pin waits on it. The gather's fallback at `7770020`, pushed at 16:24 on 2026-11-26, its run
+    awaited, the hand unchanged. A point that sees none of its level's probes takes the next level's
+    it sees where they stand, else its own level's by trilinear weight alone; the lamp's closed room
+    with every face sending 1, 1,536 points over fields of cell 0.5 and 1 from two eyes, reads
+    1.0000 at every point where 8, 104 and 174 went dark. The ladder and the walks unchanged. The
+    lintel's carry-over read with three mends, none taken, the best at three quarters and a quarter
+    by sight giving the ladder 0.079 and the lintel 0.138 but the engine's walk worst 0.519 to
+    0.728. 241 tests.
 
 19. **The finest probes from the view, kept; the coarse levels as fixed world grids.** The direction
     of 2026-11-26 at 16:3x (Decision 11), after item 18's fallback for a point no probe sees and
@@ -406,6 +414,46 @@ pointer. One commit an engine, after item 3's first part.
     eye comes near, in place of the level by distance from the eye. Read on the corridor walk
     against today's 0.360 and 0.609 worst step and on the whole ladder, the store's memory beside;
     the walk's bound moves toward 2% with it. One or two commits, the hand's change said if any.
+    Ruled on the second change at 16:4x, the level by distance dropped outright. Every surface point
+    asks for and gathers from cascade-0 probes at the world's 0.25 spacing placed from its surface
+    and kept, and the levels above are further cascades on fixed world cells of 0.25 times two to
+    the level; far surfaces take as many probes as near ones, their rays a frame fewer a probe and
+    filled over frames by the keeping, with the probe count, the rays a probe and the memory read on
+    the corridor and the ladder.
+
+20. **The gather reads the finest level alone; the levels above feed the merge.** Item 19's second
+    change sharpened by the direction of 2026-11-27 (Decision 11). The finest level is placed from
+    the view at the world's 0.25 spacing and kept; the levels above are fixed world grids that exist
+    to feed the merge with far light and are never gathered from, so a fixed point's light depends
+    on fixed probes and a fixed chain and the walk's step at level changes goes by construction.
+    Read on the corridor walk against 0.360 and 0.609 and on the ladder, the probe count, the rays a
+    probe and the memory beside; with item 19's first change the two commits of 19.
+
+21. **The sight from the store, not the field.** Each probe's transmittance a direction over its
+    first interval is deposited already; a corner probe whose own rays toward the point are blocked
+    within that interval lights it with no weight, and the field marches of the gather's sight check
+    and the merge's parent sight go. Read on the one-cell wall, the dark room and the whole ladder
+    against the marches' figures; the hand loses the hits on gatherSurface and askCascadeProbes,
+    said for both bindings. One commit.
+
+22. **One trace a ray, split by its hit.** Recorded under item 18 on 2026-11-26 from the engine's
+    device, 4,688,000 queries for 2,650,656 rays. Each ray is traced once from its surface point and
+    its one hit is split by distance into the cascades' intervals, the parts past the hit taking
+    transmittance 0 and the light at the hit alone; the ladder reads equal within noise and the
+    engine reads its time against 54 ms. The hand hands one trace a ray. One commit.
+
+23. **Fresh probes take more rays.** A pixel whose finest probe was placed within its first frames
+    sends four rays rather than one until the probe's count reaches the others', so a surface coming
+    into view fills in within those frames rather than popping in; read as the frames to settle
+    after a turn of the eye on the corridor, with the rays a frame beside. One commit.
+
+24. **A probe drops its history when its fresh deposits disagree.** The direction's rule for history
+    (the engine's Decision 123) in world space. A probe whose frame's deposit differs from its kept
+    mean in a direction by more than the noise restarts that direction from the frame, so a lamp
+    switched or a sun moved shows in the next frame and nothing lags; the threshold read on a ladder
+    scene with a lamp switching and the sun stepping, the frames after the change counted, not
+    guessed. One commit. The lintel's carry-over, which the published method does not solve, is read
+    after these with the per-direction agreement as its lever.
 
 ## Verdicts
 
@@ -954,3 +1002,76 @@ walk 0.426 and 0.214 and 0.728 and 0.247, its worst at an engine's configuration
 point 2.5 high 5 along the corridor as the eye crosses 3.25, which steps 0.519 under the merge at
 `bc1e297`. None is taken, and the lintel waits behind item 19, whose grids change the hand-off it
 rests on.
+
+Items 19 and 20, the finest probes from the view kept and the cascades above on fixed world grids
+that feed the merge alone, in the commit carrying this line, one commit for the two since the
+keeping's count of ages and the fixed grids' keys share the clear and the entry's layout. Every seen
+point asks for and gathers from the finest cascade's probes at the store's spacing, 0.25 by default,
+on a grid fixed in the world, and each cascade above stands on a fixed grid of twice the spacing of
+the one below and is never gathered from. The level by distance from the eye goes, and with it the
+overlap's blend and its second trace. A probe is kept until its pool presses. `clearSplitTable`
+counts each probe in its cascade's bin of how many frames ago it was last asked for, a bin a frame
+for the first 16 and one for each doubling past them, and `keepSplitProbes` keeps the bins from the
+newest while they leave the pool room for twice the probes taken in it the frame before and for a
+sixteenth of its entries, at most half, so those asked for longest ago go first and every probe
+asked for the frame before stays. A probe's key holds its cascade and nine bits of its cell along
+each axis and its entry keeps the whole cell, so a probe whose key would read back about the eye as
+another cell is freed. The pool's test holds 200 points' probes through 200 frames no point asks for
+them, and as eleven groups more ask in turn the groups standing are the latest, each whole, and a
+fixed point's gathered light reads the same within a millionth from three eyes along a line of
+points (`dotnet test RadianceCascades.Tests --filter FullyQualifiedName~SplitStoreTests`).
+
+The hand's change. `SplitStore` keeps the slots, the spacing and the cascades and loses the levels,
+the reach and the age, its default 6 cascades. `clearSplitTable` takes the `SplitFrame`. An entry is
+8 uints, `SplitEntryUints`, and the counts 32, four a cascade for up to 8, the ages' counts of both
+parities after them, `SplitAgeBins` a cascade, all of which a binding sizing its buffers by
+`SplitStoreShape.Uints` and `Lights` takes without change. `SplitStoreShape.Bytes` gives the memory,
+157.3 MB at the default of 16,384 slots and 6 cascades, where 5 levels of 4 cascades took 104.9 MB,
+and 78.6 MB at the walk's 8,192 (`dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~SplitStoreTests`). `splitLevelLight` becomes `splitFinestLight`, and
+`splitLevelOf` and `splitLevelAt` go.
+
+The whole walk steps 0.076 at worst and 0.005 at the 99th part at an engine's configuration and
+0.007 and 0.004 at the module's, where it stepped 0.609 and 0.249 and 0.360 and 0.220, the eye still
+between readings 0.011 and 0.006 and 0.007 and 0.005, and the short walk 0.031 and 0.018 and 0.027
+and 0.013 (`RC_LADDER=.github/LADDER.md dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~On_The_Split_Probes`). At the last eye the store stands 7,665, 1,740, 474, 114,
+32 and 8 probes by cascade at an engine's configuration, 6,129 of the finest asked for at its last
+frame and the others kept from the eyes before, those asked for taking 4.1 rays a frame each at the
+mean, and 3,009, 756, 222, 48, 16 and 8 at the module's, all asked for. By a reading not committed,
+the engine's worst step falls at the wall's points half a unit high from 4 to 6 along the corridor
+as the eye crosses -3.25, and with the field held still about the corridor's middle the walk steps
+0.015 and 0.005, and with the seen faces held as well 0.010 and 0.005, so what is left past the
+rays' noise is the engine's field snapping about the eye. The wall's point at the lamp's edge reads
+1.050 and 1.089 of its trace fed by every face and 1.011 and 1.020 fed by its own rays, where its
+own level read 1.197 and 1.127 and 0.983 and 0.983 (`dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~At_The_Lamps_Edge`).
+
+The split ladder reads 0.127 from the trace on the mean and 0.430 at worst at the module's
+configuration and 0.125 and 0.421 at an engine's, where it read 0.107 and 0.459 and 0.108 and 0.459,
+the leak 0 and the held out room 0.018 and 0.062 and 0.027 and 0.087. By scene at the module's, the
+court falls from 0.109 to 0.052 and the room with a door from 0.020 to 0.012, the lintel rises from
+0.316 to 0.341 and the lamp's closed box from 0.397 to 0.418, and the vestibule rises from 0.047 to
+0.132 and the long hall from 0.040 to 0.083, every part of either above its trace
+(`RC_LADDER=.github/LADDER.md dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~The_Ladder`). A scene's points stand about one to a finest probe, 1.0 to 1.1 rays
+a probe a frame, so they ask for nearly as many probes of the second cascade as of the finest, and
+the pools, each a quarter of the one below, fill in the court, its finest and second, and under the
+lintel, its second and third. By a reading not committed, a store of 32,768 slots that holds every
+probe asked for reads the court 0.052, the vestibule 0.132 and the long hall 0.083 as before and the
+lintel 0.368, its second cascade standing 4,516 probes beside the finest's 4,532, so the rise is not
+the pools'. Under the levels by distance a far point's rays went to its own level's probes, and on
+the fixed grids every point's rays share the coarse probes, so the likeliest reading is the lintel's
+carry-over over a wider span, a probe above that a vestibule's or a hall's probe sees holding the
+far parts of the rays of the court's or the opening's points. The lintel's item after 21 to 24 is
+where it is mended.
+
+Three things for the reviewing session's word. The key's nine bits a cell along each axis bound the
+store at 254 of the finest spacings from the eye, 63.5 at the default 0.25, where the levels by
+distance held 254 of the coarsest level's, 1,016, and a point past it asks for nothing and gathers
+nothing, so a binding with a far view needs a coarser spacing or a wider key, a third uint a slot of
+the table. The pools are each a quarter of the one below, as the probes of a surface the eye's
+pixels cover are, and by a reading not committed the corridor at an engine's configuration asks 36
+and 20 probes of its two coarsest pools, which hold 32 and 8, so some probes below them take no
+light from past their own interval. The default store takes 157.3 MB, each cascade's ways and sums
+the same share as the finest's.

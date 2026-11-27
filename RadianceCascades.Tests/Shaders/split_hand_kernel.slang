@@ -67,7 +67,7 @@ float4 handed<P : IVisiblePoints, H : IRayHits, W : IStoreUints, L : IStoreLight
     store.store(shape.slots + slot % shape.slots, store.add(index, 1u) + store.load(index));
     kept.keepLight(index, kept.lightAt(index) + float4(ray.light, ray.carried));
     seen.keepTaken(index, ray.light);
-    clearSplitTable(store, shape, index);
+    clearSplitTable(store, frame, shape, index);
     keepSplitProbes(store, frame, shape, index);
     askSeenProbes(seen, hits, store, frame, shape, index);
     askCascadeProbes(hits, store, frame, shape, 0u, index);
@@ -76,7 +76,7 @@ float4 handed<P : IVisiblePoints, H : IRayHits, W : IStoreUints, L : IStoreLight
     keepSplitLight(store, kept, frame, shape, index);
     mergeSplitCascade(store, kept, sky, frame, shape, 0u, index);
     gatherSurface(store, kept, hits, frame, shape, seen, index);
-    return float4(place - frame.eye, float(shape.levels + shape.cascades));
+    return float4(place - frame.eye, float(shape.slots + shape.cascades));
 }
 
 [shader("compute")]
@@ -93,9 +93,6 @@ void test(uint3 id : SV_DispatchThreadID)
     SplitStore shape;
     shape.slots = 1024u;
     shape.spacing = 0.25;
-    shape.levels = 4u;
-    shape.cascades = 4u;
-    shape.reach = 1.0;
-    shape.age = 32u;
+    shape.cascades = 6u;
     written[id.x] = handed(seen, hits, store, kept, frame, shape, id.x);
 }

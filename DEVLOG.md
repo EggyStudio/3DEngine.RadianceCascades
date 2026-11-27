@@ -15,6 +15,24 @@ Done that day
 
 Commits that day
 
+- `7770020` A point that sees none of its probes takes its own level's by their trilinear weights
+  where the next level's it sees do not stand, so no point over a coarse field gathers none.
+- `bc1e297` The merge weighs the probes above a probe by the share of each it sees, kept in its
+  entry as the cascade above is asked for, and the gather marches to a probe on the plane of a
+  point's face lifted off it as the ray's start is.
+- `8aa3e17` The split gather weighs each probe about a point by the share of it the point sees, a
+  point adds its rays to the nearest probe it sees, and the merge takes the light above a way from
+  the one probe its rays go on into, so no light passes a wall of one cell into the dark room beside
+  a lit one.
+- `0d3f67d` The ladder reads the split store over every scene and along the corridor beside the
+  merges, and the split gather keeps the irradiance as the dense gather does.
+- `4bbcd0d` The build's run walks the corridor's first 2 units on the split probes from 64 warm
+  frames, the whole walk running where RC_LADDER is set, and the Linux job's limit is 60 minutes.
+- `3d9cbfc` A seen point's rays start off its surface by its distance from the eye, so both split
+  levels' rays of a point start at one place, and a test reads the corridor's wall point at the
+  lamp's edge on each level against its trace.
+- `5dec8d3` The split cascades walk the corridor beside the dense levels with their rays through the
+  field's march, each way's light the mean of its rays counted up to 256.
 - `3c43c5e` The split cascades merge each way of a cascade from the probes standing above it by
   renormalized trilinear weights, a way no ray reached left out so a closed room takes no sky.
 - `d2bd443` Each seen point of the split cascades sends a ray a frame along its low-discrepancy
