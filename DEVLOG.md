@@ -6,12 +6,20 @@ kept under `.github/assets/readings` as WebP files named by their day, each on t
 says, and the notes written beside them as Markdown files named the same way. A line under Done
 names the item of .github/REVIEW.md or .github/REVIEW-ARCHIVE.md and the commit that closed it.
 
+## 2026-11-27
+
+Commits that day
+
+- `10c530a` The finest probes are placed from the view at the world spacing and kept until their
+  pool presses, and the cascades above stand on grids fixed in the world that feed the merge alone.
+
 ## 2026-11-26
 
 Done that day
 
 - Item 16 at `676c5f5`. The engine's door at the mark, read again on items 14 and 15.
 - Item 17 at `edc5520`. A fixed point's light holds still as the field moves.
+- Item 18 at `7770020`. Split radiance cascades, sparse probes with ray splitting.
 
 Commits that day
 

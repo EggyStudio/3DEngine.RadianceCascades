@@ -53,9 +53,9 @@ public sealed partial class ProbeMergeTests
         var line = $"the closed room's {points.Length} points over each field and eye, {string.Join("; ", said)}";
         output.WriteLine(line);
         // 1.0000 at every point. Over a field whose cells are coarse beside the lift of the rays'
-        // start, the march from that start can meet a face at once along every way, and a point
-        // by the room's edges that so sees none of the finest probes about it takes them by their
-        // trilinear weights alone.
+        // start, the march from that start can meet a face at once along every way, and a point by
+        // the room's edges toward which so none of the finest probes about it let any through takes
+        // them by their trilinear weights alone.
         Assert.True(dark == 0, line);
     }
 }

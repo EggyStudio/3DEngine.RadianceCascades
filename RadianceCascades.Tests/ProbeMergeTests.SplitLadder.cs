@@ -24,7 +24,7 @@ public sealed partial class ProbeMergeTests
     // last frame, the probes standing in each cascade, the finest asked for and the rays a frame
     // each of those takes at the mean.
     private sealed record SplitRow(Configuration Configuration, LadderScene Scene, float[] First, float[] Ratios, int Rounds, bool Settles, float Gain,
-        float Leak, (int[] Standing, int Asked, float Rays) Store)
+        float Leak, (int[] Standing, int[] Short, int Asked, float Rays) Store)
     {
         public float[] Distances => Ratios.Select(r => MathF.Abs(MathF.Log(r))).ToArray();
         public float Mean => Distances.Average();
@@ -41,7 +41,7 @@ public sealed partial class ProbeMergeTests
     // the last round's last frame, the probes standing in each cascade, the finest asked for and
     // the rays a frame each of those takes at the mean. The store takes the walk's shape unless
     // another is given.
-    private static (float[] First, float[] Light, int Rounds, bool Settles, float Gain, (int[] Standing, int Asked, float Rays) Store) SplitLoop(
+    private static (float[] First, float[] Light, int Rounds, bool Settles, float Gain, (int[] Standing, int[] Short, int Asked, float Rays) Store) SplitLoop(
         LadderScene scene, Transport transport,
         (Vector3, Vector3)[] points, int lit, SplitStoreShape? shape = null)
     {
@@ -68,7 +68,7 @@ public sealed partial class ProbeMergeTests
             if (sums.Count == MostRounds || HasSettled(sums))
             {
                 var asked = store.Asked();
-                return (each[0], light, sums.Count, HasSettled(sums), Gain(sums), (store.Standing(), asked, store.SeenCount / (float)Math.Max(asked, 1)));
+                return (each[0], light, sums.Count, HasSettled(sums), Gain(sums), (store.Standing(), store.Short(), asked, store.SeenCount / (float)Math.Max(asked, 1)));
             }
             bounce = Spread(transport, taken[points.Length..]);
         }
@@ -111,8 +111,8 @@ public sealed partial class ProbeMergeTests
         }
         file.AppendLine();
         file.AppendLine("| Configuration | Scene | Each part's ratio after one gather | Each part's ratio at the steady state | Rounds | Gain a round "
-            + "| Mean distance | Worst part | Leak | The dense grid's mean and worst | Probes standing by cascade | The finest asked | Rays a probe |");
-        file.AppendLine("|---|---|---|---|---|---|---|---|---|---|---|---|---|");
+            + "| Mean distance | Worst part | Leak | The dense grid's mean and worst | Probes standing by cascade | Asked with no entry by cascade | The finest asked | Rays a probe |");
+        file.AppendLine("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|");
         string Each(SplitRow r, float[] ratios) => string.Join(", ", r.Scene.Parts.Select((part, p) => $"{part.Name} {Number(ratios[p], "0.000")}"));
         foreach (var r in split)
         {
@@ -120,7 +120,7 @@ public sealed partial class ProbeMergeTests
             file.AppendLine($"| {ConfigurationName(r.Configuration)} | {r.Scene.Name} | {Each(r, r.First)} | {Each(r, r.Ratios)} | "
                 + $"{(r.Settles ? r.Rounds.ToString(CultureInfo.InvariantCulture) : $"{r.Rounds}, unsettled")} | {Number(r.Gain, "0.000")} | "
                 + $"{Number(r.Mean, "0.000")} | {Number(r.Worst, "0.000")} | {(r.Scene.Dark is null ? "" : Number(r.Leak, "0.00000"))} | "
-                + $"{Number(d.Mean, "0.000")} and {Number(d.Worst, "0.000")} | {string.Join(", ", r.Store.Standing)} | {r.Store.Asked} | "
+                + $"{Number(d.Mean, "0.000")} and {Number(d.Worst, "0.000")} | {string.Join(", ", r.Store.Standing)} | {string.Join(", ", r.Store.Short)} | {r.Store.Asked} | "
                 + $"{Number(r.Store.Rays, "0.0")} |");
         }
     }

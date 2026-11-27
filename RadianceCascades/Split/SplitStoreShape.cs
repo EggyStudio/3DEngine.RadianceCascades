@@ -7,12 +7,14 @@ namespace RadianceCascades;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The store keeps a pool of entries for each cascade, the slots for the finest and a quarter as
-/// many for each above, since a probe of the cascade above stands for the four below it along a
-/// surface, and a table four times the finest pool's slots from each probe's key to its entry. Its
-/// light takes the same span for each cascade, a quarter as many probes with four times the ways,
-/// once for the probes' own light and once for the light merged from above, and the sums of the
-/// seen points' rays take five uints for each way of the probes' own light.
+/// The store keeps a pool of entries for each cascade, the slots for the finest, and for each
+/// above the probes of its spacing over the square the finest pool's slots cover with a row more
+/// along each edge (<see cref="PoolProbes"/>), and a table four times the finest pool's slots from
+/// each probe's key to its entry. Its light takes a float4 for each way of each entry, once for the
+/// probes' own light and once for the light merged from above, and the sums of the seen points'
+/// rays take five uints for each way of the probes' own light. A probe of a coarse cascade holds
+/// many ways, 32,768 at the sixth, so the coarse pools take most of the memory the rows past the
+/// square's edges add.
 /// </para>
 /// <para>
 /// A probe's key keeps the low nine bits of its cell along each axis, which tell apart the probes
@@ -66,12 +68,43 @@ public sealed record SplitStoreShape
     private const int Counts = 32;
 
     /// <summary>
-    /// The entries of a cascade's pool, the slots over four for each cascade below it.
+    /// The entries of a cascade's pool, as the Slang <c>splitPoolProbes</c>, the slots for the
+    /// finest, and for each above the probes of its spacing over the square of the finest's probes
+    /// the slots cover, the fewest a side whose square holds them, with a row more along each edge,
+    /// no more than the slots.
     /// </summary>
-    public int PoolProbes(int cascade) => Checked().Slots >> (2 * cascade);
+    /// <remarks>
+    /// The probes a surface's points ask for of a cascade above run past the surface's edges and
+    /// across its thickness, so a quarter of the pool below, as the probes of a surface at twice
+    /// the spacing are, would leave the coarse pools short where a side holds few probes beside
+    /// those rows.
+    /// </remarks>
+    public int PoolProbes(int cascade)
+    {
+        var slots = Checked().Slots;
+        if (cascade == 0)
+            return slots;
+        var side = (int)Math.Sqrt(slots);
+        while (side * side < slots)
+            side++;
+        var along = ((side + (1 << cascade) - 1) >> cascade) + 2;
+        return Math.Min(along * along, slots);
+    }
 
     /// <summary>The entries of every pool.</summary>
     public int Entries => Enumerable.Range(0, Checked().Cascades).Sum(PoolProbes);
+
+    /// <summary>
+    /// The float4 of a cascade's own light, a way of each entry of its pool, which an engine
+    /// dispatches <c>mergeSplitCascade</c> over for that cascade, a thread each.
+    /// </summary>
+    public int CascadeLights(int cascade) => PoolProbes(cascade) * (BaseWays << (2 * cascade));
+
+    /// <summary>
+    /// The float4 of every cascade's own light, which an engine dispatches <c>keepSplitLight</c>
+    /// over, a thread each, half of <see cref="Lights"/>.
+    /// </summary>
+    public int OwnLights => Enumerable.Range(0, Checked().Cascades).Sum(CascadeLights);
 
     /// <summary>
     /// The uints the store lays out, its counts, the ages' counts of both parities, its table, its
@@ -79,13 +112,13 @@ public sealed record SplitStoreShape
     /// the engine's buffer of uints holds.
     /// </summary>
     public int Uints => Counts + 2 * AgeBins * Checked().Cascades + 2 * 4 * Slots + (EntryUints + 1) * Entries
-        + 5 * Cascades * BaseWays * Slots;
+        + 5 * OwnLights;
 
     /// <summary>
     /// The float4 of light the store lays out, its probes' own light and the light merged from
     /// above, which the engine's buffer of light holds.
     /// </summary>
-    public int Lights => 2 * Checked().Cascades * BaseWays * Slots;
+    public int Lights => 2 * OwnLights;
 
     /// <summary>
     /// The bytes the store's two buffers take, four a uint of <see cref="Uints"/> and sixteen a

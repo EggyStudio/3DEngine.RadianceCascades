@@ -57,11 +57,11 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
         public void Merge(Vector3 eye, uint frame)
         {
             for (int c = shape.Cascades - 1; c >= 0; c--)
-                Run(14, eye, frame, [], SplitStoreShape.BaseWays * shape.Slots, c);
+                Run(14, eye, frame, [], shape.CascadeLights(c), c);
         }
 
         // Keeps each way's light from the frame's sums.
-        public void Keep(Vector3 eye, uint frame) => Run(10, eye, frame, [], shape.Cascades * SplitStoreShape.BaseWays * shape.Slots);
+        public void Keep(Vector3 eye, uint frame) => Run(10, eye, frame, [], shape.OwnLights);
 
         // The first uint of the sums.
         public int SumsAt => (int)Run(5, Vector3.Zero, 0, [], 1)[7];
@@ -264,7 +264,7 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
         foreach (var (entry, place, _) in store.Probes(eyes[0], 1).Where(p => p.Cascade == 0))
             for (int way = 0; way < SplitStoreShape.BaseWays; way++)
             {
-                var at = 4 * (Shape.Cascades * SplitStoreShape.BaseWays * Shape.Slots + entry * SplitStoreShape.BaseWays + way);
+                var at = 4 * (Shape.OwnLights + entry * SplitStoreShape.BaseWays + way);
                 var light = 1 + place.X / 4;
                 (store.Light[at], store.Light[at + 1], store.Light[at + 2]) = (light, light, light);
             }
@@ -302,10 +302,10 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
         Assert.All(held, h => Assert.Equal(4, h));
     }
 
-    // The index of the way of entry's probe of cascade among the probes' own light, the cascade's
-    // span first, then its pool's entries in order, each its ways.
+    // The index of the way of entry's probe of cascade among the probes' own light, the cascades
+    // below first, then its pool's entries in order, each its ways.
     private static int LightAt(int cascade, int entry, int way) =>
-        cascade * SplitStoreShape.BaseWays * Shape.Slots
+        Enumerable.Range(0, cascade).Sum(Shape.CascadeLights)
         + (entry - Enumerable.Range(0, cascade).Sum(Shape.PoolProbes)) * (SplitStoreShape.BaseWays << 2 * cascade) + way;
 
     [CpuKernelFact]
@@ -367,8 +367,8 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
         var store = new Store(Shape, CorridorLitBoxes);
         store.Frame(eye, 1, points, rays: true, keep: false);
         var whole = store.Run(13, eye, 1, points, count);
-        var span = SplitStoreShape.BaseWays * Shape.Slots;
-        var expected = new uint[5 * Shape.Cascades * span];
+        var own = Shape.OwnLights;
+        var expected = new uint[5 * own];
         var (rays, missing) = (0, 0);
         var reached = new int[Shape.Cascades];
         static uint Parts(float light) => (uint)(Math.Clamp(light, 0, 16384) * 1024 + 0.5f);
@@ -398,7 +398,7 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
         }
         var sumsAt = store.SumsAt;
         var off = Enumerable.Range(0, expected.Length).Count(i => store.Uints[sumsAt + i] != expected[i]);
-        var touched = Enumerable.Range(0, Shape.Cascades * span).Count(i => expected[5 * i + 4] > 0);
+        var touched = Enumerable.Range(0, own).Count(i => expected[5 * i + 4] > 0);
         var said = $"{rays} rays of {count} seen points add {reached.Sum()} parts to {touched} ways, {string.Join(", ", reached)} reaching "
             + $"each cascade from the finest, {missing} parts finding no probe and {off} of the sums' uints off the rays traced whole";
         output.WriteLine(said);
@@ -417,15 +417,15 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
         var points = CorridorFaces();
         var eye = new Vector3(0, 1.5f, 0);
         var store = new Store(Shape, CorridorLitBoxes);
-        var span = SplitStoreShape.BaseWays * Shape.Slots;
+        var own = Shape.OwnLights;
         var sumsAt = store.SumsAt;
         float worst = 0;
         var (fresh, followed, held) = (0, 0, 0);
         for (uint frame = 1; frame <= 2; frame++)
         {
             store.Frame(eye, frame, points, rays: true, keep: false);
-            var sums = store.Uints[sumsAt..(sumsAt + 5 * Shape.Cascades * span)];
-            var before = store.Light[..(4 * Shape.Cascades * span)];
+            var sums = store.Uints[sumsAt..(sumsAt + 5 * own)];
+            var before = store.Light[..(4 * own)];
             var probes = store.Probes(eye, frame);
             var keys = store.Keys();
             var takenNow = keys.Values.Where(v => v.Taken == frame).Select(v => v.Entry).ToHashSet();
@@ -462,7 +462,7 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
                 store.Uints[sumsAt + 5 * i + k] = k < 3 ? 10 * 3 * 1024u : 10 * 512u;
             store.Uints[sumsAt + 5 * i + 4] = (uint)(KeptRays - 4) << 20 | 10;
         }
-        var (capSums, capBefore) = (store.Uints[sumsAt..(sumsAt + 5 * Shape.Cascades * span)], store.Light[..(4 * Shape.Cascades * span)]);
+        var (capSums, capBefore) = (store.Uints[sumsAt..(sumsAt + 5 * own)], store.Light[..(4 * own)]);
         store.Keep(eye, 33);
         var worstCapped = capped.Max(i => Kept(store, sumsAt, i, capSums, capBefore, false, KeptRays));
         var said = $"over two frames {fresh} ways took their rays' mean, {followed} moved toward it and {held} kept their light, each "
@@ -524,18 +524,24 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
     }
 
     // The merged light of each way of every standing probe as the merge's rule gives it from the
-    // store's own light and the shares of the probes above that each entry keeps, the sky of 1
-    // above the coarsest cascade, and where through is set a way no ray reached letting all through
-    // in place of merging to none, with the count of the probes above at half a cell rounded up
-    // that do not stand, and of the others about a probe that it sees some of and that it sees none
-    // of.
+    // store's own light, each probe above weighed by the share the probe's own rays let through
+    // along the way toward it and by none where no ray reached that way, the one at half its cell
+    // rounded up by all of it, the sky of 1 above the coarsest cascade, and where through is set a
+    // way no ray reached letting all through in place of merging to none, with the count of the
+    // probes above at half a cell rounded up that do not stand, and of the others about a probe
+    // standing toward which its rays let some through and let none through.
     private static (Dictionary<(int, int), Vector4[]> Merged, int Missing, int Seen, int Unseen) MergedBy(Store store,
         List<(int Entry, Vector3 Place, int Cascade)> probes, bool through = false)
     {
         var standing = probes.ToDictionary(p => (p.Cascade, CellOf(p)), p => p.Entry);
         var merged = new Dictionary<(int, int), Vector4[]>();
         var (missing, seen, unseen) = (0, 0, 0);
-        var pool = (int)store.Run(5, Vector3.Zero, 0, [], 1)[5];
+        // The way of each cascade that each step of the lattice of cells falls in, by the kernel's
+        // own reading of a way, a probe above standing a step from the probe below along each axis
+        // where the probe below lies between two.
+        (Vector3, Vector3)[] steps = [.. from x in new[] { -1, 0, 1 } from y in new[] { -1, 0, 1 } from z in new[] { -1, 0, 1 }
+                                         select (Vector3.Zero, x == 0 && y == 0 && z == 0 ? Vector3.UnitY : Vector3.Normalize(new(x, y, z)))];
+        var wayOf = Enumerable.Range(0, Shape.Cascades).Select(c => store.Run(15, Vector3.Zero, 0, Floats(steps), steps.Length, c)).ToArray();
         for (int c = Shape.Cascades - 1; c >= 0; c--)
             foreach (var p in probes.Where(p => p.Cascade == c))
             {
@@ -543,19 +549,23 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
                 var (x, y, z) = CellOf(p);
                 var corners = new List<(float Weight, int Entry)>();
                 var (low, high) = ((x >> 1, y >> 1, z >> 1), ((x + 1) >> 1, (y + 1) >> 1, (z + 1) >> 1));
-                var sights = store.Uints[pool + SplitStoreShape.EntryUints * p.Entry + 3];
                 for (int corner = 0; c + 1 < Shape.Cascades && corner < 8; corner++)
                 {
                     var (ox, oy, oz) = (corner & 1, corner >> 1 & 1, corner >> 2);
                     if (ox > high.Item1 - low.Item1 || oy > high.Item2 - low.Item2 || oz > high.Item3 - low.Item3)
                         continue;
                     var place = (low.Item1 + ox, low.Item2 + oy, low.Item3 + oz);
-                    var weight = place == high ? 1f : (sights >> 4 * corner & 15) / 15f;
+                    if (!standing.TryGetValue((c + 1, place), out var above))
+                    {
+                        missing += place == high ? 1 : 0;
+                        continue;
+                    }
+                    var step = (2 * ox - (x & 1) + 1) * 9 + (2 * oy - (y & 1) + 1) * 3 + 2 * oz - (z & 1) + 1;
+                    var share = store.Light[4 * LightAt(c, p.Entry, (int)wayOf[c][4 * step]) + 3];
+                    var weight = place == high ? 1f : share < 0 ? 0f : share;
                     (seen, unseen) = place == high ? (seen, unseen) : weight > 0 ? (seen + 1, unseen) : (seen, unseen + 1);
-                    if (weight > 0 && standing.TryGetValue((c + 1, place), out var above))
+                    if (weight > 0)
                         corners.Add((weight, above));
-                    else if (place == high)
-                        missing++;
                 }
                 var result = new Vector4[ways];
                 for (int w = 0; w < ways; w++)
@@ -625,9 +635,9 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
         // Each probe's own light set along every way, a fifth of them reached by no ray, the merge
         // gives each way its own light and, by the share it lets through, the mean of the four ways
         // above it that hold light at the probes of the cascade above about it, each weighed by the
-        // share of it the probe sees among the corridor's walls, the one at half its cell rounded
-        // up, which its rays' next parts are added to, by all of it, as the rule read on the CPU
-        // gives it from the shares each entry keeps.
+        // share the probe's own rays let through along the way toward it, the one at half its cell
+        // rounded up, which its rays' next parts are added to, by all of it, as the rule read on
+        // the CPU gives it.
         var points = CorridorFaces();
         var eye = new Vector3(0, 1.5f, 0);
         var store = new Store(Shape, CorridorLitBoxes);
@@ -651,12 +661,12 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
         foreach (var ((cascade, entry), want) in merged)
             for (int w = 0; w < want.Length; w++, ways++)
             {
-                var i = 4 * (Shape.Cascades * SplitStoreShape.BaseWays * Shape.Slots + LightAt(cascade, entry, w));
+                var i = 4 * (Shape.OwnLights + LightAt(cascade, entry, w));
                 var got = new Vector4(store.Light[i], store.Light[i + 1], store.Light[i + 2], store.Light[i + 3]);
                 worst = MathF.Max(worst, (got - want[w]).Length());
             }
         var said = $"over {ways} ways of {probes.Count} probes, {unknown} reached by no ray, {missing} probes above them "
-            + $"not standing and {seen} others about them seen and {unseen} not, the merge lies within {worst:0.000000} of its rule";
+            + $"not standing and {seen} others about them toward which their own rays let some through and {unseen} none, the merge lies within {worst:0.000000} of its rule";
         output.WriteLine(said);
         Assert.True(worst < 1e-5f && unknown > 0 && seen > 0 && unseen > 0, said);
     }

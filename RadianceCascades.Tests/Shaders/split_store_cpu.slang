@@ -126,9 +126,9 @@ void test(uint3 id : SV_DispatchThreadID)
     else if (pass == 2u && index < uint(setup[12]))
         askSeenProbes(seen, hits, store, frame, shape, index);
     else if (pass == 3u)
-        askCascadeProbes(hits, store, frame, shape, uint(setup[11]), index);
+        askCascadeProbes(store, frame, shape, uint(setup[11]), index);
     else if (pass == 4u && index < uint(setup[12]))
-        gatherSurface(store, kept, hits, frame, shape, seen, index);
+        gatherSurface(store, kept, frame, shape, seen, index);
     else if (pass == 5u && index == 0u)
     {
         // The layout, which the tests hold the library's sizes to.
@@ -170,6 +170,12 @@ void test(uint3 id : SV_DispatchThreadID)
         // The first point's ray at the frame of the thread's count, and the finest way it falls in.
         float3 way = splitRayWay(seen.normalAt(0u), 0u, index);
         taken[index] = float4(way, float(splitWayOf(0u, way)));
+    }
+    else if (pass == 15u && index < uint(setup[12]))
+    {
+        // The way of the cascade at 11 each point's normal falls in, which the tests read the
+        // merge's shares by.
+        taken[index] = float4(float(splitWayOf(uint(setup[11]), seen.normalAt(index))), 0.0, 0.0, 0.0);
     }
     else if (pass == 12u && index < splitWays(uint(setup[11])))
         taken[index] = float4(float(splitWayOf(uint(setup[11]), splitWay(uint(setup[11]), index))), 0.0, 0.0, 0.0);

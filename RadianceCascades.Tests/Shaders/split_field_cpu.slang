@@ -184,7 +184,7 @@ void test(uint3 id : SV_DispatchThreadID)
     else if (pass == 2u && index < uint(setup[12]))
         askSeenProbes(points, hits, store, frame, shape, index);
     else if (pass == 3u)
-        askCascadeProbes(hits, store, frame, shape, cascade, index);
+        askCascadeProbes(store, frame, shape, cascade, index);
     else if (pass == 4u && index < uint(setup[12]))
         traceSeenRays(points, hits, sky, store, frame, shape, index);
     else if (pass == 5u)
@@ -192,17 +192,17 @@ void test(uint3 id : SV_DispatchThreadID)
     else if (pass == 6u)
         mergeSplitCascade(store, kept, sky, frame, shape, cascade, index);
     else if (pass == 7u && index < uint(setup[13]))
-        gatherSurface(store, kept, hits, frame, shape, surfaces, index);
+        gatherSurface(store, kept, frame, shape, surfaces, index);
     else if (pass == 8u && index < uint(setup[13]))
     {
-        // Each point's light from the probes about it it sees and from those standing by their
-        // trilinear weights alone, and the weights of each.
+        // Each point's light from the probes about it, each by the share it lets through toward
+        // the point, and from those standing by their trilinear weights alone, and the weights of
+        // each.
         float3 p = surfaces.placeAt(index);
         float weights, plainWeights;
         float3 n = surfaces.normalAt(index);
-        float3 origin = splitRayOrigin(frame, shape, p, n);
-        float3 seenLight = splitFinestLight(store, kept, hits, shape, p, n, origin, true, weights);
-        float3 plain = splitFinestLight(store, kept, hits, shape, p, n, origin, false, plainWeights);
-        taken[index] = float4(seenLight.x, plain.x, weights, plainWeights);
+        float3 shared = splitFinestLight(store, kept, shape, p, n, true, weights);
+        float3 plain = splitFinestLight(store, kept, shape, p, n, false, plainWeights);
+        taken[index] = float4(shared.x, plain.x, weights, plainWeights);
     }
 }

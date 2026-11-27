@@ -1,6 +1,6 @@
 # The ladder of merges
 
-Measured on 2026-11-27 on the tree of 7770020 with the changes committed beside it, every merge the
+Measured on 2026-11-27 on the tree of 10c530a with the changes committed beside it, every merge the
 passes take by name (`IMerge`) run over 10 scenes on the CPU at 2 configurations, as `dotnet test
 RadianceCascades.Tests` writes it with `RC_LADDER` naming this file. The module's configuration is
 its tests' chain of four levels in one cascade of the field of 64 cells of 0.25. An engine's is one
@@ -163,7 +163,7 @@ Its two walls' light each round over the first round's, traced and by each merge
 
 The split store, `ProbeLayout.Split`, runs over each scene at each configuration on the field, the
 light and the bounce the merges run on, at its default shape with 8,192 slots to its finest pool and
-6 cascades on grids fixed in the world, the finest 0.25 apart and each above twice as far, in 78.6
+6 cascades on grids fixed in the world, the finest 0.25 apart and each above twice as far, in 130.7
 MB. Each round a store anew sees the scene's points and the places of the bounce's cells, runs 64
 frames with each hit taking its surface's own light and what the surface reflects of the light
 gathered at its cell the round before, and gathers at the same points, the irradiance the dense
@@ -174,33 +174,33 @@ seen point, at the mean.
 
 | Configuration | Merge | Mean distance | Worst part | Leak | Most gain a round | Held out, mean and worst |
 |---|---|---|---|---|---|---|
-| the module's | the split store's, `mergeSplitCascade` | 0.127 | 0.430 | 0.00000 | 0.508 | 0.018 and 0.062 |
+| the module's | the split store's, `mergeSplitCascade` | 0.124 | 0.443 | 0.00000 | 0.509 | 0.013 and 0.042 |
 | the module's | at the ray's end, `MergeAtRayEnd` | 0.096 | 0.329 | 0.00000 | 0.501 | 0.030 and 0.041 |
-| an engine's | the split store's, `mergeSplitCascade` | 0.125 | 0.421 | 0.00000 | 0.500 | 0.027 and 0.087 |
+| an engine's | the split store's, `mergeSplitCascade` | 0.122 | 0.402 | 0.00000 | 0.501 | 0.011 and 0.027 |
 | an engine's | at the ray's end, `MergeAtRayEnd` | 0.094 | 0.446 | 0.00000 | 0.501 | 0.032 and 0.040 |
 
-| Configuration | Scene | Each part's ratio after one gather | Each part's ratio at the steady state | Rounds | Gain a round | Mean distance | Worst part | Leak | The dense grid's mean and worst | Probes standing by cascade | The finest asked | Rays a probe |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| the module's | a room with a door | floor 0.981, walls 1.003, ceiling 0.997 | floor 0.985, walls 0.995, ceiling 0.983 | 7 | 0.495 | 0.012 | 0.017 |  | 0.032 and 0.048 | 4737, 1142, 264, 56, 12, 4 | 4737 | 1.1 |
-| the module's | a closed box with one lamp | floor 0.668, walls 0.681 | floor 0.651, walls 0.666 | 7 | 0.508 | 0.418 | 0.430 |  | 0.167 and 0.213 | 5644, 1352, 296, 56, 8, 4 | 5644 | 1.1 |
-| the module's | a lit room beside a dark one through a wall of one cell | lit floor 0.960, lit walls 0.950 | lit floor 0.961, lit walls 0.958 | 7 | 0.500 | 0.041 | 0.043 | 0.00000 | 0.052 and 0.061 | 6094, 1480, 328, 64, 8, 4 | 6094 | 1.1 |
-| the module's | a room under a lintel | by the opening 1.389, between 1.688, deepest 1.459 | by the opening 1.308, between 1.524, deepest 1.395 | 4 | 0.300 | 0.341 | 0.421 |  | 0.295 and 0.329 | 4532, 2048, 512, 113, 28, 8 | 4532 | 1.0 |
-| the module's | an open box under a sky | floor 0.999, walls 0.971 | floor 0.991, walls 0.980 | 6 | 0.415 | 0.014 | 0.020 |  | 0.007 and 0.011 | 4805, 1156, 260, 52, 8, 4 | 4805 | 1.0 |
-| the module's | a long hall | by the opening 1.145, middle 1.067, far end 1.030 | by the opening 1.136, middle 1.083, far end 1.044 | 7 | 0.480 | 0.083 | 0.128 |  | 0.021 and 0.047 | 2257, 532, 152, 32, 4, 2 | 2257 | 1.1 |
-| the module's | a vestibule off a sunlit court | wall at -z 1.180, wall at +z 1.124, beside the door 1.037, floor 1.233, ceiling 1.123 | wall at -z 1.163, wall at +z 1.141, beside the door 1.067, floor 1.175, ceiling 1.161 | 7 | 0.441 | 0.132 | 0.162 |  | 0.093 and 0.145 | 6047, 1538, 392, 104, 32, 8 | 6047 | 1.1 |
-| the module's | a court lit in a strip between arcades | low wall 0.896, high wall 1.028 | low wall 0.919, high wall 1.019 | 6 | 0.418 | 0.052 | 0.084 |  | 0.107 and 0.125 | 8192, 2048, 488, 92, 16, 4 | 8192 | 1.1 |
-| the module's | a wall under a lamp | top left 1.298, top middle 1.214, top right 1.165, bottom left 0.916, bottom middle 0.978, bottom right 0.961 | top left 1.238, top middle 1.178, top right 1.113, bottom left 1.001, bottom middle 0.989, bottom right 0.960 | 6 | 0.493 | 0.089 | 0.213 |  | 0.086 and 0.300 | 3994, 968, 208, 40, 6, 4 | 3994 | 1.0 |
-| the module's | held out, a room with a roof window and a pillar | floor 0.990, walls 0.998, ceiling 0.978, pillar 1.111 | floor 0.999, walls 1.002, ceiling 0.994, pillar 1.064 | 7 | 0.491 | 0.018 | 0.062 |  | 0.030 and 0.041 | 3918, 931, 196, 36, 8, 4 | 3918 | 1.1 |
-| an engine's | a room with a door | floor 0.981, walls 1.003, ceiling 0.995 | floor 0.984, walls 0.995, ceiling 0.983 | 7 | 0.493 | 0.013 | 0.018 |  | 0.013 and 0.020 | 4737, 1142, 264, 56, 12, 4 | 4737 | 1.1 |
-| an engine's | a closed box with one lamp | floor 0.748, walls 0.680 | floor 0.701, walls 0.673 | 7 | 0.494 | 0.376 | 0.397 |  | 0.422 and 0.446 | 5644, 1352, 296, 56, 8, 4 | 5644 | 1.1 |
-| an engine's | a lit room beside a dark one through a wall of one cell | lit floor 0.958, lit walls 0.953 | lit floor 0.960, lit walls 0.960 | 7 | 0.500 | 0.041 | 0.041 | 0.00000 | 0.049 and 0.051 | 6094, 1480, 328, 64, 8, 4 | 6094 | 1.1 |
-| an engine's | a room under a lintel | by the opening 1.389, between 1.688, deepest 1.459 | by the opening 1.308, between 1.524, deepest 1.395 | 4 | 0.300 | 0.341 | 0.421 |  | 0.077 and 0.120 | 4532, 2048, 512, 113, 28, 8 | 4532 | 1.0 |
-| an engine's | an open box under a sky | floor 0.999, walls 0.971 | floor 0.991, walls 0.980 | 6 | 0.415 | 0.015 | 0.020 |  | 0.005 and 0.008 | 4805, 1156, 260, 52, 8, 4 | 4805 | 1.0 |
-| an engine's | a long hall | by the opening 1.152, middle 1.069, far end 1.030 | by the opening 1.139, middle 1.086, far end 1.044 | 7 | 0.477 | 0.085 | 0.131 |  | 0.018 and 0.022 | 2257, 532, 152, 32, 4, 2 | 2257 | 1.1 |
-| an engine's | a vestibule off a sunlit court | wall at -z 1.182, wall at +z 1.125, beside the door 1.038, floor 1.233, ceiling 1.123 | wall at -z 1.163, wall at +z 1.143, beside the door 1.067, floor 1.176, ceiling 1.161 | 7 | 0.435 | 0.132 | 0.162 |  | 0.014 and 0.024 | 6047, 1538, 392, 104, 32, 8 | 6047 | 1.1 |
-| an engine's | a court lit in a strip between arcades | low wall 0.897, high wall 0.998 | low wall 0.922, high wall 0.998 | 6 | 0.408 | 0.042 | 0.082 |  | 0.146 and 0.163 | 8192, 2048, 488, 92, 16, 4 | 8192 | 1.1 |
-| an engine's | a wall under a lamp | top left 1.334, top middle 1.211, top right 1.178, bottom left 0.927, bottom middle 0.971, bottom right 0.967 | top left 1.264, top middle 1.175, top right 1.120, bottom left 1.007, bottom middle 0.984, bottom right 0.963 | 6 | 0.490 | 0.095 | 0.234 |  | 0.168 and 0.344 | 3994, 968, 208, 40, 6, 4 | 3994 | 1.0 |
-| an engine's | held out, a room with a roof window and a pillar | floor 0.981, walls 0.990, ceiling 0.975, pillar 1.162 | floor 0.994, walls 0.996, ceiling 0.990, pillar 1.091 | 7 | 0.493 | 0.027 | 0.087 |  | 0.032 and 0.040 | 3918, 931, 196, 36, 8, 4 | 3918 | 1.1 |
+| Configuration | Scene | Each part's ratio after one gather | Each part's ratio at the steady state | Rounds | Gain a round | Mean distance | Worst part | Leak | The dense grid's mean and worst | Probes standing by cascade | Asked with no entry by cascade | The finest asked | Rays a probe |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| the module's | a room with a door | floor 0.985, walls 1.006, ceiling 0.996 | floor 0.988, walls 0.998, ceiling 0.985 | 7 | 0.493 | 0.010 | 0.016 |  | 0.032 and 0.048 | 4737, 1142, 264, 56, 12, 4 | 0, 0, 0, 0, 0, 0 | 4737 | 1.1 |
+| the module's | a closed box with one lamp | floor 0.650, walls 0.680 | floor 0.642, walls 0.666 | 7 | 0.509 | 0.424 | 0.443 |  | 0.167 and 0.213 | 5644, 1352, 296, 56, 8, 4 | 0, 0, 0, 0, 0, 0 | 5644 | 1.1 |
+| the module's | a lit room beside a dark one through a wall of one cell | lit floor 0.959, lit walls 0.949 | lit floor 0.960, lit walls 0.958 | 7 | 0.500 | 0.042 | 0.043 | 0.00000 | 0.052 and 0.061 | 6094, 1480, 328, 64, 8, 4 | 0, 0, 0, 0, 0, 0 | 6094 | 1.1 |
+| the module's | a room under a lintel | by the opening 1.398, between 1.649, deepest 1.499 | by the opening 1.304, between 1.495, deepest 1.417 | 4 | 0.303 | 0.339 | 0.402 |  | 0.295 and 0.329 | 4532, 2304, 625, 147, 35, 16 | 0, 2212, 83, 0, 0, 0 | 4532 | 1.0 |
+| the module's | an open box under a sky | floor 0.993, walls 0.984 | floor 0.991, walls 0.987 | 6 | 0.414 | 0.011 | 0.013 |  | 0.007 and 0.011 | 4805, 1156, 260, 52, 8, 4 | 0, 0, 0, 0, 0, 0 | 4805 | 1.0 |
+| the module's | a long hall | by the opening 1.125, middle 1.062, far end 1.026 | by the opening 1.119, middle 1.076, far end 1.038 | 7 | 0.474 | 0.074 | 0.112 |  | 0.021 and 0.047 | 2257, 532, 152, 32, 4, 2 | 0, 0, 0, 0, 0, 0 | 2257 | 1.1 |
+| the module's | a vestibule off a sunlit court | wall at -z 1.161, wall at +z 1.123, beside the door 1.030, floor 1.228, ceiling 1.123 | wall at -z 1.142, wall at +z 1.132, beside the door 1.054, floor 1.164, ceiling 1.152 | 7 | 0.439 | 0.121 | 0.152 |  | 0.093 and 0.145 | 6047, 1538, 392, 104, 32, 8 | 0, 0, 0, 0, 0, 0 | 6047 | 1.1 |
+| the module's | a court lit in a strip between arcades | low wall 0.888, high wall 1.019 | low wall 0.911, high wall 0.998 | 6 | 0.409 | 0.047 | 0.093 |  | 0.107 and 0.125 | 8192, 2081, 488, 92, 16, 4 | 410, 0, 0, 0, 0, 0 | 8192 | 1.1 |
+| the module's | a wall under a lamp | top left 1.263, top middle 1.037, top right 0.857, bottom left 1.034, bottom middle 0.891, bottom right 0.905 | top left 1.227, top middle 1.037, top right 0.916, bottom left 1.076, bottom middle 0.936, bottom right 0.920 | 6 | 0.498 | 0.092 | 0.205 |  | 0.086 and 0.300 | 3994, 968, 208, 40, 6, 4 | 0, 0, 0, 0, 0, 0 | 3994 | 1.0 |
+| the module's | held out, a room with a roof window and a pillar | floor 0.990, walls 0.998, ceiling 0.978, pillar 1.064 | floor 1.001, walls 1.004, ceiling 0.995, pillar 1.043 | 7 | 0.490 | 0.013 | 0.042 |  | 0.030 and 0.041 | 3918, 931, 196, 36, 8, 4 | 0, 0, 0, 0, 0, 0 | 3918 | 1.1 |
+| an engine's | a room with a door | floor 0.984, walls 1.007, ceiling 0.995 | floor 0.988, walls 0.998, ceiling 0.984 | 7 | 0.491 | 0.010 | 0.016 |  | 0.013 and 0.020 | 4737, 1142, 264, 56, 12, 4 | 0, 0, 0, 0, 0, 0 | 4737 | 1.1 |
+| an engine's | a closed box with one lamp | floor 0.731, walls 0.679 | floor 0.694, walls 0.674 | 7 | 0.493 | 0.380 | 0.395 |  | 0.422 and 0.446 | 5644, 1352, 296, 56, 8, 4 | 0, 0, 0, 0, 0, 0 | 5644 | 1.1 |
+| an engine's | a lit room beside a dark one through a wall of one cell | lit floor 0.958, lit walls 0.952 | lit floor 0.959, lit walls 0.959 | 7 | 0.501 | 0.042 | 0.042 | 0.00000 | 0.049 and 0.051 | 6094, 1480, 328, 64, 8, 4 | 0, 0, 0, 0, 0, 0 | 6094 | 1.1 |
+| an engine's | a room under a lintel | by the opening 1.398, between 1.649, deepest 1.499 | by the opening 1.304, between 1.495, deepest 1.417 | 4 | 0.303 | 0.339 | 0.402 |  | 0.077 and 0.120 | 4532, 2304, 625, 147, 35, 16 | 0, 2212, 83, 0, 0, 0 | 4532 | 1.0 |
+| an engine's | an open box under a sky | floor 0.993, walls 0.984 | floor 0.991, walls 0.988 | 6 | 0.414 | 0.011 | 0.013 |  | 0.005 and 0.008 | 4805, 1156, 260, 52, 8, 4 | 0, 0, 0, 0, 0, 0 | 4805 | 1.0 |
+| an engine's | a long hall | by the opening 1.150, middle 1.063, far end 1.026 | by the opening 1.131, middle 1.076, far end 1.038 | 7 | 0.477 | 0.078 | 0.123 |  | 0.018 and 0.022 | 2257, 532, 152, 32, 4, 2 | 0, 0, 0, 0, 0, 0 | 2257 | 1.1 |
+| an engine's | a vestibule off a sunlit court | wall at -z 1.164, wall at +z 1.124, beside the door 1.031, floor 1.228, ceiling 1.123 | wall at -z 1.144, wall at +z 1.133, beside the door 1.054, floor 1.164, ceiling 1.152 | 7 | 0.439 | 0.121 | 0.152 |  | 0.014 and 0.024 | 6047, 1538, 392, 104, 32, 8 | 0, 0, 0, 0, 0, 0 | 6047 | 1.1 |
+| an engine's | a court lit in a strip between arcades | low wall 0.890, high wall 0.988 | low wall 0.913, high wall 0.977 | 6 | 0.407 | 0.057 | 0.091 |  | 0.146 and 0.163 | 8192, 2081, 488, 92, 16, 4 | 410, 0, 0, 0, 0, 0 | 8192 | 1.1 |
+| an engine's | a wall under a lamp | top left 1.299, top middle 1.024, top right 0.868, bottom left 1.040, bottom middle 0.887, bottom right 0.911 | top left 1.251, top middle 1.026, top right 0.922, bottom left 1.078, bottom middle 0.933, bottom right 0.924 | 6 | 0.500 | 0.092 | 0.224 |  | 0.168 and 0.344 | 3994, 968, 208, 40, 6, 4 | 0, 0, 0, 0, 0, 0 | 3994 | 1.0 |
+| an engine's | held out, a room with a roof window and a pillar | floor 0.981, walls 0.990, ceiling 0.975, pillar 1.035 | floor 0.995, walls 0.998, ceiling 0.991, pillar 1.028 | 7 | 0.493 | 0.011 | 0.027 |  | 0.032 and 0.040 | 3918, 931, 196, 36, 8, 4 | 0, 0, 0, 0, 0, 0 | 3918 | 1.1 |
 
 ## The corridor walked
 
@@ -229,11 +229,11 @@ world, the points it sees the corridor's faces within 16 of the eye along it.
 | an engine's | by reach sight, `MergeByReachSight` | the levels | 0.631 | 0.246 | 0.692 | 0.084 |
 | an engine's | by reach sight, `MergeByReachSight` | the field | 3.633 | 2.437 | 3.601 | 1.311 |
 | the module's | the split store's, `mergeSplitCascade` | nothing | 0.032 | 0.016 | 0.007 | 0.004 |
-| an engine's | the split store's, `mergeSplitCascade` | nothing | 0.058 | 0.044 | 0.076 | 0.005 |
+| an engine's | the split store's, `mergeSplitCascade` | nothing | 0.058 | 0.041 | 0.009 | 0.005 |
 
 ## The cones by roughness
 
-Measured on 2026-11-27 on the tree of 7770020 with the changes committed beside it, the cone a rough
+Measured on 2026-11-27 on the tree of 10c530a with the changes committed beside it, the cone a rough
 surface reflects read from the cascades by `ConeAtProbes` (`IConeRead`) over 12 scenes, the ladder's
 and two of their own, on the CPU at 2 configurations after one gather, as `dotnet test
 RadianceCascades.Tests` writes it with `RC_LADDER` naming this file. Each point of a scene reflects

@@ -38,10 +38,11 @@ public sealed partial class ProbeMergeTests
         return ((float)(sum / (side * side)), sum > 0 ? (float)(open / sum) : 0);
     }
 
-    // The point's light from the finest probes about it that it sees after the warm frames with
-    // the eye still, the store fed by every face the eye sees or by the faces given, the weights of
-    // those probes and its light traced. A store fed by the faces given takes the least pool of the
-    // walk's cascades, which holds a point's probes and runs in an eighth of the time.
+    // The point's light from the finest probes about it, each by the share it lets through toward
+    // the point, after the warm frames with the eye still, the store fed by every face the eye sees
+    // or by the faces given, the weights of those probes and its light traced. A store fed by the
+    // faces given takes the least pool of the walk's cascades, which holds a point's probes and
+    // runs in an eighth of the time.
     private static (float Own, float Weights, float Traced) CorridorApartRead(Configuration configuration,
         ConcurrentDictionary<Vector4, float[]> cascades, Vector3 eye, (Vector3 Place, Vector3 Normal) point, float[]? seen = null)
     {
@@ -57,11 +58,11 @@ public sealed partial class ProbeMergeTests
     public void The_Corridors_Wall_Point_At_The_Lamps_Edge_Reads_Within_A_Twentieth_Of_Its_Trace_On_The_Split_Probes_From_Its_Own_Rays()
     {
         // The point on the wall at the lamp's edge, the eye held still. Fed by every face the eye
-        // sees, the finest probes about it that it sees hold beside its rays those of the faces
-        // about it within a spacing, those before the wall, and read it within an eighth of the
-        // trace. Fed by the point's own rays alone they hold none but its rays, which go to the
-        // nearest probe it sees (splitSeenCell), so they read within a twentieth of the trace, the
-        // cascades' intervals, ways and merge giving the point its light.
+        // sees, the finest probes about it hold beside its rays those of the faces about it within
+        // a spacing, those before the wall, and read it within an eighth of the trace. Fed by the
+        // point's own rays alone they hold none but its rays, which go to the nearest probe it sees
+        // (splitSeenCell), so they read within a twentieth of the trace, the cascades' intervals,
+        // ways and merge giving the point its light.
         var failed = new List<string>();
         var cascades = new ConcurrentDictionary<Vector4, float[]>();
         var eye = new Vector3(CorridorApartEye, 1.5f, 0);

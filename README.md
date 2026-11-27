@@ -135,7 +135,7 @@ library's functions, and the engine keeps its bindings, its threads and its atom
 | `IConeRead` | Brings the mean light of the cone a rough surface reflects toward the eye from the levels about it, one read behind one name, which `ConeAtProbes` is the first of | `readCone` |
 | `IVisiblePoints` | Reads, beyond `ISurfacePoints`, whether a pixel sees a surface, false where its depth is the far plane's, by which a seen point asks the split cascades' store for its probes | the split cascades' passes |
 | `IRayHits` | Traces a part of a ray from a seen point between a start and an end, how it ended, where, the share of light carried and the light it met, which `FieldHits` gives from the field's march | the split cascades' passes |
-| `IStoreUints` | Reads, writes, adds to and compares and exchanges the store's uints, an atomic add and an atomic compare and exchange on a GPU, in which the passes keep the table from each probe's key to its entry, each entry's key, the frames it was taken and last asked for and the shares of the probes above it that it sees, the free entries, their rays' sums and the count standing in each cascade | the split cascades' passes |
+| `IStoreUints` | Reads, writes, adds to and compares and exchanges the store's uints, an atomic add and an atomic compare and exchange on a GPU, in which the passes keep the table from each probe's key to its entry, each entry's key, the frames it was taken and last asked for and its cell, the free entries, their rays' sums and the count standing in each cascade | the split cascades' passes |
 | `IStoreLight` | Reads and keeps the store's light, each probe's light along each of its ways with the share let through, kept from frame to frame, and the light merged from the cascades above | the split cascades' passes |
 
 The split cascades keep probes only near the surfaces the eye sees, and `rc_split.slang` holds what
@@ -170,59 +170,63 @@ nearest of the eight about it that it sees from where its rays start, or the nea
 sees none (`splitSeenCell`), a thread a point. The nearest of all stands behind the face a point
 lies on for half the points of a face, and past a wall thinner than its spacing, where the gather
 would not read the point's own rays. `askCascadeProbes` asks for the nearest probe of the cascade
-above for each probe of a cascade asked for in the frame, once for each cascade but the coarsest,
-and keeps in the probe's entry the share of each of the eight probes above about it that it sees
-from its place (`splitAboveSights`), its march starting an eighth of its spacing along so a probe on
-the plane of a face sees past it. `traceSeenRays` sends each seen point one ray a frame, a thread a
-point, its way stepping along a low-discrepancy sequence of the plane from an offset of the point's
-own, one step a frame, laid on the half of the sphere its normal faces so each step stands for an
-equal share of it. It starts off the surface along the normal by a quarter of the finest spacing for
-each four finest spacings the point lies from the eye, and by no less than a quarter of the finest
-spacing (`splitRayOrigin`), so the march from a far point's start does not meet the face it leaves
-where a coarse cell of the field holds that face. The ray is traced through the cascades' intervals
-one after another, the finest 1.6 of the finest spacing long and each above reaching four times as
-far past the one below, and each part is added to the probe of its cascade that the point's probe
-leads up to, at the way it falls in, as its light, the share it lets through and a count of one,
-until a part meets a surface or leaves the world. `keepSplitLight` keeps each way's light from those
-sums, a thread a way, the mean of what it held over the rays it is the mean of and of the frame's
-rays, those counted up to `SplitKeptRays`, 256, past which each ray moves it by a 256th, so a way
-settles as its rays come and then follows a change of light over 256 of them, and empties the sums,
-the count of rays its light is the mean of kept above the frame's in the bits past `SplitCountBits`.
-`mergeSplitCascade` merges each cascade's ways from the coarsest down, a thread a way, each way's
-own light and, by the share it lets through, the mean of the four ways above that its texel holds at
-the probes of the cascade above about it, each weighed by the share of it the probe sees, the one at
-half its cell rounded up, which its rays' next parts are added to, by all of it, and the sky's above
-the coarsest. That one probe alone gives a probe at an odd cell along an axis the rays of a patch a
-cell past it along that axis, and the eight by their trilinear weights alone lend a way the light of
-points past a wall thinner than their spacing. A way no ray reached merges to none and is left out
-of the ways below and of the gather, since letting all its light through would let the sky into a
-closed room. `gatherSurface` over the store's buffers gathers a point's light from the finest probes
-about it alone, each standing probe weighed by its trilinear weight and by the share of it the point
-sees from where its rays start (`splitProbeSight`), all of it where the march toward its place meets
-no surface short of it by more than half of `SeeingSlack` of the spacing and none where it meets one
-short by the whole, a probe not behind the point's face by half that lifted off the face as the
-ray's start is, since the field's march meets the face short of a probe on its plane where it comes
-in low, over those standing and seen that hold a way facing the point. The cascades above feed the
-merge and are never gathered from, so a fixed point's light is read from the same probes and the
-same chain above them wherever the eye stands. A point that sees none of the finest probes about it
-takes them by their trilinear weights alone, which stand since it asks for one of them and hold its
-own rays. Over a field whose cells are coarse beside the lift of the rays' start, the march from
-that start can meet a face at once along every way, and such a point would otherwise be dark. A
-probe's ways are the middles of the texels of a square of 4 a side for each half of the sphere at
-the finest cascade, twice as many a side for each cascade above, laid on the half so each stands for
-an equal share of the sphere. `SplitStoreShape` gives the store's shape at its defaults and the
-uints and the float4 of light an engine's two buffers hold, and `ProbeLayout` picks between the
-dense levels, its default, and the split cascades. A point farther along an axis from the eye than
-254 of the finest spacings, 63.5 at the default spacing of 0.25, is not held by the store
-(`splitHolds`), since a probe's key holds nine bits of its cell along each axis, and asks for no
-probe, sends no ray and gathers no light, so an engine gives its pixel the far light it gives the
-sky, or raises the store's spacing until it holds its scene. A cascade's pool holds a quarter of the
-probes of the one below, as the probes of a surface at twice the spacing are, and a pool too small
-for the probes asked of it in a frame leaves some probes of the cascade below without the probe
-above, which then take no light from past their own interval. `SplitStoreShape.Bytes` gives the
-store's memory, 4 bytes a uint and 16 a float4 of light, each cascade's light and sums taking the
-same share, 157.3 MB at the default shape of 16,384 slots to the finest pool and 6 cascades (`dotnet
-test RadianceCascades.Tests --filter FullyQualifiedName~SplitStoreTests`).
+above for each probe of a cascade asked for in the frame, once for each cascade but the coarsest.
+`traceSeenRays` sends each seen point one ray a frame, a thread a point, its way stepping along a
+low-discrepancy sequence of the plane from an offset of the point's own, one step a frame, laid on
+the half of the sphere its normal faces so each step stands for an equal share of it. It starts off
+the surface along the normal by a quarter of the finest spacing for each four finest spacings the
+point lies from the eye, and by no less than a quarter of the finest spacing (`splitRayOrigin`), so
+the march from a far point's start does not meet the face it leaves where a coarse cell of the field
+holds that face. The ray is traced through the cascades' intervals one after another, the finest 1.6
+of the finest spacing long and each above reaching four times as far past the one below, and each
+part is added to the probe of its cascade that the point's probe leads up to, at the way it falls
+in, as its light, the share it lets through and a count of one, until a part meets a surface or
+leaves the world. `keepSplitLight` keeps each way's light from those sums, a thread a way, the mean
+of what it held over the rays it is the mean of and of the frame's rays, those counted up to
+`SplitKeptRays`, 256, past which each ray moves it by a 256th, so a way settles as its rays come and
+then follows a change of light over 256 of them, and empties the sums, the count of rays its light
+is the mean of kept above the frame's in the bits past `SplitCountBits`. `mergeSplitCascade` merges
+each cascade's ways from the coarsest down, a thread a way, each way's own light and, by the share
+it lets through, the mean of the four ways above that its texel holds at the probes of the cascade
+above about it, each weighed by the share the probe's own rays let through along the way toward it
+(`splitShareToward`) and by none where no ray of its reached that way, since a probe above that
+stands behind the face of the points whose rays the probe holds stands where none of their rays go,
+the one at half its cell rounded up, which its rays' next parts are added to, by all of it, and the
+sky's above the coarsest. That one probe alone gives a probe at an odd cell along an axis the rays
+of a patch a cell past it along that axis, and the eight by their trilinear weights alone lend a way
+the light of points past a wall thinner than their spacing. A way no ray reached merges to none and
+is left out of the ways below and of the gather, since letting all its light through would let the
+sky into a closed room. `gatherSurface` over the store's buffers gathers a point's light from the
+finest probes about it alone, each standing probe weighed by its trilinear weight and by the share
+its own rays let through along the way toward the point over its interval, as `keepSplitLight` keeps
+it, and by all of it where no ray reached that way, since a probe before a face holds none along the
+ways into the face, among them those toward the face's own points, over those standing that hold a
+way facing the point. Neither the gather nor the merge marches the field, each reading the sight of
+a probe from the rays it holds. The cascades above feed the merge and are never gathered from, so a
+fixed point's light is read from the same probes and the same chain above them wherever the eye
+stands. A point toward which none of the finest probes about it let any through takes them by their
+trilinear weights alone, which stand since it asks for one of them and hold its own rays. Over a
+field whose cells are coarse beside the lift of the rays' start, the march from that start can meet
+a face at once along every way, so the probes about a point let none through toward it, and such a
+point would otherwise be dark. A probe's ways are the middles of the texels of a square of 4 a side
+for each half of the sphere at the finest cascade, twice as many a side for each cascade above, laid
+on the half so each stands for an equal share of the sphere. `SplitStoreShape` gives the store's
+shape at its defaults and the uints and the float4 of light an engine's two buffers hold, and
+`ProbeLayout` picks between the dense levels, its default, and the split cascades. A point farther
+along an axis from the eye than 254 of the finest spacings, 63.5 at the default spacing of 0.25, is
+not held by the store (`splitHolds`), since a probe's key holds nine bits of its cell along each
+axis, and asks for no probe, sends no ray and gathers no light, so an engine gives its pixel the far
+light it gives the sky, or raises the store's spacing until it holds its scene. A cascade's pool
+above the finest holds the probes of its spacing over the square of the finest's probes the slots
+cover with a row more along each edge (`splitPoolProbes`), since the probes a surface's points ask
+for of a cascade above run past its edges and across its thickness, where a quarter of the pool
+below, as the probes of a surface at twice the spacing are, leaves the coarse pools short, and a
+pool too small for the probes asked of it in a frame leaves some probes of the cascade below without
+the probe above, which then take no light from past their own interval. `SplitStoreShape.Bytes`
+gives the store's memory, 4 bytes a uint and 16 a float4 of light, 216.3 MB at the default shape of
+16,384 slots to the finest pool and 6 cascades, the coarse pools taking most of it since a probe of
+the sixth cascade holds 32,768 ways (`dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~SplitStoreTests`).
 
 On the CPU over the inside faces of a corridor from an eye in it, a store of 4 cascades from a
 spacing of 0.5 holds 1,164, 348, 78 and 28 probes by cascade where a dense grid of the finest over
@@ -244,44 +248,44 @@ the finest cascade's 26,688 ways a hundredth off it, the brightest at the sky's 
 RadianceCascades.Tests --filter FullyQualifiedName~SplitStoreTests`).
 
 Walked along the corridor as the dense levels are, 4 frames at each quarter step after 256 at the
-first eye, in a store of 8,192 slots to the finest pool and 6 cascades, 78.6 MB, a fixed point's
-light on the split probes steps 0.076 of its mean at worst and 0.005 at the 99th part at an engine's
+first eye, in a store of 8,192 slots to the finest pool and 6 cascades, 130.7 MB, a fixed point's
+light on the split probes steps 0.009 of its mean at worst and 0.005 at the 99th part at an engine's
 configuration, against the dense levels' 3.558 and 1.299, and 0.007 and 0.004 at the module's, the
-rays' noise alone moving it between readings with the eye still 0.011 and 0.006 at an engine's and
+rays' noise alone moving it between readings with the eye still 0.008 and 0.005 at an engine's and
 0.007 and 0.005 at the module's. A point reads the same probes and the same chain above them from
-every eye, and at an engine's configuration it steps most where a coarse cascade of the field, which
-snaps about the eye, steps past the hits of its probes' rays. At the last eye the store stands
-7,665, 1,740, 474, 114, 32 and 8 probes by cascade at an engine's configuration, 6,129 of the finest
-asked for at its last frame and the others kept from the eyes before, each of those asked for taking
-4.1 rays a frame at the mean, and 3,009, 756, 222, 48, 16 and 8 at the module's
+every eye, and their sight of it is read from the rays they hold rather than marched through the
+field, so at an engine's configuration, whose field snaps about the eye, it steps by about the rays'
+noise too. At the last eye the store stands 7,665, 2,076, 572, 150, 52 and 20 probes by cascade at
+an engine's configuration, 6,129 of the finest asked for at its last frame and the others kept from
+the eyes before, each of those asked for taking 4.1 rays a frame at the mean, and 3,009, 756, 222,
+48, 16 and 8 at the module's, no probe asked for at either left without an entry in its pool
 (`RC_LADDER=.github/LADDER.md dotnet test RadianceCascades.Tests --filter
 FullyQualifiedName~On_The_Split_Probes`, the whole walk running where `RC_LADDER` is set and the
 build's run walking its first 2 units at an engine's configuration from 64 warm frames). At the
 wall's point at the lamp's edge, 2.5 high, with the eye 7.5 from it along the corridor, the point
 traced takes 0.5006 at an engine's configuration and 0.5467 at the module's. Fed by every face the
-eye sees its probes read 1.050 and 1.089 of that, from the probes before the wall alone, since those
-behind its face stand inside it where the point does not see them, and fed by its own rays alone
-1.011 and 1.020 (`dotnet test RadianceCascades.Tests --filter
-FullyQualifiedName~At_The_Lamps_Edge`).
+eye sees its probes read 1.048 and 1.091 of that, holding beside its rays those of the faces about
+it within a spacing, and fed by its own rays alone 1.011 and 1.020 (`dotnet test
+RadianceCascades.Tests --filter FullyQualifiedName~At_The_Lamps_Edge`).
 
 Over the ladder's ten scenes, each round of the bounce run by a store anew that sees the scene's
 points and the places of its bounce's cells for 64 frames, in the walk's store of 8,192 slots and 6
-cascades, the split store reads a part 0.127 from its trace on the mean and 0.430 at worst at the
-module's configuration and 0.125 and 0.421 at an engine's, against 0.096 and 0.329 and 0.094 and
+cascades, the split store reads a part 0.124 from its trace on the mean and 0.443 at worst at the
+module's configuration and 0.122 and 0.402 at an engine's, against 0.096 and 0.329 and 0.094 and
 0.446 by the merge at the ray's end on the dense grid, and the dark room beside the lit one takes
 none of the lit room's light through their wall of one cell, as on the dense grid. A scene's points
 stand about one to a probe of the finest cascade, each such probe taking 1.0 to 1.1 rays a frame, so
-they ask for nearly as many probes of the second cascade as of the finest, and the pools, each a
-quarter of the one below as the probes of a surface are, fill in the court lit in a strip, whose
-finest and second hold 8,192 and 2,048, and under the lintel, whose second and third hold 2,048 and
-512. It reads nearer than the dense grid in the court at the module's configuration, 0.052 from its
-trace on the mean against 0.107, and in the room with a door, 0.012 against 0.032, and farthest in
-the closed box with one lamp, whose floor and walls take 0.651 and 0.666 of their trace at the
-module's, 0.418 from it on the mean against the dense grid's 0.167, under the lintel, 0.341 against
-0.295, where a probe above that a probe sees lends it the light of rays of points past the lintel's
-edge, and in the vestibule off the sunlit court and the long hall, 0.132 against 0.093 and 0.083
-against 0.021, each part of either above its trace (`RC_LADDER=.github/LADDER.md dotnet test
-RadianceCascades.Tests --filter FullyQualifiedName~The_Ladder`).
+they ask for nearly as many probes of the second cascade as of the finest, and the pools fill in the
+court lit in a strip, whose finest holds 8,192 with 410 more asked for, and under the lintel, whose
+second and third hold 2,304 and 625 with 2,212 and 83 more asked for. It reads nearer than the dense
+grid in the court at the module's configuration, 0.047 from its trace on the mean against 0.107, and
+in the room with a door, 0.010 against 0.032, and farthest in the closed box with one lamp, whose
+floor and walls take 0.642 and 0.666 of their trace at the module's, 0.424 from it on the mean
+against the dense grid's 0.167, under the lintel, 0.339 against 0.295, where a probe above toward
+which a probe's rays pass lends it the light of rays of points past the lintel's edge, and in the
+vestibule off the sunlit court and the long hall, 0.121 against 0.093 and 0.074 against 0.021, each
+part of either above its trace (`RC_LADDER=.github/LADDER.md dotnet test RadianceCascades.Tests
+--filter FullyQualifiedName~The_Ladder`).
 
 `stampCell` takes the cascade's cell width, and stamps a box thinner than a cell along an axis of
 its own a cell across there. A march meets a surface within a tenth of a cell of it (`MarchHit`), so
