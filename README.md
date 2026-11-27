@@ -228,6 +228,17 @@ gives the store's memory, 4 bytes a uint and 16 a float4 of light, 216.3 MB at t
 the sixth cascade holds 32,768 ways (`dotnet test RadianceCascades.Tests --filter
 FullyQualifiedName~SplitStoreTests`).
 
+A binding that finds points reading dark against its own reference reads each with
+`splitGatherCause` on its frames, a thread a point, which gives the sums of the weights
+`gatherSurface` takes by the share each probe lets through toward the point and by the trilinear
+weights alone, the share of the first lent by probes behind the point's plane whose way toward it no
+ray reached, and the frames since the youngest of the probes about it was taken. A dark point whose
+sums are both 0 gathers nothing, none of the probes standing about it holding a way its rays reached
+that faces it, one whose first sum alone is 0 takes the trilinear weights, one whose youngest probe
+is a few frames old takes the light of probes that hold few rays, and one whose share from behind
+its plane is half or more takes most of its light from past the face it lies on (`dotnet test
+RadianceCascades.Tests --filter FullyQualifiedName~A_Split_Gathers_Cause`).
+
 On the CPU over the inside faces of a corridor from an eye in it, a store of 4 cascades from a
 spacing of 0.5 holds 1,164, 348, 78 and 28 probes by cascade where a dense grid of the finest over
 the faces' bounds stands 3,150, each within 0.707 of its spacing of what asked for it, and over 16

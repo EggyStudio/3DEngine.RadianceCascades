@@ -672,6 +672,90 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
     }
 
     [CpuKernelFact]
+    public void A_Split_Gathers_Cause_Reads_Its_Weights_The_Probes_Behind_A_Points_Plane_And_Their_Age()
+    {
+        // Half the corridor's faces seen at the first frame and all of them four frames on, and
+        // each finest probe's own and merged light set along every way, a fifth of each reached by
+        // no ray, the reading at each face's point a tenth of a unit off it gives the weights the
+        // gather takes by the share each probe lets through toward the point and by the trilinear
+        // weights alone, the share of the first lent by probes behind the point's plane whose way
+        // toward it no ray reached and the frames since its youngest probe was taken, as the rule
+        // read on the CPU gives them.
+        var faces = CorridorFaces();
+        var eye = new Vector3(0, 1.5f, 0);
+        var store = new Store(Shape, CorridorLitBoxes);
+        store.Frame(eye, 1, faces[..(8 * (faces.Length / 16))]);
+        store.Frame(eye, 5, faces);
+        var probes = store.Probes(eye, 5).Where(p => p.Cascade == 0).ToList();
+        foreach (var (entry, _, _) in probes)
+            for (int w = 0; w < SplitStoreShape.BaseWays; w++)
+                foreach (var merged in new[] { false, true })
+                {
+                    var i = 4 * ((merged ? Shape.OwnLights : 0) + LightAt(0, entry, w));
+                    var h = (uint)HashCode.Combine(entry, w, merged);
+                    var none = h % 5 == 0;
+                    (store.Light[i], store.Light[i + 1], store.Light[i + 2]) = none ? (0, 0, 0) : ((h >> 4) % 97 / 96f, (h >> 11) % 89 / 88f, (h >> 18) % 83 / 82f);
+                    store.Light[i + 3] = none ? -1 : (h >> 25) % 65 / 64f;
+                }
+        var points = Enumerable.Range(0, faces.Length / 8).Select(k => (Normal: new Vector3(faces[8 * k + 4], faces[8 * k + 5], faces[8 * k + 6]), Place: PlaceOf(faces, k)))
+            .Select(p => (Place: p.Place + p.Normal * 0.1f, p.Normal)).ToArray();
+        var read = store.Run(16, eye, 5, Floats(points), points.Length);
+        var standing = probes.ToDictionary(CellOf, p => p.Entry);
+        var taken = store.Keys().Values.ToDictionary(k => k.Entry, k => k.Taken);
+        var ways = store.Run(8, eye, 5, [], 160);
+        var (spacing, slack) = (Shape.Spacing, 0.125f * Shape.Spacing);
+        // The eight cells about each point and the way toward the point from each, by the kernel's
+        // own reading of a way.
+        var cells = points.SelectMany(p =>
+        {
+            var low = new Vector3(MathF.Floor(p.Place.X / spacing), MathF.Floor(p.Place.Y / spacing), MathF.Floor(p.Place.Z / spacing));
+            return Enumerable.Range(0, 8).Select(k => low + new Vector3(k & 1, k >> 1 & 1, k >> 2));
+        }).ToArray();
+        var towards = cells.Select((cell, k) =>
+        {
+            var toward = points[k / 8].Place - cell * spacing;
+            return (Vector3.Zero, toward / toward.Length());
+        });
+        var wayOf = store.Run(15, eye, 5, Floats(towards), cells.Length);
+        var (worst, behindSome, cut, ages) = (0f, 0, 0, new HashSet<float>());
+        for (int i = 0; i < points.Length; i++)
+        {
+            var (p, n) = points[i];
+            var f = p / spacing - cells[8 * i];
+            var (x, y, behind, youngest) = (0f, 0f, 0f, -1f);
+            for (int k = 0; k < 8; k++)
+            {
+                var cell = cells[8 * i + k];
+                if (!standing.TryGetValue(((int)cell.X, (int)cell.Y, (int)cell.Z), out var entry))
+                    continue;
+                var age = 5f - taken[entry];
+                youngest = youngest < 0 ? age : MathF.Min(youngest, age);
+                var lerps = new Vector3((k & 1) == 1 ? f.X : 1 - f.X, (k >> 1 & 1) == 1 ? f.Y : 1 - f.Y, (k >> 2) == 1 ? f.Z : 1 - f.Z);
+                var weight = lerps.X * lerps.Y * lerps.Z;
+                var from = cell * spacing;
+                var own = (p - from).Length() <= slack ? 1f : store.Light[4 * LightAt(0, entry, (int)wayOf[4 * (8 * i + k)]) + 3];
+                var facing = Enumerable.Range(0, SplitStoreShape.BaseWays).Any(w => store.Light[4 * (Shape.OwnLights + LightAt(0, entry, w)) + 3] >= 0
+                    && Vector3.Dot(n, new Vector3(ways[4 * w], ways[4 * w + 1], ways[4 * w + 2])) > 0);
+                if (weight <= 0 || !facing)
+                    continue;
+                y += weight;
+                x += weight * (own < 0 ? 1 : own);
+                behind += Vector3.Dot(from - p, n) < 0 && own < 0 ? weight : 0;
+            }
+            var z = x > 0 ? behind / x : 0;
+            worst = MathF.Max(worst, MathF.Max(MathF.Abs(read[4 * i] - x), MathF.Max(MathF.Abs(read[4 * i + 1] - y), MathF.Abs(read[4 * i + 2] - z))));
+            worst = read[4 * i + 3] == youngest ? worst : float.PositiveInfinity;
+            (behindSome, cut) = (behindSome + (z > 0 ? 1 : 0), cut + (x < y ? 1 : 0));
+            ages.Add(youngest);
+        }
+        var said = $"over {points.Length} points, {behindSome} lent some of their weight by probes behind their plane whose way toward them no ray reached, "
+            + $"{cut} whose probes let less than all through toward them, their youngest probes {string.Join(" and ", ages.Order())} frames old, "
+            + $"the reading lies within {worst:0.000000} of its rule";
+        output.WriteLine(said);
+        Assert.True(worst < 1e-5f && behindSome > 0 && cut > 0 && ages.Contains(0) && ages.Contains(4), said);
+    }
+
+    [CpuKernelFact]
     public void A_Split_Store_Under_An_Even_Sky_With_Nothing_To_Meet_Gathers_The_Sky()
     {
         // The corridor's points with no corridor about them, under a sky of 1 with nothing for

@@ -241,14 +241,29 @@ pointer. One commit an engine, after item 3's first part.
     from the eye at 0.25 and the corridor at the engine's configuration asks 36 and 20 probes of its
     coarsest pools, which hold 32 and 8, so the two coarsest pools are read for fullness at the
     engine's reach under item 21 or a sixth change to this item, the pool sizes set from the reach
-    and the spacing rather than fixed.
+    and the spacing rather than fixed. The sixth change, the pools, is in a99aae0 with item 21. The
+    first cascade holds the slots and each cascade above the square of the root of the slots over
+    two to its level plus two, 8,192, 2,304, 625, 196, 64 and 25 against the corridor's asks of
+    1,740, 474, 114, 36 and 20; memory 130.7 MB at 8,192 slots and 216.3 MB at the default, the walk
+    leaving no probe without an entry. Two scenes still ask past their pools, the court for 410
+    finest probes and the lintel for 2,212 second- and 83 third-cascade probes, the lintel 0.339
+    against the quarter pools' 0.319, carried into the lintel's item.
 
 21. **The sight from the store, not the field.** Each probe's transmittance a direction over its
     first interval is deposited already; a corner probe whose own rays toward the point are blocked
     within that interval lights it with no weight, and the field marches of the gather's sight check
     and the merge's parent sight go. Read on the one-cell wall, the dark room and the whole ladder
     against the marches' figures; the hand loses the hits on gatherSurface and askCascadeProbes,
-    said for both bindings. One commit.
+    said for both bindings. One commit. Done at a99aae0 on 2026-11-27 at 23:21, pushed, its run read
+    next tick, 241 tests green, the pools as 19's sixth change inside it. The merge departs from the
+    text where the leak was, each probe above weighed by the share the lower probe's own rays let
+    through toward it, since the probe above's own rays leaked 0.0752 into the dark room. Dark room
+    0.00000, lamp's edge 1.048 and 1.091; the whole walk's worst step 0.009 at the engine's
+    configuration (from 0.076) and 0.007 at the module's, the eye still 0.008 and 0.005; ladder
+    split 0.124 and 0.443 module, 0.122 and 0.402 engine, leak 0, the held-out room 0.013 and 0.042,
+    0.011 and 0.027. Review, the walk's bound of 2% is met at both configurations with the field's
+    snapping inside; the specks are read next by their three causes and the probes behind a point's
+    plane, the green ledge's case.
 
 22. **One trace a ray, split by its hit.** Recorded under item 18 on 2026-11-26 from the engine's
     device, 4,688,000 queries for 2,650,656 rays. Each ray is traced once from its surface point and
@@ -477,3 +492,21 @@ finest. The lintel reads 0.339 at the module's against 0.319 with the quarter po
 parts above its trace, and the court 0.047 against 0.049 (`RC_LADDER=.github/LADDER.md dotnet test
 RadianceCascades.Tests --filter FullyQualifiedName~The_Ladder`). The ladder's split table gives the
 probes asked for with no entry by cascade, the walk's message as well.
+
+The specks. By a reading not committed, at a99aae0, the corridor's seen faces from eyes at -3, 0 and
+3.75, 9,385 points each, read against a trace over 32 by 32 ways, hold no point under a fifth of its
+trace at an engine's configuration, the mean distance by point 0.095 to 0.158, and at the module's
+the 900 and 1,300 points under a fifth all lie outside its one field, where the store holds none.
+Over the ladder's ten scenes at both configurations, each lit point against its traced steady state,
+none reads under a fifth, the room with a door, the court between arcades and the room with a pillar
+among them. Weighing each probe also by the share of the hemisphere its reached ways facing the
+point hold moves no point, since the merged ways cover it at every probe there, so cause (c) does
+not occur, and the probes before the point's plane alone read farther, 0.169 against 0.133 at the
+corridor's middle eye. With no speck on the CPU, the engine's are of its frames, fresh probes within
+their first frames or its hits, and `splitGatherCause` gives the engine the count to run on its
+frames at the pin, a thread a pixel, the sums of the gather's weights by the share and by the
+trilinear weight alone, the share lent from behind the point's plane by probes whose way toward it
+no ray reached, and the frames since the youngest probe about it was taken (`dotnet test
+RadianceCascades.Tests --filter FullyQualifiedName~A_Split_Gathers_Cause`). The hand gains it for
+both bindings, a dispatch after gatherSurface over the pixels read dark, and item 23 takes the
+specks.

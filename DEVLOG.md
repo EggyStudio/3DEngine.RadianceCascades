@@ -10,6 +10,9 @@ names the item of .github/REVIEW.md or .github/REVIEW-ARCHIVE.md and the commit 
 
 Commits that day
 
+- `a99aae0` The gather and the merge read a probe's sight from the share its own rays let through
+  over the first interval in place of the field's march, and each pool above the finest is sized
+  from the square the finest's slots cover.
 - `10c530a` The finest probes are placed from the view at the world spacing and kept until their
   pool presses, and the cascades above stand on grids fixed in the world that feed the merge alone.
 

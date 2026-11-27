@@ -679,6 +679,55 @@ public void gatherSurface<W : IStoreUints, L : IStoreLight, A : ISurfacePoints>(
     surfaces.keepTaken(index, taken * 3.14159265);
 }
 
+// What a binding counts a point by where the light gatherSurface gives it reads dark against the
+// binding's own reference, read on its frames as gatherSurface reads the point at p facing n. Its
+// x is the sum of the weights splitFinestLight takes by the share each probe lets through toward
+// the point and its y the sum by the trilinear weights alone, which gatherSurface falls back to
+// where x is 0, so a point whose x and y are both 0 gathers no light, none of the probes standing
+// about it holding a way its rays reached that faces it. Its z is the share of x lent by probes
+// behind the point's plane whose way toward the point no ray reached, which the gather reads as
+// letting all of it through, so a point whose z is half or more takes most of its light from past
+// the face it lies on. Its w is the frames since the youngest of the probes standing about the
+// point was taken, -1 where none of the eight stands, so a point whose w is a few frames takes the
+// light of probes that hold few rays. A point the store does not hold (splitHolds) reads 0, 0, 0
+// and -1.
+public float4 splitGatherCause<W : IStoreUints, L : IStoreLight>(W uints, L light, SplitFrame frame, SplitStore shape,
+    float3 p, float3 n)
+{
+    if (!splitHolds(frame, shape, p))
+        return float4(0.0, 0.0, 0.0, -1.0);
+    float weights, plainWeights;
+    splitFinestLight(uints, light, shape, p, n, true, weights);
+    splitFinestLight(uints, light, shape, p, n, false, plainWeights);
+    float spacing = shape.spacing;
+    float slack = SeeingSlack * spacing;
+    float3 q = p / spacing;
+    int3 base = int3(floor(q));
+    float3 f = q - float3(base);
+    float behind = 0.0, youngest = -1.0;
+    for (int corner = 0; corner < 8; corner++)
+    {
+        int3 offset = int3(corner & 1, (corner >> 1) & 1, corner >> 2);
+        uint entry = findSplitProbe(uints, shape, splitKey(0u, base + offset));
+        if (entry == SplitNone)
+            continue;
+        float age = float(frame.frame - uints.load(splitPoolAt(shape) + SplitEntryUints * entry + 2u));
+        youngest = youngest < 0.0 ? age : min(youngest, age);
+        float3 lerps = lerp(1.0 - f, f, float3(offset));
+        float weight = lerps.x * lerps.y * lerps.z;
+        float3 from = float3(base + offset) * spacing;
+        if (weight <= 0.0 || dot(from - p, n) >= 0.0 || splitShareToward(light, shape, entry, 0u, from, p, slack, -1.0) >= 0.0)
+            continue;
+        for (uint way = 0u; way < SplitBaseWays; way++)
+            if (light.lightAt(splitLightAt(shape, entry, way, true)).w >= 0.0 && dot(n, splitWay(0u, way)) > 0.0)
+            {
+                behind += weight;
+                break;
+            }
+    }
+    return float4(weights, plainWeights, weights > 0.0 ? behind / weights : 0.0, youngest);
+}
+
 // The point of a disk of radius 1 a point of the square from -1 to 1 stands for, by the concentric
 // map, which keeps each patch's share of the area.
 float2 splitDisk(float2 uv)

@@ -177,6 +177,8 @@ void test(uint3 id : SV_DispatchThreadID)
         // merge's shares by.
         taken[index] = float4(float(splitWayOf(uint(setup[11]), seen.normalAt(index))), 0.0, 0.0, 0.0);
     }
+    else if (pass == 16u && index < uint(setup[12]))
+        taken[index] = splitGatherCause(store, kept, frame, shape, seen.placeAt(index), seen.normalAt(index));
     else if (pass == 12u && index < splitWays(uint(setup[11])))
         taken[index] = float4(float(splitWayOf(uint(setup[11]), splitWay(uint(setup[11]), index))), 0.0, 0.0, 0.0);
     else if (pass == 13u && index < uint(setup[12]))
