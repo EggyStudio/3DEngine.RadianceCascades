@@ -58,9 +58,9 @@ jobs:
       - run: dotnet test RadianceCascades.Tests --no-build --logger trx --results-directory RadianceCascades.Tests/TestResults
 
       - uses: actions/upload-artifact@v7
-        # Kept for a job canceled as well as one that failed, since a cut-short run is the one to
-        # read.
-        if: failure() || cancelled()
+        # Kept for every job, a green one as well as one canceled or failed, since a cut-short run
+        # is the one to read and a green one's times by test size the suite against the job's hour.
+        if: always()
         with:
           name: test-results-${{ matrix.os }}
           path: RadianceCascades.Tests/TestResults/

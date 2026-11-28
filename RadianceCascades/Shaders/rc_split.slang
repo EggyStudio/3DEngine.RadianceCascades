@@ -1058,7 +1058,11 @@ public void keepSplitLight<W : IStoreUints, L : IStoreLight>(W uints, L light, S
 // cascade above that its texel holds, at twice its place along each side of its half, at the probes
 // of that cascade about it, the one its rays' next parts are added to (traceSeenRays), at half its
 // cell rounded up, by all of it, and each other by the share the probe's own rays let through along
-// the way toward it (splitShareToward), none where no ray of its reached that way. A way merged to
+// the way toward it (splitShareToward), none where no ray of its reached that way. Each other lends
+// each of the four ways only where the one at half the cell holds rays along it, by how near the
+// share its own rays let through along that way over its interval lies to that one's, all of it
+// where the two agree and none where one lets all through and the other none, and by the share
+// toward it alone where the one at half the cell does not stand. A way merged to
 // none is left out and the mean is taken over those kept, w holds the share let through to the sky,
 // and w is -1 where none is kept or no such probe stands. The probe at half the cell rounded up
 // alone holds the rays of the probes at the cell and the one past it along each axis, so a probe
@@ -1070,7 +1074,14 @@ public void keepSplitLight<W : IStoreUints, L : IStoreLight>(W uints, L light, S
 // those of the probe above, since a probe above past such a wall holds the rays of points on the
 // wall's far side, which face away from the probe, so its way toward the probe holds no ray, and a
 // probe above behind the face of the points whose rays the probe holds lies along ways none of
-// their rays take.
+// their rays take. A probe above beside the one at half the cell holds the rays of other points,
+// which pass an edge where the probe's own points' rays meet it, as those of a floor beneath a
+// lintel pass under it where those of points higher up meet its face, so its light along such a
+// way is the light past the edge, which the probe's points do not see. The one at half the cell
+// holds no ray along a way the probe's points' rays did not reach past their interval, and lets
+// through about as much as another does where the two see the same, so the others lend their
+// light where the probe's own points' rays would take it, and a probe between two takes the light
+// of both where they see the same.
 float4 splitAboveLight<W : IStoreUints, L : IStoreLight>(W uints, L light, SplitFrame frame, SplitStore shape, uint key,
     uint entry, uint cascade, uint way)
 {
@@ -1080,6 +1091,12 @@ float4 splitAboveLight<W : IStoreUints, L : IStoreLight>(W uints, L light, Split
     int3 cell = splitCellOf(frame, shape, key);
     int3 low = cell >> 1, high = (cell + 1) >> 1;
     float spacing = splitSpacing(shape, cascade);
+    // The share the probe at half the cell rounded up lets through along each of the four ways
+    // over its own interval, -1 where no ray of its reached that way, which the others are read by.
+    uint own = findSplitProbe(uints, shape, splitKey(cascade + 1u, high));
+    float4 mine = float4(-1.0);
+    for (uint k = 0u; own != SplitNone && k < 4u; k++)
+        mine[k] = light.lightAt(splitLightAt(shape, own, first + (k & 1u) + (k >> 1u) * above, false)).w;
     float4 sum = float4(0.0);
     float weights = 0.0;
     for (uint corner = 0u; corner < 8u; corner++)
@@ -1093,11 +1110,14 @@ float4 splitAboveLight<W : IStoreUints, L : IStoreLight>(W uints, L light, Split
             : splitShareToward(light, shape, entry, cascade, float3(cell) * spacing, float3(place) * 2.0 * spacing, SeeingSlack * spacing, 0.0);
         for (uint k = 0u; weight > 0.0 && k < 4u; k++)
         {
-            float4 merged = light.lightAt(splitLightAt(shape, upper, first + (k & 1u) + (k >> 1u) * above, true));
-            if (merged.w >= 0.0)
+            uint toward = first + (k & 1u) + (k >> 1u) * above;
+            float4 merged = light.lightAt(splitLightAt(shape, upper, toward, true));
+            float agree = all(place == high) || own == SplitNone ? 1.0 : mine[k] < 0.0 ? 0.0
+                : saturate(1.0 - abs(light.lightAt(splitLightAt(shape, upper, toward, false)).w - mine[k]));
+            if (merged.w >= 0.0 && agree > 0.0)
             {
-                sum += merged * weight;
-                weights += weight;
+                sum += merged * weight * agree;
+                weights += weight * agree;
             }
         }
     }

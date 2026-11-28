@@ -635,16 +635,18 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
     // The merged light of each way of every standing probe as the merge's rule gives it from the
     // store's own light, each probe above weighed by the share the probe's own rays let through
     // along the way toward it and by none where no ray reached that way, the one at half its cell
-    // rounded up by all of it, the sky of 1 above the coarsest cascade, and where through is set a
-    // way no ray reached letting all through in place of merging to none, with the count of the
-    // probes above at half a cell rounded up that do not stand, and of the others about a probe
-    // standing toward which its rays let some through and let none through.
-    private static (Dictionary<(int, int), Vector4[]> Merged, int Missing, int Seen, int Unseen) MergedBy(Store store,
+    // rounded up by all of it, each other along each way above by how near its own share let
+    // through lies to that one's, none where that one's way holds no ray, the sky of 1 above the
+    // coarsest cascade, and where through is set a way no ray reached letting all through in place
+    // of merging to none, with the count of the probes above at half a cell rounded up that do not
+    // stand, of the others about a probe standing toward which its rays let some through and let
+    // none through, and of the ways of those others weighed by less than all for their share.
+    private static (Dictionary<(int, int), Vector4[]> Merged, int Missing, int Seen, int Unseen, int Apart) MergedBy(Store store,
         List<(int Entry, Vector3 Place, int Cascade)> probes, bool through = false)
     {
         var standing = probes.ToDictionary(p => (p.Cascade, CellOf(p)), p => p.Entry);
         var merged = new Dictionary<(int, int), Vector4[]>();
-        var (missing, seen, unseen) = (0, 0, 0);
+        var (missing, seen, unseen, apart) = (0, 0, 0, 0);
         // The way of each cascade that each step of the lattice of cells falls in, by the kernel's
         // own reading of a way, a probe above standing a step from the probe below along each axis
         // where the probe below lies between two.
@@ -656,7 +658,8 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
             {
                 var (side, ways) = (4 << c, SplitStoreShape.BaseWays << 2 * c);
                 var (x, y, z) = CellOf(p);
-                var corners = new List<(float Weight, int Entry)>();
+                var corners = new List<(float Weight, int Entry, bool High)>();
+                var own = -1;
                 var (low, high) = ((x >> 1, y >> 1, z >> 1), ((x + 1) >> 1, (y + 1) >> 1, (z + 1) >> 1));
                 for (int corner = 0; c + 1 < Shape.Cascades && corner < 8; corner++)
                 {
@@ -673,36 +676,42 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
                     var share = store.Light[4 * LightAt(c, p.Entry, (int)wayOf[c][4 * step]) + 3];
                     var weight = place == high ? 1f : share < 0 ? 0f : share;
                     (seen, unseen) = place == high ? (seen, unseen) : weight > 0 ? (seen + 1, unseen) : (seen, unseen + 1);
+                    own = place == high ? above : own;
                     if (weight > 0)
-                        corners.Add((weight, above));
+                        corners.Add((weight, above, place == high));
                 }
                 var result = new Vector4[ways];
                 for (int w = 0; w < ways; w++)
                 {
                     var i = 4 * LightAt(c, p.Entry, w);
-                    var own = new Vector4(store.Light[i], store.Light[i + 1], store.Light[i + 2], store.Light[i + 3]);
-                    if (own.W < 0 && through)
-                        own = new(0, 0, 0, 1);
+                    var self = new Vector4(store.Light[i], store.Light[i + 1], store.Light[i + 2], store.Light[i + 3]);
+                    if (self.W < 0 && through)
+                        self = new(0, 0, 0, 1);
                     var up = Vector4.One;
                     if (c + 1 < Shape.Cascades)
                     {
                         var first = w / (side * side) * 4 * side * side + 2 * (w / side % side) * 2 * side + 2 * (w % side);
                         var (sum, weights) = (Vector4.Zero, 0f);
-                        foreach (var (weight, e) in corners)
+                        foreach (var (weight, e, isHigh) in corners)
                             for (int k = 0; k < 4; k++)
                             {
-                                var m = merged[(c + 1, e)][first + (k & 1) + (k >> 1) * 2 * side];
-                                if (m.W >= 0)
-                                    (sum, weights) = (sum + m * weight, weights + weight);
+                                var toward = first + (k & 1) + (k >> 1) * 2 * side;
+                                var m = merged[(c + 1, e)][toward];
+                                var mine = own < 0 ? -1 : store.Light[4 * LightAt(c + 1, own, toward) + 3];
+                                var agree = isHigh || own < 0 ? 1 : mine < 0 ? 0
+                                    : Math.Clamp(1 - MathF.Abs(store.Light[4 * LightAt(c + 1, e, toward) + 3] - mine), 0, 1);
+                                apart += m.W >= 0 && agree < 1 ? 1 : 0;
+                                if (m.W >= 0 && agree > 0)
+                                    (sum, weights) = (sum + m * weight * agree, weights + weight * agree);
                             }
                         up = weights > 0 ? sum / weights : new(0, 0, 0, -1);
                     }
-                    result[w] = own.W < 0 ? new(0, 0, 0, -1) : up.W < 0 ? new(own.X, own.Y, own.Z, 0)
-                        : new(own.X + own.W * up.X, own.Y + own.W * up.Y, own.Z + own.W * up.Z, own.W * up.W);
+                    result[w] = self.W < 0 ? new(0, 0, 0, -1) : up.W < 0 ? new(self.X, self.Y, self.Z, 0)
+                        : new(self.X + self.W * up.X, self.Y + self.W * up.Y, self.Z + self.W * up.Z, self.W * up.W);
                 }
                 merged[(c, p.Entry)] = result;
             }
-        return (merged, missing, seen, unseen);
+        return (merged, missing, seen, unseen, apart);
     }
 
     // The inside faces of a closed room 8 by 4 by 6 about the eye at (0, 2, 0), a quarter of a
@@ -745,8 +754,9 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
         // gives each way its own light and, by the share it lets through, the mean of the four ways
         // above it that hold light at the probes of the cascade above about it, each weighed by the
         // share the probe's own rays let through along the way toward it, the one at half its cell
-        // rounded up, which its rays' next parts are added to, by all of it, as the rule read on
-        // the CPU gives it.
+        // rounded up, which its rays' next parts are added to, by all of it, and each other along
+        // each way above by how near its own share let through lies to that one's, as the rule read
+        // on the CPU gives it.
         var points = CorridorFaces();
         var eye = new Vector3(0, 1.5f, 0);
         var store = new Store(Shape, CorridorLitBoxes);
@@ -764,7 +774,7 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
                 store.Light[i + 3] = none ? -1 : (h >> 25) % 65 / 64f;
             }
         store.Merge(eye, 1);
-        var (merged, missing, seen, unseen) = MergedBy(store, probes);
+        var (merged, missing, seen, unseen, apart) = MergedBy(store, probes);
         float worst = 0;
         var ways = 0;
         foreach (var ((cascade, entry), want) in merged)
@@ -775,9 +785,10 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
                 worst = MathF.Max(worst, (got - want[w]).Length());
             }
         var said = $"over {ways} ways of {probes.Count} probes, {unknown} reached by no ray, {missing} probes above them "
-            + $"not standing and {seen} others about them toward which their own rays let some through and {unseen} none, the merge lies within {worst:0.000000} of its rule";
+            + $"not standing and {seen} others about them toward which their own rays let some through and {unseen} none, {apart} ways of those "
+            + $"others weighed by less than all for their share, the merge lies within {worst:0.000000} of its rule";
         output.WriteLine(said);
-        Assert.True(worst < 1e-5f && unknown > 0 && seen > 0 && unseen > 0, said);
+        Assert.True(worst < 1e-5f && unknown > 0 && seen > 0 && unseen > 0 && apart > 0, said);
     }
 
     [CpuKernelFact]
@@ -901,8 +912,8 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
         var worst = Enumerable.Range(0, count).Max(k => MathF.Abs(taken[4 * k] / MathF.PI - held) / held);
         var probes = store.Probes(eye, 4);
         var finest = probes.Where(p => p.Cascade == 0).ToList();
-        var (through, _, _, _) = MergedBy(store, probes, through: true);
-        var (left, _, _, _) = MergedBy(store, probes);
+        var (through, _, _, _, _) = MergedBy(store, probes, through: true);
+        var (left, _, _, _, _) = MergedBy(store, probes);
         int Off(Dictionary<(int, int), Vector4[]> merged) =>
             finest.Sum(p => merged[(0, p.Entry)].Count(m => m.W >= 0 && MathF.Abs(m.X - held) > 0.01f * held));
         var known = finest.Sum(p => left[(0, p.Entry)].Count(m => m.W >= 0));

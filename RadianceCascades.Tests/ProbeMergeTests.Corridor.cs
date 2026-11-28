@@ -93,7 +93,9 @@ public sealed partial class ProbeMergeTests
         var moduleCells = configuration == Configuration.Module ? Field(triangles) : Array.Empty<float>();
         var light = new ConcurrentDictionary<string, float[]>();
         var distinct = layouts.DistinctBy(Key).ToArray();
-        Parallel.ForEach(distinct, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount / 2) }, layout =>
+        // Over half the machine's threads, or all of them up to four, since a layout runs on about
+        // one thread and the build's systems have four.
+        Parallel.ForEach(distinct, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(Math.Min(4, Environment.ProcessorCount), Environment.ProcessorCount / 2) }, layout =>
         {
             var cells = layout.Field is { } field
                 ? field.SelectMany(f => cascades.GetOrAdd(f, k => FieldCascade(triangles, new(k.X, k.Y, k.Z), k.W))).ToArray()

@@ -249,28 +249,30 @@ pointer. One commit an engine, after item 3's first part.
     finest probes and the lintel for 2,212 second- and 83 third-cascade probes, the lintel 0.339
     against the quarter pools' 0.319, carried into the lintel's item.
 
-24. **A probe drops its history when its fresh deposits disagree.** The direction's rule for history
-    (the engine's Decision 123) in world space. A probe whose frame's deposit differs from its kept
-    mean in a direction by more than the noise restarts that direction from the frame, so a lamp
-    switched or a sun moved shows in the next frame and nothing lags; the threshold read on a ladder
-    scene with a lamp switching and the sun stepping, the frames after the change counted, not
-    guessed. One commit. The lintel's carry-over, which the published method does not solve, is read
-    after these with the per-direction agreement as its lever. Done at 40e1a90 on 2026-11-28, pushed
-    at 08:35, its run read next tick, 246 tests green. Each way keeps a sixth uint, the spread of
-    its frames' light, 232.8 MB at the default and 140.7 at 8,192 slots; the evidence rule, a way
-    restarting once the spreads its frames lie past the kept light reach five, is off by default and
-    taken by a binding through keepSplitLight with spreads. With it, at the cap, a lamp on or off is
-    within 0.05 from frame 12 (0.033 and 0.036 at 16, floors 0.008 and 0.007) and the sun's 90th
-    part 0.493 at 16 against 0.851, where the kept history reads 0.172 and 0.197 at 16 and 0.056 and
-    0.088 at 48; at the sparse 4 by 4 the lamp 0.23 to 0.25 at 16 against 0.32, the rays' limit.
-    With it the walk fails its bound, 0.040 and 0.013 between steps at the module's configuration
-    and 0.070 and 0.015 at the engine's, and a least ray count a frame that keeps the walk delays
-    the lamp past frame 21; off, the walk reads as before, 0.006 and 0.004, 0.008 and 0.004. Review,
-    the rule stays off by default since the walk's bound rules; the engine reads the switch and the
-    walk at its pin with the rule behind a setting, and the rule's way to hold both, a restart by
-    parent agreement or by the frame's own ray count, is the lintel's item's neighbor and comes
-    after it.
 
+25. **The lintel's carry-over out of the merge.** The merge's other seven parents fill ways where
+    the probe's own parent holds no ray with light from other points' rays that pass under the
+    lintel, the share reaching cascades 3 and 4 at 1.4 and 2.4 times the trace's. The merge leaves
+    those ways out and weighs the others by how well their own through agrees with the own parent's,
+    the rule in the merge's CPU test. By the readings of 2026-11-28 the lintel goes from 0.334 and
+    0.407 to 0.107 and 0.141 at both configurations, the walk holds at 0.006 and 0.008, the dark
+    room is unchanged and the split's mean goes 0.124 to 0.098. One commit with Verdict 3's second
+    cut and the trx uploaded always.
+
+26. **A way drops what the scene had before a change.** Each way keeps the mean of its last 256
+    rays, so light the scene had before a change stays. An engine's room seen open for 8 frames and
+    then closed for 16 reads 0.082 of the open sky at High and 0.403 at Low against a bound of
+    0.002, 0.0078 and 0.0199 closed for 400 frames, and with the evidence rule on 0.035 and 0.361.
+    The item is item 24's rule made to hold both the walk's bound and the change, by parent
+    agreement or by the frame's own ray count as item 24 left it, read on the ladder's lamp switch
+    and sun step and on a room closed after being seen open, the walk's bound 2% kept. After item
+    25, before the store lights its own hits. The engine's tests that change their scene partway are
+    held on the grid's layout until this item's pin.
+
+27. **The store lights its own hits.** A ray's hit takes its light from the cascades' own store, the
+    finest probes about the hit, and not from an engine's probe grid, so the split carries its
+    bounces alone and a host can remove its other layouts. After item 26; a host reads the split
+    with the other bounce at zero to size it.
 ## Verdicts
 
 Verdict 1 is settled at 22:56 on 2026-11-21, the build run on `2f0dc8e` green on the three systems,
@@ -432,40 +434,6 @@ and 20 probes of its two coarsest pools, which hold 32 and 8, so some probes bel
 light from past their own interval. The default store takes 157.3 MB, each cascade's ways and sums
 the same share as the finest's.
 
-Item 24, the layout and the rule with it off by default. Each way keeps a sixth uint, the mean of
-the squares of its frames' light with the sum of its frames past its light in its low 8 bits, so
-the store takes 232.8 MB at the default and 140.7 MB at 8,192 slots (`dotnet test
-RadianceCascades.Tests --filter FullyQualifiedName~SplitStoreTests`). Given `SplitAgreeSpread`, 5,
-each frame of a way of 16 rays or more adds to its side's sum the spreads it lies past the light
-kept, at most 2, less a half, the spread at least a quarter of the greater light, and a way whose
-sum reaches 5 starts again from the frame, counted as at least 8 rays. At 16 by 16 seen points a
-lit point, the ways at their cap, the lamp switched on and off lies within 0.05 by parts from the
-12th frame, 0.033 and 0.036 at the 16th, the floors 0.008 and 0.007, and the sun's step brings its
-points' 90th part from 0.851 to 0.493 by the 16th, where keeping each way's history reads 0.172 and
-0.197 at the 16th and 0.056 and 0.088 at the 48th (`dotnet test RadianceCascades.Tests --filter
-FullyQualifiedName~A_Lamp_Switched`). The 12 frames at the cap, against the owner's wish for the
-next frame, is the number an engine reads at its pin with the spreads given.
-
-By readings not committed, a one-frame test at 8 spreads has the lamp on within 0.05 by the 16th
-frame, 0.011, and the lamp off 0.16 to 0.21 off at every spread from 4 to 8, the second cascade
-restarting 15 ways for it against 214 for the lamp on, since a dead lamp's dark frame lies within
-the spread of a way that saw it in part. At 4 by 4, about a ray a way a frame, the rule's floor is
-0.010 to 0.011 and the lamp reads 0.23 to 0.25 at the 16th frame against 0.32 with no rule, the
-sparse case's limit that the rays bound. A way under 16 rays moves by a 16th of the way or more a
-ray, so its count bounds it, where a restart by the share alone reads a floor of 0.24 at 4 by 4,
-each restart putting the way back under 16 rays where the next noisy frame restarts it.
-
-The rule is off by default because the walk fails with it given. By readings not committed, the
-whole walk with it given reads between steps 0.040 at worst and 0.013 at the 99th part at the
-module's configuration and 0.070 and 0.015 at an engine's, with the eye still 0.017 and 0.018 at
-worst, against 0.006 and 0.004, 0.008 and 0.004, and 0.005 and 0.007 with it off. The walk's probes
-take 4.1 to 4.5 rays a frame over 32 ways, about a ray a finest way in seven frames, and a run of
-frames of one ray past a way's spread restarts it on noise. A least count of rays a frame must
-bring to add to its sum, the sum kept as it is below it, reads the module's walk between steps at
-0.008, 0.006 and 0.006 for 2, 4 and 8 rays and an engine's at 0.064 for 2, and the switch at 16 by
-16 within 0.05 from the 11th and 20th frames for 2, the 21st and 40th for 4, and the 38th and never
-for 8, so none keeps both the walk and the switch.
-
 **Verdict 3.** The switch test runs whole where RC_LADDER is set, as the walk does, and the push
 suite reads the given spreads alone after 32 frames, over 24 frames against the mean of the last 8
 of 56, with the job's limit as it was. The short form reads the lamp within 0.05 from the 13th frame
@@ -477,4 +445,59 @@ session's token with 403, so the runner's time is read from the jobs' step times
 40:31 on Linux, 27:00 on Windows and 14:56 on macOS for e68fd0f and past 59:42, 34:18 and 17:27 for
 40e1a90. The short form takes 259 seconds of a desktop's processor time against the whole's 949, a
 little over a quarter, which by those step times puts about 5 to 7 minutes on the Linux job over
-e68fd0f's, about 46 to 48 minutes for its test step.
+e68fd0f's, about 46 to 48 minutes for its test step. Pushed at 11:00 on 2026-11-28 as 4527b67 after
+the check; the run is read next tick and the Linux job's test step beside the 40:31 of e68fd0f.
+Review of the run on 4527b67, 46133091888, green at 12:01 on 2026-11-28: the Linux job took 59:57 of
+its hour and its test step 59:30, against the 46 to 48 minutes sized, so the suite holds by half a
+minute and the next test added cancels it. The verdict stays open for a second cut before any other
+push, the push suite's test step on Linux at 45 minutes or less, the frames and seen points of the
+tests that grew since e68fd0f read by the trx of this run, the long forms under the ladder's set;
+the job's limit is not raised.
+
+**The lintel's carry-over.** Counted by cascade and by the points a probe's rays come from, the
+room under the lintel takes its excess from the merge's other seven probes above. A probe beside
+the one at half the cell holds the rays of other points, the floor's beneath the lintel among them,
+which pass under it where the read points' rays meet its face, and where the one at half the cell
+held no ray along a way, the probe's points' rays stopping short of it, the others filled that way
+with the light past the edge by all of their share. By readings not committed, the shares of the
+read points' rays reaching the fourth and fifth cascades by the opening were 0.283 and 0.131
+against the trace's 0.201 and 0.054, 1.4 and 2.4 times, and a gather after one round read the parts
+1.400, 1.628 and 1.418, the same within 0.04 with the pools short 114 second-cascade probes in
+place of 2,212, so the pools' asks cost the read points little. Each other lends each of the four
+ways only where the one at half the cell holds rays along it, by one less the distance between the
+shares the two let through along it over their own intervals, and by its share toward it alone
+where the one at half the cell does not stand. The room under the lintel reads 0.110 from its trace
+on the mean and 0.143 at worst at both configurations against 0.334 and 0.407, the split store's
+rows 0.098 and 0.385 at the module's against 0.124 and 0.407 and 0.097 and 0.412 at an engine's
+against 0.125 and 0.415, the dark room 0.00000 and 0.042 as before, and the walk's worst step 0.006
+and 0.008 and its 99th part 0.004 as before, its worst swing 0.029 and 0.052 against 0.028 and
+0.052 (`RC_LADDER=.github/LADDER.md dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~The_Ladder`). The closed box with one lamp reads 0.380 against 0.383 at the
+module's, the court 0.055 against 0.058 there and 0.064 against 0.058 at an engine's. By the
+readings not committed the gather after one round reads 1.103, 1.077 and 1.097, the fourth
+cascade's share 0.083, 1.5 times the trace's, and the one at half the cell alone 0.089 there, so
+what is left lies in pooling within one coarse probe. The merge's test holds the store to the rule
+on the CPU within 0.000000 over 529,564 ways of the others weighed by less than all (`dotnet test
+RadianceCascades.Tests --filter FullyQualifiedName~A_Split_Merge_Takes_Each_Way`). The scratch
+merge reported at first as 0.107 and 0.141 left out the other probes where the one at half the cell
+does not stand, and the rule committed takes them by their share there.
+
+**Verdict 3, the second cut.** Run 46133091888 keeps no trx, since the upload step ran only for a
+job failed or canceled, and in this commit it runs always so a green run's times by test are read.
+The Linux job's test step read 48:42, 45:19, 36:24 and 40:31 for a99aae0, 4485327, 1dc336e and
+e68fd0f against 23:57, 22:29, 18:37 and 27:00 on Windows, about twice Windows' but 1.50 times it for
+e68fd0f, and 59:30 against 27:54 for 4527b67 (gh api repos/{owner}/{repo}/actions/runs/<id>/jobs).
+By readings not committed, e68fd0f's suite and the tree's run side by side on a desktop took 2,799
+and 3,207 seconds of processor time, the tree's 14.6 percent over, and the tests that grew are the
+split store's by about a ninth each, the wall point at the lamp's edge 381 to 424 seconds, the walk
+223 to 247, the surface turned into view 145 to 161, the closed room over a coarse field 92 to 101
+and the wall under a lamp 48 to 56, with the switch's 92 added. The suite runs one test at a time
+for 1,512 of its 1,552 seconds, and a store's kernel runs a dispatch on one thread, so on four of a
+desktop's cores (taskset -c 0,2,4,6) the suite took 1,824 seconds, which 4527b67's 59:30 puts at
+1.96 seconds of the Linux runner's each. The cut runs side by side what a test ran one after
+another, the wall point's four reads, the walk's two configurations, the coarse room's four stores
+and each switch case's two stores, and the dense walk over four threads where it took two, each test
+printing what it printed before, and takes those five from 1,115 to 636 seconds on the four cores,
+the suite to about 1,345 and the Linux step to about 44 minutes, or 41 at Linux's usual twice
+Windows', with the job's limit unchanged. The walk's comment had kept 5 minutes and 108 seconds from
+an earlier tree, where it takes 11 minutes whole and 128 seconds short on a desktop.

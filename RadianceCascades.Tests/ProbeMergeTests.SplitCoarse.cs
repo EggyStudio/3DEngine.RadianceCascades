@@ -36,20 +36,23 @@ public sealed partial class ProbeMergeTests
                 faces.Add((new(a, 8 - off, b), -Vector3.UnitY));
             }
         var points = faces.ToArray();
-        var said = new List<string>();
-        var dark = 0;
-        foreach (var cell in new[] { 0.5f, 1f })
-            foreach (var eye in new Vector3[] { new(0, 4, 0), new(0, 1.7f, -2) })
-            {
-                Vector4[] field = [.. Enumerable.Range(0, 5).Select(c => cell * (1 << c)).Select(f => new Vector4(eye - new Vector3(32 * f), f))];
-                var store = new SplitRun(CorridorSplitShape, points, CellLightBy(_ => 1f), 0);
-                store.Field(eye, field, [.. field.SelectMany(f => FieldCascade(triangles, new(f.X, f.Y, f.Z), f.W))]);
-                store.Seen(SplitRun.Floats(points));
-                store.Frames(32);
-                var read = store.Gather().Select(t => t / MathF.PI).ToArray();
-                dark += read.Count(q => Math.Abs(q - 1) > 0.005f);
-                said.Add($"field's cell {cell} from {eye}, {read.Min():0.0000} to {read.Max():0.0000}");
-            }
+        // The four stores run side by side, since each runs on about one thread and the build's
+        // systems have four.
+        var jobs = new[] { 0.5f, 1f }.SelectMany(cell => new Vector3[] { new(0, 4, 0), new(0, 1.7f, -2) }.Select(eye => (Cell: cell, Eye: eye))).ToArray();
+        var reads = new (string Said, int Dark)[jobs.Length];
+        Parallel.For(0, jobs.Length, j =>
+        {
+            var (cell, eye) = jobs[j];
+            Vector4[] field = [.. Enumerable.Range(0, 5).Select(c => cell * (1 << c)).Select(f => new Vector4(eye - new Vector3(32 * f), f))];
+            var store = new SplitRun(CorridorSplitShape, points, CellLightBy(_ => 1f), 0);
+            store.Field(eye, field, [.. field.SelectMany(f => FieldCascade(triangles, new(f.X, f.Y, f.Z), f.W))]);
+            store.Seen(SplitRun.Floats(points));
+            store.Frames(32);
+            var read = store.Gather().Select(t => t / MathF.PI).ToArray();
+            reads[j] = ($"field's cell {cell} from {eye}, {read.Min():0.0000} to {read.Max():0.0000}", read.Count(q => Math.Abs(q - 1) > 0.005f));
+        });
+        var said = reads.Select(r => r.Said).ToList();
+        var dark = reads.Sum(r => r.Dark);
         var line = $"the closed room's {points.Length} points over each field and eye, {string.Join("; ", said)}";
         output.WriteLine(line);
         // 1.0000 at every point. Over a field whose cells are coarse beside the lift of the rays'

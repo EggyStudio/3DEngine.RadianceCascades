@@ -1015,6 +1015,27 @@ corner toward the opening, which see the sky and span the least solid angle, as 
     noise test keeps a second moment a way, which changes the store's layout for the bindings and is
     said before its commit.
 
+24. **A probe drops its history when its fresh deposits disagree.** The direction's rule for history
+    (the engine's Decision 123) in world space. A probe whose frame's deposit differs from its kept
+    mean in a direction by more than the noise restarts that direction from the frame, so a lamp
+    switched or a sun moved shows in the next frame and nothing lags; the threshold read on a ladder
+    scene with a lamp switching and the sun stepping, the frames after the change counted, not
+    guessed. One commit. The lintel's carry-over, which the published method does not solve, is read
+    after these with the per-direction agreement as its lever. Done at 40e1a90 on 2026-11-28, pushed
+    at 08:35, its run read next tick, 246 tests green. Each way keeps a sixth uint, the spread of
+    its frames' light, 232.8 MB at the default and 140.7 at 8,192 slots; the evidence rule, a way
+    restarting once the spreads its frames lie past the kept light reach five, is off by default and
+    taken by a binding through keepSplitLight with spreads. With it, at the cap, a lamp on or off is
+    within 0.05 from frame 12 (0.033 and 0.036 at 16, floors 0.008 and 0.007) and the sun's 90th
+    part 0.493 at 16 against 0.851, where the kept history reads 0.172 and 0.197 at 16 and 0.056 and
+    0.088 at 48; at the sparse 4 by 4 the lamp 0.23 to 0.25 at 16 against 0.32, the rays' limit.
+    With it the walk fails its bound, 0.040 and 0.013 between steps at the module's configuration
+    and 0.070 and 0.015 at the engine's, and a least ray count a frame that keeps the walk delays
+    the lamp past frame 21; off, the walk reads as before, 0.006 and 0.004, 0.008 and 0.004. Review,
+    the rule stays off by default since the walk's bound rules; the engine reads the switch and the
+    walk at its pin with the rule behind a setting, and the rule's way to hold both, a restart by
+    parent agreement or by the frame's own ray count, is the lintel's item's neighbor and comes
+    after it.  Its mend's run on 4527b67 is green at 12:01 on 2026-11-28 and the item is done.
 The gather toward the surface, `gatherTraced`, for a surface whose probes stand off it. A point
 sends a ray along each way of the finest cascade's octahedron that faces its normal, from a cell off
 the surface, and hands each on through `mergedLight` as a ray that ended where it began, weighed by
@@ -2369,6 +2390,40 @@ by their own rays alone 0.962 and 0.981, against 1.044 and 1.096 and 0.971 and 0
 'FullyQualifiedName~On_The_Split_Probes|FullyQualifiedName~At_The_Lamps_Edge'`). The specks are the
 engine's normals, as the reviewing session read, and no kernel reading a pixel's eight probes is
 added.
+
+Item 24, the layout and the rule with it off by default. Each way keeps a sixth uint, the mean of
+the squares of its frames' light with the sum of its frames past its light in its low 8 bits, so
+the store takes 232.8 MB at the default and 140.7 MB at 8,192 slots (`dotnet test
+RadianceCascades.Tests --filter FullyQualifiedName~SplitStoreTests`). Given `SplitAgreeSpread`, 5,
+each frame of a way of 16 rays or more adds to its side's sum the spreads it lies past the light
+kept, at most 2, less a half, the spread at least a quarter of the greater light, and a way whose
+sum reaches 5 starts again from the frame, counted as at least 8 rays. At 16 by 16 seen points a
+lit point, the ways at their cap, the lamp switched on and off lies within 0.05 by parts from the
+12th frame, 0.033 and 0.036 at the 16th, the floors 0.008 and 0.007, and the sun's step brings its
+points' 90th part from 0.851 to 0.493 by the 16th, where keeping each way's history reads 0.172 and
+0.197 at the 16th and 0.056 and 0.088 at the 48th (`dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~A_Lamp_Switched`). The 12 frames at the cap, against the owner's wish for the
+next frame, is the number an engine reads at its pin with the spreads given.
+
+By readings not committed, a one-frame test at 8 spreads has the lamp on within 0.05 by the 16th
+frame, 0.011, and the lamp off 0.16 to 0.21 off at every spread from 4 to 8, the second cascade
+restarting 15 ways for it against 214 for the lamp on, since a dead lamp's dark frame lies within
+the spread of a way that saw it in part. At 4 by 4, about a ray a way a frame, the rule's floor is
+0.010 to 0.011 and the lamp reads 0.23 to 0.25 at the 16th frame against 0.32 with no rule, the
+sparse case's limit that the rays bound. A way under 16 rays moves by a 16th of the way or more a
+ray, so its count bounds it, where a restart by the share alone reads a floor of 0.24 at 4 by 4,
+each restart putting the way back under 16 rays where the next noisy frame restarts it.
+
+The rule is off by default because the walk fails with it given. By readings not committed, the
+whole walk with it given reads between steps 0.040 at worst and 0.013 at the 99th part at the
+module's configuration and 0.070 and 0.015 at an engine's, with the eye still 0.017 and 0.018 at
+worst, against 0.006 and 0.004, 0.008 and 0.004, and 0.005 and 0.007 with it off. The walk's probes
+take 4.1 to 4.5 rays a frame over 32 ways, about a ray a finest way in seven frames, and a run of
+frames of one ray past a way's spread restarts it on noise. A least count of rays a frame must
+bring to add to its sum, the sum kept as it is below it, reads the module's walk between steps at
+0.008, 0.006 and 0.006 for 2, 4 and 8 rays and an engine's at 0.064 for 2, and the switch at 16 by
+16 within 0.05 from the 11th and 20th frames for 2, the 21st and 40th for 4, and the 38th and never
+for 8, so none keeps both the walk and the switch.
 
 ## Decisions
 

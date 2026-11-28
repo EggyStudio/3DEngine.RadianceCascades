@@ -221,8 +221,13 @@ the probes of the cascade above about it, each weighed by the share the probe's 
 along the way toward it (`splitShareToward`) and by none where no ray of its reached that way, since
 a probe above that stands behind the face of the points whose rays the probe holds stands where none
 of their rays go, the one at half its cell rounded up, which its rays' next parts are added to, by
-all of it, and the sky's above the coarsest. That one probe alone gives a probe at an odd cell along
-an axis the rays of a patch a cell past it along that axis, and the eight by their trilinear weights
+all of it, and the sky's above the coarsest. Each of the others lends each of the four ways only
+where the one at half the cell holds rays along it, by how near the share its own rays let through
+along that way lies to that one's, since another holds the rays of other points, which pass an edge
+where the probe's own points' rays meet it, as those of a floor beneath a lintel pass under it where
+those of points higher up meet its face, and lends there the light past the edge, which the
+probe's points do not see. The one at half the cell alone gives a probe at an odd cell along an
+axis the rays of a patch a cell past it along that axis, and the eight by their trilinear weights
 alone lend a way the light of points past a wall thinner than their spacing. A way no ray reached
 merges to none and is left out of the ways below and of the gather, since letting all its light
 through would let the sky into a closed room. `gatherSurface` over the store's buffers gathers a
@@ -320,21 +325,20 @@ RadianceCascades.Tests --filter FullyQualifiedName~A_Surface_Turned_Into_View`).
 
 Over the ladder's ten scenes, each round of the bounce run by a store anew that sees the scene's
 points and the places of its bounce's cells for 64 frames, in the walk's store of 8,192 slots and 6
-cascades, the split store reads a part 0.124 from its trace on the mean and 0.407 at worst at the
-module's configuration and 0.125 and 0.415 at an engine's, against 0.096 and 0.329 and 0.094 and
+cascades, the split store reads a part 0.098 from its trace on the mean and 0.385 at worst at the
+module's configuration and 0.097 and 0.412 at an engine's, against 0.096 and 0.329 and 0.094 and
 0.446 by the merge at the ray's end on the dense grid, and the dark room beside the lit one takes
 none of the lit room's light through their wall of one cell, as on the dense grid. A scene's points
 stand about one to a probe of the finest cascade, each such probe taking 1.0 to 1.1 rays a frame, so
 they ask for nearly as many probes of the second cascade as of the finest, and the pools fill in the
 court lit in a strip, whose finest holds 8,192 with 410 more asked for, and under the lintel, whose
 second and third hold 2,304 and 625 with 2,212 and 83 more asked for. It reads nearer than the dense
-grid in the court at the module's configuration, 0.058 from its trace on the mean against 0.107, and
-in the room with a door, 0.011 against 0.032, and farthest in the closed box with one lamp, whose
-floor and walls take 0.685 and 0.678 of their trace at the module's, 0.383 from it on the mean
-against the dense grid's 0.167, under the lintel, 0.334 against 0.295, where a probe above toward
-which a probe's rays pass lends it the light of rays of points past the lintel's edge, and in the
-vestibule off the sunlit court and the long hall, 0.118 against 0.093 and 0.074 against 0.021, each
-part of either above its trace (`RC_LADDER=.github/LADDER.md dotnet test RadianceCascades.Tests
+grid in the court at the module's configuration, 0.055 from its trace on the mean against 0.107, in
+the room with a door, 0.012 against 0.032, and under the lintel, 0.110 against 0.295, and farthest
+in the closed box with one lamp, whose floor and walls take 0.687 and 0.680 of their trace at the
+module's, 0.380 from it on the mean against the dense grid's 0.167, and in the vestibule off the
+sunlit court and the long hall, 0.112 against 0.093 and 0.072 against 0.021, each part of either
+above its trace (`RC_LADDER=.github/LADDER.md dotnet test RadianceCascades.Tests
 --filter FullyQualifiedName~The_Ladder`).
 
 `stampCell` takes the cascade's cell width, and stamps a box thinner than a cell along an axis of

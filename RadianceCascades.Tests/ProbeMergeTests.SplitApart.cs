@@ -62,17 +62,20 @@ public sealed partial class ProbeMergeTests
         // a spacing, those before the wall, and read it within an eighth of the trace. Fed by the
         // point's own rays alone they hold none but its rays, which go to the nearest probe it sees
         // (splitSeenCell), so they read within a twentieth of the trace, the cascades' intervals,
-        // ways and merge giving the point its light.
+        // ways and merge giving the point its light. The four reads run side by side, since each
+        // runs on about one thread and the build's systems have four.
         var failed = new List<string>();
         var cascades = new ConcurrentDictionary<Vector4, float[]>();
         var eye = new Vector3(CorridorApartEye, 1.5f, 0);
         var point = CorridorPoints[CorridorApartPoint];
         var (place, normal) = point;
         var alone = new[] { place.X, place.Y, place.Z, 1, normal.X, normal.Y, normal.Z, 0 };
-        foreach (var configuration in Enum.GetValues<Configuration>())
+        var configurations = Enum.GetValues<Configuration>();
+        var reads = new (float Own, float Weights, float Traced)[2 * configurations.Length];
+        Parallel.For(0, reads.Length, j => reads[j] = CorridorApartRead(configurations[j / 2], cascades, eye, point, j % 2 == 0 ? null : alone));
+        for (int c = 0; c < configurations.Length; c++)
         {
-            var every = CorridorApartRead(configuration, cascades, eye, point);
-            var own = CorridorApartRead(configuration, cascades, eye, point, alone);
+            var (configuration, every, own) = (configurations[c], reads[2 * c], reads[2 * c + 1]);
             var said = $"at {configuration}'s configuration the point traced takes {every.Traced:0.0000}, and fed by every face the eye sees its "
                 + $"probes read {every.Own / every.Traced:0.000} of that, fed by its own rays alone {own.Own / own.Traced:0.000}";
             output.WriteLine(said);

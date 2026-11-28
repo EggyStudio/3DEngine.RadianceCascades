@@ -270,23 +270,26 @@ public sealed partial class ProbeMergeTests
         // but a probe's sight of a point is read from the rays it holds rather than marched through
         // the field, so a point there moves between steps by about the rays' noise too. The test
         // holds each at its reading, the step under the dense levels' 3.558 and 1.299, and the
-        // merge's eight probes cost the ladder's split rows the light a seen probe above lends from
-        // rays of points past the lintel's edge (RC_LADDER=.github/LADDER.md dotnet test
-        // RadianceCascades.Tests --filter FullyQualifiedName~The_Ladder). The whole walk runs where
-        // RC_LADDER is set, as in the ladder's run, in 5 minutes on a desktop
+        // merge's eight probes, each beside the one a probe's rays go to lending a way by how near
+        // its share let through lies to that one's, keep the step while the ladder's room under the
+        // lintel takes little of the light past the lintel's edge (RC_LADDER=.github/LADDER.md
+        // dotnet test RadianceCascades.Tests --filter FullyQualifiedName~The_Ladder). The whole
+        // walk runs where RC_LADDER is set, as in the ladder's run, in 11 minutes on a desktop
         // (RC_LADDER=.github/LADDER.md dotnet test RadianceCascades.Tests --filter
         // FullyQualifiedName~On_The_Split_Probes). Elsewhere, as in the build's run, the walk warms
         // 64 frames, reads 4 times with the eye still and walks the first 2 units at an engine's
-        // configuration, in 108 seconds (the same without RC_LADDER), since the build's slowest
+        // configuration, in 128 seconds (the same without RC_LADDER), since the build's slowest
         // system takes several times what a desktop takes and an engine's field is built anew at
-        // each eye.
+        // each eye. The two configurations run side by side, since each runs on about one thread
+        // and the build's systems have four.
         var whole = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RC_LADDER"));
         var bounds = whole
             ? new[] { (Configuration.Engine, 0.012f, 0.008f, 0.016f, 0.009f), (Configuration.Module, 0.011f, 0.006f, 0.01f, 0.007f) }
             : new[] { (Configuration.Engine, 0.045f, 0.026f, 0.048f, 0.038f), (Configuration.Module, 0.038f, 0.019f, 0.046f, 0.027f) };
-        var failed = new List<string>();
-        foreach (var (configuration, bound, partBound, stillBound, stillPartBound) in bounds)
+        var read = new (string Said, bool Holds)[bounds.Length];
+        Parallel.For(0, bounds.Length, j =>
         {
+            var (configuration, bound, partBound, stillBound, stillPartBound) = bounds[j];
             var eyes = CorridorEyes(configuration);
             var (walk, still, standing, shortOf, asked, rays) = whole ? CorridorSplitWalk(configuration, eyes)
                 : CorridorSplitWalk(configuration, configuration == Configuration.Engine ? eyes[..CorridorShortEngineEyes] : eyes, CorridorShortWarm, CorridorShortStill);
@@ -297,11 +300,11 @@ public sealed partial class ProbeMergeTests
                 + $"with the eye still between readings {stillStep:0.000} at worst and {stillPart:0.000} at the 99th part, the store standing "
                 + $"{string.Join(", ", standing)} probes by cascade at the last eye, {string.Join(", ", shortOf)} asked for at its last frame with no "
                 + $"entry left in their pool, {asked} of the finest asked for and taking {rays:0.0} rays a frame each at the mean, in {CorridorSplitShape.Bytes / 1048576.0:0.0} MB";
+            read[j] = (said, worstStep < bound && stepPart < partBound && stillStep < stillBound && stillPart < stillPartBound);
+        });
+        foreach (var (said, _) in read)
             output.WriteLine(said);
-            if (!(worstStep < bound && stepPart < partBound && stillStep < stillBound && stillPart < stillPartBound))
-                failed.Add(said);
-        }
-        Assert.True(failed.Count == 0, string.Join("; ", failed));
+        Assert.True(read.All(r => r.Holds), string.Join("; ", read.Where(r => !r.Holds).Select(r => r.Said)));
     }
 
     [CpuKernelFact]

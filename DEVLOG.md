@@ -10,6 +10,8 @@ names the item of .github/REVIEW.md or .github/REVIEW-ARCHIVE.md and the commit 
 
 Commits that day
 
+- `4527b67` The switch test runs whole under the ladder's setting and the build's run reads a short
+  form of it that keeps its numbers within the runner's hour.
 - `40e1a90` Each way of the split store keeps the spread of its frames' light, and a way given
   spreads starts again from the frame once its frames disagree with its light, off by default since
   the walk's sparse ways would start again on noise.

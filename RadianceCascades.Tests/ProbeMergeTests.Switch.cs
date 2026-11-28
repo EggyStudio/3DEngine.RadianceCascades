@@ -67,14 +67,31 @@ public sealed partial class ProbeMergeTests
                 return store;
             }
             float[] Taken(SplitRun store) => store.Gather()[..lit];
-            var steady = Made(k.After);
-            steady.Frames(Warm + After - Kept);
+            // The steady store and the one read after the change run side by side, since each runs
+            // on about one thread and the build's systems have four.
             var last = new List<float[]>();
-            for (int f = 0; f < Kept; f++)
+            var (before, lights) = (Array.Empty<float>(), new float[After][]);
+            Parallel.Invoke(() =>
             {
-                steady.Frames(1);
-                last.Add(Taken(steady));
-            }
+                var steady = Made(k.After);
+                steady.Frames(Warm + After - Kept);
+                for (int f = 0; f < Kept; f++)
+                {
+                    steady.Frames(1);
+                    last.Add(Taken(steady));
+                }
+            }, () =>
+            {
+                var store = Made(k.Before);
+                store.Frames(Warm);
+                before = Taken(store);
+                store.Lit(k.After);
+                for (int f = 0; f < After; f++)
+                {
+                    store.Frames(1);
+                    lights[f] = Taken(store);
+                }
+            });
             var target = Enumerable.Range(0, lit).Select(i => last.Average(l => l[i])).ToArray();
             var targetParts = ByPart(scene, target);
             float PartOff(float[] light) => ByPart(scene, light).Select((v, p) => MathF.Abs(MathF.Log(MathF.Max(v, 1e-6f) / targetParts[p]))).Max();
@@ -85,17 +102,8 @@ public sealed partial class ProbeMergeTests
                 return offs[(int)(0.9 * (offs.Length - 1))];
             }
             var floor = last.Max(PartOff);
-            var store = Made(k.Before);
-            store.Frames(Warm);
-            var startPoints = PointOff(Taken(store));
-            var (parts, pointsOff) = (new float[After], new float[After]);
-            store.Lit(k.After);
-            for (int f = 0; f < After; f++)
-            {
-                store.Frames(1);
-                var light = Taken(store);
-                (parts[f], pointsOff[f]) = (PartOff(light), PointOff(light));
-            }
+            var startPoints = PointOff(before);
+            var (parts, pointsOff) = (lights.Select(PartOff).ToArray(), lights.Select(PointOff).ToArray());
             var within = Enumerable.Range(0, After).FirstOrDefault(f => parts[f..].All(o => o < 0.05f), -1);
             var holds = floor < 0.02f && (k.Spread == 0 || (k.Name == "sun step" ? pointsOff[15] < 0.7f * startPoints : within >= 0 && within < 16));
             read[j] = ($"{(k.Spread > 0 ? "given spreads" : "keeping its history")} {k.Name} within 0.05 from frame {(within < 0 ? "none" : within + 1)}, {parts[0]:0.000} at frame 1, {parts[3]:0.000} at 4, "
