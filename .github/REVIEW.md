@@ -255,7 +255,21 @@ pointer. One commit an engine, after item 3's first part.
     switched or a sun moved shows in the next frame and nothing lags; the threshold read on a ladder
     scene with a lamp switching and the sun stepping, the frames after the change counted, not
     guessed. One commit. The lintel's carry-over, which the published method does not solve, is read
-    after these with the per-direction agreement as its lever.
+    after these with the per-direction agreement as its lever. Done at 40e1a90 on 2026-11-28, pushed
+    at 08:35, its run read next tick, 246 tests green. Each way keeps a sixth uint, the spread of
+    its frames' light, 232.8 MB at the default and 140.7 at 8,192 slots; the evidence rule, a way
+    restarting once the spreads its frames lie past the kept light reach five, is off by default and
+    taken by a binding through keepSplitLight with spreads. With it, at the cap, a lamp on or off is
+    within 0.05 from frame 12 (0.033 and 0.036 at 16, floors 0.008 and 0.007) and the sun's 90th
+    part 0.493 at 16 against 0.851, where the kept history reads 0.172 and 0.197 at 16 and 0.056 and
+    0.088 at 48; at the sparse 4 by 4 the lamp 0.23 to 0.25 at 16 against 0.32, the rays' limit.
+    With it the walk fails its bound, 0.040 and 0.013 between steps at the module's configuration
+    and 0.070 and 0.015 at the engine's, and a least ray count a frame that keeps the walk delays
+    the lamp past frame 21; off, the walk reads as before, 0.006 and 0.004, 0.008 and 0.004. Review,
+    the rule stays off by default since the walk's bound rules; the engine reads the switch and the
+    walk at its pin with the rule behind a setting, and the rule's way to hold both, a restart by
+    parent agreement or by the frame's own ray count, is the lintel's item's neighbor and comes
+    after it.
 
 ## Verdicts
 
@@ -273,6 +287,14 @@ the Windows job 2 minutes with the CPU kernels built at full optimization.
     the cost, a coarser trace where the bound allows or the heavy cases behind one shared fixture. A
     larger limit is no mend. Settled when a run passes on the three systems with the Windows job's
     minutes stated.
+
+3. **The build on `40e1a90` is cancelled at 09:36 on 2026-11-28 in the Linux job**, which ran past
+    its hour, Windows green in 35 minutes and macOS in 18. The job before it, e68fd0f's, took 41
+    minutes whole, so item 24's switch tests, the lamp on and off and the sun step at 16 by 16 seen
+    points over their frames, add more than the hour has. The mend is one commit that keeps the
+    switch tests' numbers while the push suite stays under the hour on the runner, the long frames
+    run under the ladder's set as the walk is and a short form of each in the push suite, the
+    runner's time read from the job's log before the push; the job's limit is not raised.
 
 ## Decisions
 
@@ -443,3 +465,16 @@ bring to add to its sum, the sum kept as it is below it, reads the module's walk
 0.008, 0.006 and 0.006 for 2, 4 and 8 rays and an engine's at 0.064 for 2, and the switch at 16 by
 16 within 0.05 from the 11th and 20th frames for 2, the 21st and 40th for 4, and the 38th and never
 for 8, so none keeps both the walk and the switch.
+
+**Verdict 3.** The switch test runs whole where RC_LADDER is set, as the walk does, and the push
+suite reads the given spreads alone after 32 frames, over 24 frames against the mean of the last 8
+of 56, with the job's limit as it was. The short form reads the lamp within 0.05 from the 13th frame
+switched on and the 10th switched off, 0.024 and 0.027 at the 16th, the floors 0.006 and 0.004, and
+the strip's 90th part 0.858 to 0.486 by the 16th, where the whole form reads the 12th and 12th,
+0.033 and 0.036, and 0.851 to 0.493 (`dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~A_Lamp_Switched`, the whole under RC_LADDER). The job's log answers this
+session's token with 403, so the runner's time is read from the jobs' step times, the test step at
+40:31 on Linux, 27:00 on Windows and 14:56 on macOS for e68fd0f and past 59:42, 34:18 and 17:27 for
+40e1a90. The short form takes 259 seconds of a desktop's processor time against the whole's 949, a
+little over a quarter, which by those step times puts about 5 to 7 minutes on the Linux job over
+e68fd0f's, about 46 to 48 minutes for its test step.

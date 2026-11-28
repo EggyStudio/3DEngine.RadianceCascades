@@ -207,7 +207,11 @@ off from the 12th, 0.036 at the 16th, while the parts of the scene held still mo
 at most from frame to frame, and the court's sunlit strip stepped a unit brings its points' 90th
 part from 0.851 to 0.493 by the 16th frame, where keeping each way's history the lamp lies 0.172
 and 0.197 off at the 16th frame and 0.056 and 0.088 at the 48th and the strip's 90th part 0.654 at
-the 16th (`dotnet test RadianceCascades.Tests --filter FullyQualifiedName~A_Lamp_Switched`).
+the 16th (`RC_LADDER=.github/LADDER.md dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~A_Lamp_Switched`). The build's run reads the given spreads alone over fewer
+frames, the lamp within 0.05 from the 13th frame switched on and the 10th switched off and the
+strip's 90th part 0.486 at the 16th (`dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~A_Lamp_Switched`).
 `keepSplitLight` with no spreads keeps each way's history always, since a way of the corridor's
 walk below, whose probes take 4.1 to 4.5 rays a frame over their 32 ways, meets by chance a run of
 frames of one ray each past its spread often enough to start again on noise.

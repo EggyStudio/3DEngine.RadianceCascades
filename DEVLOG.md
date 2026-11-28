@@ -10,6 +10,9 @@ names the item of .github/REVIEW.md or .github/REVIEW-ARCHIVE.md and the commit 
 
 Commits that day
 
+- `40e1a90` Each way of the split store keeps the spread of its frames' light, and a way given
+  spreads starts again from the frame once its frames disagree with its light, off by default since
+  the walk's sparse ways would start again on noise.
 - `e68fd0f` A seen point whose finest probe was taken within the last 16 frames sends four rays a
   frame rather than one, so a surface turned into view settles within those frames.
 - `1dc336e` Each seen point's ray is traced once to the end of the coarsest interval and split by

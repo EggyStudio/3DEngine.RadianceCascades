@@ -16,7 +16,14 @@ public sealed partial class ProbeMergeTests
     // floor stays under 0.02, since a still scene's frames take from that sum as they add. The
     // court's strip is a small part of its parts, so its points' 90th part, which starts far, is
     // held to fall below 0.7 of its start by frame 16. The store's own, which keeps each way's
-    // history always, is read beside it.
+    // history always, is read beside it. The whole test runs where RC_LADDER is set, as in the
+    // ladder's run (RC_LADDER=.github/LADDER.md dotnet test RadianceCascades.Tests --filter
+    // FullyQualifiedName~A_Lamp_Switched). Elsewhere, as in the build's run, it reads the given
+    // spreads alone after 32 frames in the light before, over 24 frames' gather against the mean
+    // of the last 8 of 56 frames in the light after, in 259 seconds of a desktop's processor time
+    // against the whole's 949 (dotnet test RadianceCascades.Tests --filter
+    // FullyQualifiedName~A_Lamp_Switched), since the build's slowest system takes many times what a
+    // desktop takes over the 16 by 16 points of each lit point.
     [CpuKernelFact]
     public void A_Lamp_Switched_Or_The_Sun_Stepped_On_The_Split_Probes_Given_Spreads_Shows_Within_16_Frames()
     {
@@ -24,14 +31,16 @@ public sealed partial class ProbeMergeTests
         static float Both(Vector3 p) => LampWallLight(p) + LampB(p);
         static float Stepped(Vector3 p) => p.Y < 0.25f && p.Z is > -0.5f and < 2.5f && MathF.Abs(p.X) < 7.25f ? 1 : 0;
         // The spreads of the Slang SplitAgreeSpread, and 0 for the store's own.
-        var spreads = new[] { 5f, 0f };
+        var whole = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RC_LADDER"));
+        var spreads = whole ? new[] { 5f, 0f } : new[] { 5f };
         var cases = spreads.SelectMany(spread => new (string Name, float Spread, Func<LadderScene> Scene, float[] Before, float[] After)[]
         {
             ("lamp on", spread, WallUnderALamp, CellLightBy(LampWallLight), CellLightBy(Both)),
             ("lamp off", spread, WallUnderALamp, CellLightBy(Both), CellLightBy(LampWallLight)),
             ("sun step", spread, ArcadeCourt, CellLightBy(CourtLight), CellLightBy(Stepped)),
         }).ToArray();
-        const int After = 48, Warm = 64, Kept = 16, Dense = 16;
+        var (After, Warm, Kept) = whole ? (48, 64, 16) : (24, 32, 8);
+        const int Dense = 16;
         var read = new (string Said, bool Holds)[cases.Length];
         Parallel.For(0, cases.Length, j =>
         {
