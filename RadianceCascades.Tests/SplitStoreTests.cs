@@ -360,7 +360,8 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
         // probe leads up to the part of it within that cascade's interval, the light it met there
         // or the sky's past where it left the world with no share let through, or none and all of
         // it let through where it passed, and nothing past where it ended, as the same ray traced
-        // whole and split by where it ended gives, and every part finds its probe.
+        // whole by the store's kernel and split by where it ended gives, and every part finds its
+        // probe.
         var points = CorridorFaces();
         var count = points.Length / 8;
         var eye = new Vector3(0, 1.5f, 0);

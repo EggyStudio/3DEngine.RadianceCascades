@@ -62,9 +62,10 @@ public interface IVisiblePoints : ISurfacePoints
 
 // A part of a ray from a seen point, where it meets a surface and the light that surface sends
 // back along it, which the field's march gives (FieldHits) and an engine that traces rays its own
-// way gives as it finds them. The passes trace a ray one cascade's interval at a time and hand the
-// next part on from where the last ended, so a part that meets nothing ends as RayPast at end and
-// one that leaves the world as RayLeft, the sky's light then read through ISky.
+// way gives as it finds them. The passes trace a seen point's ray once, from its start to the end
+// of the coarsest cascade's interval, and split it by where it ended, so a ray that meets nothing
+// ends as RayPast at that end and one that leaves the world as RayLeft, the sky's light then read
+// through ISky, and read a probe's sight of a point along the part between them.
 public interface IRayHits
 {
     // The part of the ray from origin along way, of unit length, between start and end, how it
@@ -871,13 +872,17 @@ void addSplitLight<W : IStoreUints>(W uints, SplitStore shape, uint entry, uint 
 }
 
 // Sends the seen point at index its frame's ray (splitRayWay), a thread a point after
-// askCascadeProbes, from its start through the cascades' intervals one after another, each part
-// from where the last ended, and adds each part to the probe of its cascade the point's probe of
-// the finest (splitSeenCell) leads up to (askCascadeProbes), at the way it falls in. A part that
-// meets a surface adds the light the surface sends back and lets none through, one that leaves the
-// world adds the sky's light past what it crossed, and the ray ends there, so a cascade's probe
-// takes only the rays that reach its interval. A part whose march was capped is added to nothing,
-// and the ray ends.
+// askCascadeProbes, traced once from its start to the end of the coarsest cascade's interval, and
+// splits it by where it ended across the cascades' intervals, adding each part to the probe of its
+// cascade the point's probe of the finest (splitSeenCell) leads up to (askCascadeProbes), at the
+// way it falls in. Each part before the interval the ray ended in adds no light and lets all of it
+// through, and the part of that interval adds the light the ray took, the sky's past what it
+// crossed where it left the world, and lets through what it carries where it ended at the coarsest
+// interval's end with nothing met, or none, and the ray ends there, so a cascade's probe takes only
+// the rays that reach its interval. A ray whose march was capped adds nothing to the part it
+// stopped in, and a binding's cap counts the whole ray's steps. A surface the ray crosses before
+// the interval it ended in dims and lights that interval's part rather than its own, which the
+// merge, multiplying each part's light through by the next, reads as the same along the chain.
 public void traceSeenRays<P : IVisiblePoints, H : IRayHits, K : ISky, W : IStoreUints>(P points, H hits, K sky, W uints,
     SplitFrame frame, SplitStore shape, uint index)
 {
@@ -888,23 +893,20 @@ public void traceSeenRays<P : IVisiblePoints, H : IRayHits, K : ISky, W : IStore
     float3 way = splitRayWay(n, index, frame.frame);
     float3 origin = splitRayOrigin(frame, shape, p, n);
     int3 cell = splitSeenCell(hits, shape, p, origin);
-    float start = 0.0;
+    ProbeRay whole = hits.along(origin, way, 0.0, splitIntervalEnd(shape, shape.cascades - 1u));
+    float3 light = whole.light + (whole.ended == RayLeft ? whole.carried * sky.skyAlong(way) : float3(0.0));
     for (uint cascade = 0u; cascade < shape.cascades; cascade++)
     {
-        float end = splitIntervalEnd(shape, cascade);
-        ProbeRay part = hits.along(origin, way, start, end);
-        if (part.ended == RayCapped)
+        bool ends = cascade + 1u == shape.cascades || whole.t < splitIntervalEnd(shape, cascade);
+        if (ends && whole.ended == RayCapped)
             return;
-        float3 light = part.light;
-        if (part.ended == RayLeft)
-            light += part.carried * sky.skyAlong(way);
         uint entry = findSplitProbe(uints, shape, splitKey(cascade, cell));
         if (entry != SplitNone)
-            addSplitLight(uints, shape, entry, splitWayOf(cascade, way), light, part.ended == RayPast ? part.carried : 0.0);
-        if (part.ended != RayPast)
+            addSplitLight(uints, shape, entry, splitWayOf(cascade, way), ends ? light : float3(0.0),
+                !ends ? 1.0 : whole.ended == RayPast ? whole.carried : 0.0);
+        if (ends)
             return;
         cell = (cell + 1) >> 1;
-        start = end;
     }
 }
 

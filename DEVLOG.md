@@ -6,6 +6,13 @@ kept under `.github/assets/readings` as WebP files named by their day, each on t
 says, and the notes written beside them as Markdown files named the same way. A line under Done
 names the item of .github/REVIEW.md or .github/REVIEW-ARCHIVE.md and the commit that closed it.
 
+## 2026-11-28
+
+Commits that day
+
+- `4485327` The store reads at a point what a binding counts where its gathered light reads dark,
+  the gather's weights, the share lent from behind its plane and the age of its youngest probe.
+
 ## 2026-11-27
 
 Commits that day
