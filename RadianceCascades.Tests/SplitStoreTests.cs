@@ -22,7 +22,7 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
     {
         public readonly uint[] Uints = new uint[shape.Uints];
         public readonly float[] Light = new float[4 * shape.Lights];
-        private readonly float[] setup = new float[17];
+        private readonly float[] setup = new float[18];
         private readonly float[] boxes = boxes is { Length: > 0 } ? boxes : [1000, 1000, 1000, 0, 1001, 1001, 1001, 0];
 
         public float[] Run(int pass, Vector3 eye, uint frame, float[] points, int threads, int cascade = 0)
@@ -30,7 +30,7 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
             var count = points.Length / 8;
             (setup[0], setup[1], setup[2], setup[3], setup[4]) = (pass, eye.X, eye.Y, eye.Z, frame);
             (setup[5], setup[6], setup[7]) = (shape.Slots, shape.Spacing, shape.Cascades);
-            (setup[11], setup[12], setup[13], setup[14], setup[15], setup[16]) = (cascade, count, boxes.Length / 8, 64, 1, FreshFrames);
+            (setup[11], setup[12], setup[13], setup[14], setup[15], setup[16], setup[17]) = (cascade, count, boxes.Length / 8, 64, 1, FreshFrames, AgreeSpread);
             var taken = new float[4 * Math.Max(Math.Max((1 + shape.Cascades) * count, shape.Entries), Math.Max(160, threads))];
             CpuKernel.Run("split_store_cpu.slang", ((uint)(threads + 63) / 64, 1, 1), setup, points.Length == 0 ? new float[8] : points, Uints, Light, taken, boxes);
             return taken;
@@ -68,6 +68,10 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
         // The frames within which a probe of the finest cascade is fresh, its seen points sending
         // SplitFreshRays a frame, 0 for one ray a point always.
         public int FreshFrames { get; init; }
+
+        // The spreads past which a way's frames disagree with its light, 0 for a way that keeps its
+        // history always.
+        public float AgreeSpread { get; init; }
 
         // The first uint of the sums.
         public int SumsAt => (int)Run(5, Vector3.Zero, 0, [], 1)[7];
@@ -375,7 +379,7 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
         store.Frame(eye, 1, points, rays: true, keep: false);
         var whole = store.Run(13, eye, 1, points, count);
         var own = Shape.OwnLights;
-        var expected = new uint[5 * own];
+        var expected = new uint[SplitStoreShape.SumUints * own];
         var (rays, missing) = (0, 0);
         var reached = new int[Shape.Cascades];
         static uint Parts(float light) => (uint)(Math.Clamp(light, 0, 16384) * 1024 + 0.5f);
@@ -393,7 +397,7 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
                     missing++;
                 else
                 {
-                    var sums = 5 * LightAt(c, entry, way);
+                    var sums = SplitStoreShape.SumUints * LightAt(c, entry, way);
                     for (int i = 0; i < 3; i++)
                         expected[sums + i] += passed ? 0 : Parts(whole[at + i]);
                     expected[sums + 3] += passed ? 1024u : 0;
@@ -405,7 +409,7 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
         }
         var sumsAt = store.SumsAt;
         var off = Enumerable.Range(0, expected.Length).Count(i => store.Uints[sumsAt + i] != expected[i]);
-        var touched = Enumerable.Range(0, own).Count(i => expected[5 * i + 4] > 0);
+        var touched = Enumerable.Range(0, own).Count(i => expected[SplitStoreShape.SumUints * i + 4] > 0);
         var said = $"{rays} rays of {count} seen points add {reached.Sum()} parts to {touched} ways, {string.Join(", ", reached)} reaching "
             + $"each cascade from the finest, {missing} parts finding no probe and {off} of the sums' uints off the rays traced whole";
         output.WriteLine(said);
@@ -424,7 +428,7 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
         var store = new Store(Shape, CorridorLitBoxes) { FreshFrames = 16 };
         var sumsAt = store.SumsAt;
         var finest = Shape.CascadeLights(0);
-        int Rays() => Enumerable.Range(0, finest).Sum(i => (int)(store.Uints[sumsAt + 5 * i + 4] & 0xFFFFF));
+        int Rays() => Enumerable.Range(0, finest).Sum(i => (int)(store.Uints[sumsAt + SplitStoreShape.SumUints * i + 4] & 0xFFFFF));
         var rays = new List<int>();
         var standing = 0;
         for (uint frame = 1; frame <= 17; frame++)
@@ -464,7 +468,7 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
         for (uint frame = 1; frame <= 2; frame++)
         {
             store.Frame(eye, frame, points, rays: true, keep: false);
-            var sums = store.Uints[sumsAt..(sumsAt + 5 * own)];
+            var sums = store.Uints[sumsAt..(sumsAt + SplitStoreShape.SumUints * own)];
             var before = store.Light[..(4 * own)];
             var probes = store.Probes(eye, frame);
             var keys = store.Keys();
@@ -474,7 +478,7 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
                 for (int way = 0; way < SplitStoreShape.BaseWays << 2 * cascade; way++)
                 {
                     var i = LightAt(cascade, entry, way);
-                    var (n, rays) = (sums[5 * i + 4] & 0xFFFFF, takenNow.Contains(entry) ? 0 : sums[5 * i + 4] >> 20);
+                    var (n, rays) = (sums[SplitStoreShape.SumUints * i + 4] & 0xFFFFF, takenNow.Contains(entry) ? 0 : sums[SplitStoreShape.SumUints * i + 4] >> 20);
                     var after = n == 0 ? rays : Math.Min(rays + n, KeptRays);
                     worst = MathF.Max(worst, Kept(store, sumsAt, i, sums, before, takenNow.Contains(entry), after));
                     if (n == 0)
@@ -499,10 +503,10 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
         foreach (var i in capped)
         {
             for (int k = 0; k < 4; k++)
-                store.Uints[sumsAt + 5 * i + k] = k < 3 ? 10 * 3 * 1024u : 10 * 512u;
-            store.Uints[sumsAt + 5 * i + 4] = (uint)(KeptRays - 4) << 20 | 10;
+                store.Uints[sumsAt + SplitStoreShape.SumUints * i + k] = k < 3 ? 10 * 3 * 1024u : 10 * 512u;
+            store.Uints[sumsAt + SplitStoreShape.SumUints * i + 4] = (uint)(KeptRays - 4) << 20 | 10;
         }
-        var (capSums, capBefore) = (store.Uints[sumsAt..(sumsAt + 5 * own)], store.Light[..(4 * own)]);
+        var (capSums, capBefore) = (store.Uints[sumsAt..(sumsAt + SplitStoreShape.SumUints * own)], store.Light[..(4 * own)]);
         store.Keep(eye, 33);
         var worstCapped = capped.Max(i => Kept(store, sumsAt, i, capSums, capBefore, false, KeptRays));
         var said = $"over two frames {fresh} ways took their rays' mean, {followed} moved toward it and {held} kept their light, each "
@@ -510,6 +514,71 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
             + $"{capped.Count} ways past the cap moved by a share of one over it a ray within {worstCapped:0.000000}";
         output.WriteLine(said);
         Assert.True(worst < 1e-5f && worstCapped < 1e-5f && fresh > 0 && followed > 0 && held > 0 && capped.Count > 0, said);
+    }
+
+    [CpuKernelFact]
+    public void A_Split_Way_Whose_Frames_Sum_Past_Its_Spreads_Starts_Again_From_The_Frame()
+    {
+        // Each way of the finest cascade's probes in the lit corridor handed a kept light of 1,
+        // the mean of 64 rays, the mean of its frames' squares 1.01, so its frames' light lies a
+        // tenth about it, a sum of its frames past it, and a frame of light, in a store whose ways
+        // let their history go past 5 spreads. Each frame's spread is at least a quarter of the
+        // greater light, so a frame of 3 lies 2 spreads past it at most and adds 1.5 to the sum,
+        // and from a sum of 4 the way starts again, its 2 rays counted of 8 and its 8 rays alone. A
+        // frame of 0.25 does the same from a sum of 4 darker. A frame of 1.25 adds 0.3 to the sum
+        // and one of 1.05 takes 0.31 from it, moving the way by its share of the rays, and a way
+        // of 8 rays, fewer than SplitAgreeRays, or a store whose ways keep their history always
+        // moves by its share with its sum emptied.
+        var points = CorridorFaces();
+        var eye = new Vector3(0, 1.5f, 0);
+        (int Ways, float Worst) Case(float spread, uint held, float light, uint rays, float past, uint after, float wantPast)
+        {
+            var store = new Store(Shape, CorridorLitBoxes) { AgreeSpread = spread };
+            store.Frame(eye, 1, points, rays: true);
+            store.Frame(eye, 2, points, keep: false);
+            var sumsAt = store.SumsAt;
+            var ways = store.Probes(eye, 2).Where(p => p.Cascade == 0)
+                .SelectMany(p => Enumerable.Range(0, SplitStoreShape.BaseWays).Select(w => LightAt(0, p.Entry, w))).ToList();
+            var handed = spread > 0 ? unchecked((uint)(int)MathF.Round(past / spread * 127)) & 0xFF : 0;
+            foreach (var i in ways)
+            {
+                (store.Light[4 * i], store.Light[4 * i + 1], store.Light[4 * i + 2], store.Light[4 * i + 3]) = (1, 1, 1, 0.5f);
+                var at = sumsAt + SplitStoreShape.SumUints * i;
+                for (int k = 0; k < 3; k++)
+                    store.Uints[at + k] = (uint)(rays * light * 1024);
+                (store.Uints[at + 3], store.Uints[at + 4]) = (rays * 512, held << 20 | rays);
+                store.Uints[at + 5] = BitConverter.SingleToUInt32Bits(1.01f) & 0xFFFFFF00 | handed;
+            }
+            store.Keep(eye, 2);
+            var share = (float)rays / after;
+            var (want, squares) = (1 + (light - 1) * share, 1.01f + (light * light - 1.01f) * share);
+            var worst = ways.Max(i =>
+            {
+                var at = sumsAt + SplitStoreShape.SumUints * i;
+                var kept = BitConverter.UInt32BitsToSingle(store.Uints[at + 5] & 0xFFFFFF00);
+                var sum = spread > 0 ? unchecked((sbyte)(store.Uints[at + 5] & 0xFF)) / 127f * spread : 0;
+                // The squares lose the low 8 bits the sum holds, a part in 32,768 at most, so
+                // they are held to ten times the light's bound.
+                return store.Uints[at + 4] != after << 20 || MathF.Abs(sum - wantPast) > Math.Max(spread, 1) / 127 ? float.PositiveInfinity
+                    : MathF.Max(MathF.Max(MathF.Abs(store.Light[4 * i] - want) / want, MathF.Abs(store.Light[4 * i + 3] - 0.5f)),
+                        MathF.Abs(kept - squares) / squares / 10);
+            });
+            return (ways.Count, worst);
+        }
+        var cases = new[]
+        {
+            ("a frame of 3 of 2 rays from a sum of 4 starts again of 8", Case(5, 64, 3, 2, 4, 8, 0)),
+            ("a frame of 3 of 8 rays from a sum of 4 starts again from the frame", Case(5, 64, 3, 8, 4, 8, 0)),
+            ("a frame of 0.25 from a sum of 4 darker starts again of 8", Case(5, 64, 0.25f, 2, -4, 8, 0)),
+            ("a frame of 3 from no sum adds 1.5", Case(5, 64, 3, 2, 0, 66, 1.5f)),
+            ("a frame of 1.25 from a sum of 4 adds 0.3", Case(5, 64, 1.25f, 2, 4, 66, 4.3f)),
+            ("a frame of 1.05 from a sum of 3 takes 0.31", Case(5, 64, 1.05f, 2, 3, 66, 3 + 0.05f / 0.2625f - 0.5f)),
+            ("a frame of 3 at a way of 8 rays empties its sum", Case(5, 8, 3, 2, 4, 10, 0)),
+            ("a frame of 3 in a store that keeps its history moves by its share", Case(0, 64, 3, 2, 0, 66, 0)),
+        };
+        var said = string.Join(", ", cases.Select(c => $"{c.Item1} at {c.Item2.Ways} ways within {c.Item2.Worst:0.000000}"));
+        output.WriteLine(said);
+        Assert.True(cases.All(c => c.Item2.Ways > 0 && c.Item2.Worst < 1e-5f), said);
     }
 
     // The most rays a way's kept light is the mean of, as the Slang SplitKeptRays.
@@ -521,12 +590,12 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
     // sumsAt are emptied with after kept above the frame's count.
     private static float Kept(Store store, int sumsAt, int i, uint[] sums, float[] before, bool fresh, uint after)
     {
-        var (n, rays) = (sums[5 * i + 4] & 0xFFFFF, fresh ? 0 : sums[5 * i + 4] >> 20);
+        var (n, rays) = (sums[SplitStoreShape.SumUints * i + 4] & 0xFFFFF, fresh ? 0 : sums[SplitStoreShape.SumUints * i + 4] >> 20);
         var kept = fresh ? new Vector4(0, 0, 0, -1) : new Vector4(before[4 * i], before[4 * i + 1], before[4 * i + 2], before[4 * i + 3]);
-        var mean = new Vector4(sums[5 * i], sums[5 * i + 1], sums[5 * i + 2], sums[5 * i + 3]) / (1024f * Math.Max(n, 1));
+        var mean = new Vector4(sums[SplitStoreShape.SumUints * i], sums[SplitStoreShape.SumUints * i + 1], sums[SplitStoreShape.SumUints * i + 2], sums[SplitStoreShape.SumUints * i + 3]) / (1024f * Math.Max(n, 1));
         var want = n == 0 ? kept : Vector4.Lerp(kept, mean, Math.Min(n / (float)Math.Max(after, 1), 1));
         var got = new Vector4(store.Light[4 * i], store.Light[4 * i + 1], store.Light[4 * i + 2], store.Light[4 * i + 3]);
-        var at = sumsAt + 5 * i;
+        var at = sumsAt + SplitStoreShape.SumUints * i;
         var emptied = store.Uints[at] == 0 && store.Uints[at + 1] == 0 && store.Uints[at + 2] == 0 && store.Uints[at + 3] == 0
             && store.Uints[at + 4] == after << 20;
         return emptied ? (got - want).Length() / MathF.Max(want.Length(), 1e-3f) : float.PositiveInfinity;

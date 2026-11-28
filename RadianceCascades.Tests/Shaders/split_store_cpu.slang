@@ -6,9 +6,10 @@
 //
 // The setup holds the pass first, the eye from 1, the frame's count at 4, the store's slots,
 // spacing and cascades from 5, the cascade a pass of the cascades asks above at 11, the count of
-// points at 12, the count of boxes at 13, the world's half width about its middle at 14, the
-// sky's light at 15 and the frames within which a probe is fresh at 16, 0 for one ray a point
-// always. A point is two float4, its place with 1 in w where the eye sees it, then its
+// points at 12, the count of boxes at 13, the world's half width about its middle at 14, the sky's
+// light at 15, the frames within which a probe is fresh at 16, 0 for one ray a point always, and
+// the spreads past which a way's frames disagree with its light at 17, 0 for a way that keeps its
+// history always. A point is two float4, its place with 1 in w where the eye sees it, then its
 // normal, and a box two, its low corner with the light it sends in w, then its high corner.
 import rc_split;
 
@@ -163,7 +164,7 @@ void test(uint3 id : SV_DispatchThreadID)
     else if (pass == 9u && index < uint(setup[12]))
         traceSeenRays(seen, hits, sky, store, frame, shape, index, uint(setup[16]));
     else if (pass == 10u)
-        keepSplitLight(store, kept, frame, shape, index);
+        keepSplitLight(store, kept, frame, shape, index, setup[17]);
     else if (pass == 14u)
         mergeSplitCascade(store, kept, sky, frame, shape, uint(setup[11]), index);
     else if (pass == 11u && index < uint(setup[12]))

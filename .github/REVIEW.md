@@ -249,11 +249,6 @@ pointer. One commit an engine, after item 3's first part.
     finest probes and the lintel for 2,212 second- and 83 third-cascade probes, the lintel 0.339
     against the quarter pools' 0.319, carried into the lintel's item.
 
-23. **Fresh probes take more rays.** A pixel whose finest probe was placed within its first frames
-    sends four rays rather than one until the probe's count reaches the others', so a surface coming
-    into view fills in within those frames rather than popping in; read as the frames to settle
-    after a turn of the eye on the corridor, with the rays a frame beside. One commit.
-
 24. **A probe drops its history when its fresh deposits disagree.** The direction's rule for history
     (the engine's Decision 123) in world space. A probe whose frame's deposit differs from its kept
     mean in a direction by more than the noise restarts that direction from the frame, so a lamp
@@ -415,41 +410,36 @@ and 20 probes of its two coarsest pools, which hold 32 and 8, so some probes bel
 light from past their own interval. The default store takes 157.3 MB, each cascade's ways and sums
 the same share as the finest's.
 
-Item 23, fresh probes take more rays. A seen point whose probe of the finest cascade was taken
-within the last `SplitFreshFrames`, 16, sends `SplitFreshRays`, 4, rays a frame rather than one,
-each further ray of a frame taking the step of its sequence a quarter of their range past the last,
-which lays the four on a lattice over the square. The rule reads a probe's age from the frame taken
-its entry keeps rather than from its count, since the counts sit a way and not a probe, and 16
-frames at 4 rays give a point 64 rays before it falls to one. Turned at the corridor's middle from
-the faces toward -x to those toward +x, the 6,016 points newly seen come within a tenth of their
-light 160 frames on at the 95th part by the 11th frame at the module's configuration and the 12th at
-an engine's, where at one ray a point they are still past it 24 frames on, 34 and 51 read under a
-fifth of it at the first frame against 357 and 538, and their mean distance at frames 1, 4 and 16 is
-0.243, 0.109 and 0.024 against 0.651, 0.224 and 0.061 at the module's and 0.306, 0.128 and 0.028
-against 0.778, 0.277 and 0.078 at an engine's, the 6,332 points seen sending 25,091 rays at the
-first frame and 6,332 at the 24th (`dotnet test RadianceCascades.Tests --filter
-FullyQualifiedName~A_Surface_Turned_Into_View`). By a reading not committed on the walk's 60 points
-past the turn, 16 frames bring the 99th part within a tenth by the 9th frame at the module's and the
-11th at an engine's against the 11th and the 25th at 8, for 502,768 rays over 32 frames against
-352,696, and 202,624 at one ray a point.
+Item 24, the layout and the rule with it off by default. Each way keeps a sixth uint, the mean of
+the squares of its frames' light with the sum of its frames past its light in its low 8 bits, so
+the store takes 232.8 MB at the default and 140.7 MB at 8,192 slots (`dotnet test
+RadianceCascades.Tests --filter FullyQualifiedName~SplitStoreTests`). Given `SplitAgreeSpread`, 5,
+each frame of a way of 16 rays or more adds to its side's sum the spreads it lies past the light
+kept, at most 2, less a half, the spread at least a quarter of the greater light, and a way whose
+sum reaches 5 starts again from the frame, counted as at least 8 rays. At 16 by 16 seen points a
+lit point, the ways at their cap, the lamp switched on and off lies within 0.05 by parts from the
+12th frame, 0.033 and 0.036 at the 16th, the floors 0.008 and 0.007, and the sun's step brings its
+points' 90th part from 0.851 to 0.493 by the 16th, where keeping each way's history reads 0.172 and
+0.197 at the 16th and 0.056 and 0.088 at the 48th (`dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~A_Lamp_Switched`). The 12 frames at the cap, against the owner's wish for the
+next frame, is the number an engine reads at its pin with the spreads given.
 
-The ladder reads the split store 0.124 from its trace on the mean and 0.407 at worst at the module's
-configuration and 0.125 and 0.415 at an engine's, against 0.121 and 0.402 at both, the dark room
-taking none of the lit room's light and the lintel's room reading 0.334 against 0.340, and the moves
-lie in the bright scenes, the closed box with one lamp 0.383 and 0.393 on the mean against 0.371 and
-0.373, the wall under a lamp 0.108 and 0.105 against 0.093 and 0.091, and the court 0.058 and 0.058
-against 0.048 and 0.057 (`RC_LADDER=.github/LADDER.md dotnet test RadianceCascades.Tests --filter
-FullyQualifiedName~The_Ladder`). By a reading not committed they come of the count of rays and not
-of the rule. At the module's one ray a point over 112 frames, the rays 16 fresh frames give over 64,
-reads the closed box 0.404, the court 0.053 and the wall 0.102, and over 256 frames 0.390, 0.056 and
-0.104, against 0.394, 0.058 and 0.109 with 16 fresh frames over 256, so at 64 frames of one ray the
-store read those scenes nearer their trace than it reads them at more rays, and at 4, 8 and 24 fresh
-frames over 64 the wall reads 0.100, 0.105 and 0.116. The walk steps 0.008 and 0.004 at an engine's
-and 0.006 and 0.004 at the module's, with the eye still 0.007 and 0.005 at an engine's and 0.005 and
-0.004 at the module's, each finest probe asked for at the last eye taking 4.5 rays a frame at an
-engine's, and at the lamp's edge the probes fed by every face read 1.042 and 1.091 of the trace and
-by their own rays alone 0.962 and 0.981, against 1.044 and 1.096 and 0.971 and 0.983
-(`RC_LADDER=.github/LADDER.md dotnet test RadianceCascades.Tests --filter
-'FullyQualifiedName~On_The_Split_Probes|FullyQualifiedName~At_The_Lamps_Edge'`). The specks are the
-engine's normals, as the reviewing session read, and no kernel reading a pixel's eight probes is
-added.
+By readings not committed, a one-frame test at 8 spreads has the lamp on within 0.05 by the 16th
+frame, 0.011, and the lamp off 0.16 to 0.21 off at every spread from 4 to 8, the second cascade
+restarting 15 ways for it against 214 for the lamp on, since a dead lamp's dark frame lies within
+the spread of a way that saw it in part. At 4 by 4, about a ray a way a frame, the rule's floor is
+0.010 to 0.011 and the lamp reads 0.23 to 0.25 at the 16th frame against 0.32 with no rule, the
+sparse case's limit that the rays bound. A way under 16 rays moves by a 16th of the way or more a
+ray, so its count bounds it, where a restart by the share alone reads a floor of 0.24 at 4 by 4,
+each restart putting the way back under 16 rays where the next noisy frame restarts it.
+
+The rule is off by default because the walk fails with it given. By readings not committed, the
+whole walk with it given reads between steps 0.040 at worst and 0.013 at the 99th part at the
+module's configuration and 0.070 and 0.015 at an engine's, with the eye still 0.017 and 0.018 at
+worst, against 0.006 and 0.004, 0.008 and 0.004, and 0.005 and 0.007 with it off. The walk's probes
+take 4.1 to 4.5 rays a frame over 32 ways, about a ray a finest way in seven frames, and a run of
+frames of one ray past a way's spread restarts it on noise. A least count of rays a frame must
+bring to add to its sum, the sum kept as it is below it, reads the module's walk between steps at
+0.008, 0.006 and 0.006 for 2, 4 and 8 rays and an engine's at 0.064 for 2, and the switch at 16 by
+16 within 0.05 from the 11th and 20th frames for 2, the 21st and 40th for 4, and the 38th and never
+for 8, so none keeps both the walk and the switch.

@@ -15,10 +15,11 @@ RWStructuredBuffer<float> cells;
 // gathered at 12 and 13, the field's cells along a side at 14 and the count of its cascades at 15,
 // each one's least corner and cell from 16, four floats each, the sky's light at 48, the least
 // corner, the cell and the cells along a side of the grid cellLight holds from 49, the cap of steps
-// a ray's part takes at 54, none where 0, at 57 whether a hit takes the light of the field's cell
-// it lies in rather than the light of its place, at 58 where the bounce a hit takes begins in
-// cellLight, none where 0, and from 59 the least corner of the bounce's grid, its cell and its
-// cells along a side.
+// a ray's part takes at 54, none where 0, at 55 one more than the frames within which a probe is
+// fresh and at 56 one more than the spreads past which a way's frames disagree with its light, the
+// store's own of each where 0, at 57 whether a hit takes the light of the field's cell it lies in
+// rather than the light of its place, at 58 where the bounce a hit takes begins in cellLight, none
+// where 0, and from 59 the least corner of the bounce's grid, its cell and its cells along a side.
 RWStructuredBuffer<float> setup;
 
 // The light of each cell of the grid the setup gives from 49, x fastest, or of each cell of the
@@ -187,6 +188,8 @@ void test(uint3 id : SV_DispatchThreadID)
         askCascadeProbes(store, frame, shape, cascade, index);
     else if (pass == 4u && index < uint(setup[12]))
         traceSeenRays(points, hits, sky, store, frame, shape, index, setup[55] > 0.0 ? uint(setup[55]) - 1u : SplitFreshFrames);
+    else if (pass == 5u && setup[56] > 0.0)
+        keepSplitLight(store, kept, frame, shape, index, setup[56] - 1.0);
     else if (pass == 5u)
         keepSplitLight(store, kept, frame, shape, index);
     else if (pass == 6u)

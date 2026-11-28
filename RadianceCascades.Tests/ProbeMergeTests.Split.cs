@@ -134,8 +134,8 @@ public sealed partial class ProbeMergeTests
                 Run(4, seen.Length / 8);
                 // The frame's rays in the low 20 bits of each finest way's count (SplitCountBits),
                 // the sums last in the store's uints.
-                var sums = Uints.Length - 5 * Shape.OwnLights;
-                Rays = Enumerable.Range(0, Shape.CascadeLights(0)).Sum(i => (int)(Uints[sums + 5 * i + 4] & 0xFFFFF));
+                var sums = Uints.Length - SplitStoreShape.SumUints * Shape.OwnLights;
+                Rays = Enumerable.Range(0, Shape.CascadeLights(0)).Sum(i => (int)(Uints[sums + SplitStoreShape.SumUints * i + 4] & 0xFFFFF));
                 Run(5, Shape.OwnLights);
                 for (int c = Shape.Cascades - 1; c >= 0; c--)
                     Run(6, Shape.CascadeLights(c), c);
@@ -194,6 +194,14 @@ public sealed partial class ProbeMergeTests
         // The frames within which a probe is fresh, the store's own unless given, 0 for one ray a
         // point always.
         public int FreshFrames { init => setup[55] = value + 1; }
+
+        // The spreads past which a way's frames disagree with its light, the store's own unless
+        // given, 0 for a way that keeps its history always.
+        public float AgreeSpread { init => setup[56] = value + 1; }
+
+        // The light each cell of the test's one cascade sends from the next frame, as the light
+        // given at the start lays it.
+        public void Lit(float[] light) => light.CopyTo(cellLight, 0);
     }
 
     // The split store over the corridor's field at a configuration. At places the eye, the field

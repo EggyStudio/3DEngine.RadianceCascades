@@ -233,11 +233,13 @@ public uint splitFreeAt(SplitStore shape)
     return splitPoolAt(shape) + SplitEntryUints * splitEntries(shape);
 }
 
-// The first uint of the sums the seen points' rays add to each probe's ways, five a way laid out
-// as the probes' own light is (splitLightAt), the light along it in red, green and blue, the share
-// let through and the count of rays, each light and share a whole number of SplitSumScale. The
-// count keeps the frame's rays in its low SplitCountBits and above them the rays the way's kept
-// light is the mean of.
+// The first uint of the sums the seen points' rays add to each probe's ways, SplitSumUints a way
+// laid out as the probes' own light is (splitLightAt), the light along it in red, green and blue,
+// the share let through and the count of rays, each light and share a whole number of
+// SplitSumScale, and the mean of the squares of the light its frames brought with the sum of its
+// frames past its light in the low 8 bits, which the way keeps beside its light (keepSplitLight).
+// The count keeps the frame's rays in its low SplitCountBits and above them the rays the way's
+// kept light is the mean of.
 public uint splitSumsAt(SplitStore shape)
 {
     return splitFreeAt(shape) + splitEntries(shape);
@@ -246,7 +248,7 @@ public uint splitSumsAt(SplitStore shape)
 // The uints the store lays out.
 public uint splitUints(SplitStore shape)
 {
-    return splitSumsAt(shape) + 5u * splitLightFirst(shape, shape.cascades);
+    return splitSumsAt(shape) + SplitSumUints * splitLightFirst(shape, shape.cascades);
 }
 
 // The ways of a probe of cascade.
@@ -819,6 +821,29 @@ public static const uint SplitKeptRays = 256u;
 // many rays its kept light is the mean of.
 public static const uint SplitCountBits = 20u;
 
+// The uints of each way's sums (splitSumsAt).
+public static const uint SplitSumUints = 6u;
+
+// How far a way's frames must lie from the light it keeps, summed over the frames running, before
+// the way lets its history go and starts again from the frame (keepSplitLight), in the spread of
+// its frames' light about what it keeps, so a lamp switched or the sun moved shows within the
+// frames that sum takes rather than over SplitKeptRays rays. Each frame of a way whose light is the
+// mean of SplitAgreeRays rays or more adds to the sum of its side, brighter or darker, the spreads
+// it lies past the light kept, at most SplitAgreeMost, less SplitAgreeSlack, so a frame within the
+// slack takes from the sum, which stops at none, and the way keeps the greater of the two sides.
+// The spread is taken as at least SplitAgreeShare of the greater of the frame's light and the light
+// kept, so a way whose frames hardly vary is not let go for a small change. A way that starts again
+// counts the frame's rays as at least SplitAgainRays, so a frame of a ray or two moves it by their
+// share of that many rather than putting their light alone in place of its history. The spreads
+// are those an engine whose ways take many rays a frame passes keepSplitLight with spreads, and
+// keepSplitLight alone keeps each way's history always.
+public static const float SplitAgreeSpread = 5.0;
+public static const float SplitAgreeMost = 2.0;
+public static const float SplitAgreeSlack = 0.5;
+public static const float SplitAgreeShare = 0.25;
+public static const uint SplitAgreeRays = 16u;
+public static const uint SplitAgainRays = 8u;
+
 // Where along its interval of cascade a part of a ray ends, the finest cascade's interval
 // SplitBaseInterval spacings long and each above reaching four times as far past the one below.
 public float splitIntervalEnd(SplitStore shape, uint cascade)
@@ -862,7 +887,7 @@ public float3 splitRayOrigin(SplitFrame frame, SplitStore shape, float3 p, float
 // through and a count of one.
 void addSplitLight<W : IStoreUints>(W uints, SplitStore shape, uint entry, uint way, float3 light, float through)
 {
-    uint at = splitSumsAt(shape) + 5u * splitLightAt(shape, entry, way, false);
+    uint at = splitSumsAt(shape) + SplitSumUints * splitLightAt(shape, entry, way, false);
     uint3 parts = uint3(min(max(light, 0.0), 16384.0) * SplitSumScale + 0.5);
     uints.add(at, parts.x);
     uints.add(at + 1u, parts.y);
@@ -946,8 +971,31 @@ void addSeenRay<H : IRayHits, K : ISky, W : IStoreUints>(H hits, K sky, W uints,
 // those rays counted up to SplitKeptRays, so it holds the mean of all its rays until that many
 // and moves by a share of one over SplitKeptRays a ray after. A way no ray reached keeps its light
 // and its count, and a probe taken this frame first reads none along each way, its w -1, of no
-// rays, so the light its entry kept for the probe before is let go.
+// rays, so the light its entry kept for the probe before is let go. A way keeps its history
+// always, as keepSplitLight with spreads of 0 does, since a way that takes about a ray in several
+// frames meets by chance a run of frames of one ray each past its spread often enough to start
+// again on noise, and an engine whose ways take many rays a frame, a ray a pixel of its window,
+// passes SplitAgreeSpread to keepSplitLight with spreads so a lamp switched shows within frames.
 public void keepSplitLight<W : IStoreUints, L : IStoreLight>(W uints, L light, SplitFrame frame, SplitStore shape, uint index)
+{
+    keepSplitLight(uints, light, frame, shape, index, 0.0);
+}
+
+// The same with the spreads past which a way's frames disagree given, 0 for a way that keeps its
+// history always. The light a frame brings along a way, the mean of its red, green and blue, is
+// read against the mean of the light kept, and the way keeps beside its light the mean of the
+// squares of its frames' light over the same rays, so the spread of its frames about what it keeps
+// is the root of that mean less the square of the light kept, and in the low 8 bits of that uint
+// the sum of its frames past it in 127ths of the spreads given, its side by its sign. A way whose
+// sum reaches the spreads given starts again from the frame, its rays counted as SplitAgainRays
+// less the frame's, or none where the frame brings that many, before the frame's, and its sum
+// emptied. One frame of a ray that meets a lamp the way rarely sees lies many spreads past its
+// light, as a lamp switched on does, and a lamp switched off leaves each frame of a way that saw
+// it in part within the way's spread, so the sum over frames tells either from noise where one
+// frame cannot, and the spreads are read on scenes whose light holds still as well as on those
+// whose light changes.
+public void keepSplitLight<W : IStoreUints, L : IStoreLight>(W uints, L light, SplitFrame frame, SplitStore shape, uint index,
+    float spread)
 {
     if (index >= splitLightFirst(shape, shape.cascades))
         return;
@@ -956,29 +1004,53 @@ public void keepSplitLight<W : IStoreUints, L : IStoreLight>(W uints, L light, S
         cascade++;
     uint entry = splitPoolFirst(shape, cascade) + (index - splitLightFirst(shape, cascade)) / splitWays(cascade);
     uint at = splitPoolAt(shape) + SplitEntryUints * entry;
-    uint sums = splitSumsAt(shape) + 5u * index;
+    uint sums = splitSumsAt(shape) + SplitSumUints * index;
     uint counts = uints.load(sums + 4u);
     if (uints.load(at) == 0u)
     {
-        if (counts > 0u)
-            for (uint k = 0u; k < 5u; k++)
+        if (counts > 0u || uints.load(sums + 5u) != 0u)
+            for (uint k = 0u; k < SplitSumUints; k++)
                 uints.store(sums + k, 0u);
         return;
     }
     bool fresh = uints.load(at + 2u) == frame.frame;
     float4 kept = fresh ? float4(0.0, 0.0, 0.0, -1.0) : light.lightAt(index);
+    uint packed = fresh ? 0u : uints.load(sums + 5u);
+    float squares = asfloat(packed & 0xFFFFFF00u);
+    float past = spread > 0.0 ? float(int(packed << 24u) >> 24) / 127.0 * spread : 0.0;
     uint count = counts & ((1u << SplitCountBits) - 1u);
     uint held = fresh ? 0u : counts >> SplitCountBits;
     if (count > 0u)
     {
         float4 mean = float4(float(uints.load(sums)), float(uints.load(sums + 1u)), float(uints.load(sums + 2u)),
             float(uints.load(sums + 3u))) / (SplitSumScale * float(count));
+        float brought = (mean.x + mean.y + mean.z) / 3.0;
+        float had = (kept.x + kept.y + kept.z) / 3.0;
+        if (spread > 0.0 && held >= SplitAgreeRays)
+        {
+            float noise = max(sqrt(max(squares - had * had, 0.0)), SplitAgreeShare * max(brought, had));
+            float lies = noise > 0.0 ? clamp((brought - had) / noise, -SplitAgreeMost, SplitAgreeMost) : 0.0;
+            float brighter = max(max(past, 0.0) + lies - SplitAgreeSlack, 0.0);
+            float darker = max(max(-past, 0.0) - lies - SplitAgreeSlack, 0.0);
+            past = brighter >= darker ? brighter : -darker;
+            if (abs(past) >= spread)
+            {
+                held = count < SplitAgainRays ? SplitAgainRays - count : 0u;
+                past = 0.0;
+            }
+        }
+        else
+            past = 0.0;
         held = min(held + count, SplitKeptRays);
-        kept = lerp(kept, mean, min(float(count) / float(held), 1.0));
+        float share = min(float(count) / float(held), 1.0);
+        kept = lerp(kept, mean, share);
+        squares = lerp(squares, brought * brought, share);
         for (uint k = 0u; k < 4u; k++)
             uints.store(sums + k, 0u);
     }
     uints.store(sums + 4u, held << SplitCountBits);
+    int sum = spread > 0.0 ? int(round(clamp(past / spread, -1.0, 1.0) * 127.0)) : 0;
+    uints.store(sums + 5u, (asuint(squares) & 0xFFFFFF00u) | (uint(sum) & 0xFFu));
     light.keepLight(index, kept);
 }
 

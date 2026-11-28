@@ -190,8 +190,27 @@ surface coming into view fills its probes' ways within those frames rather than 
 one ray a point takes to reach them. `keepSplitLight` keeps each way's light from those sums, a
 thread a way, the mean of what it held over the rays it is the mean of and of the frame's rays,
 those counted up to `SplitKeptRays`, 256, past which each ray moves it by a 256th, so a way settles
-as its rays come and then follows a change of light over 256 of them, and empties the sums, the
-count of rays its light is the mean of kept above the frame's in the bits past `SplitCountBits`.
+as its rays come, and empties the sums, the count of rays its light is the mean of kept above the
+frame's in the bits past `SplitCountBits`. Given spreads, as an engine whose ways take many rays a
+frame passes `SplitAgreeSpread`, 5, a way whose frames disagree with what it keeps lets its history
+go, so a lamp switched or the sun moved shows within frames rather than over 256 rays. Each frame of
+a way of `SplitAgreeRays`, 16, rays or more adds to a sum of its side, brighter or darker, the
+spreads it lies past the light kept, at most 2, less a half, the spread read from the mean of the
+squares of its frames' light that the way keeps beside its light and taken as at least a quarter of
+the greater light, and a way whose sum reaches the spreads given starts again from the frame, its
+rays counted as at least `SplitAgainRays`, 8. One frame cannot tell a lamp switched off from noise,
+since each dark frame of a way that saw the lamp in part lies within the way's spread, where a sum
+over frames can. With each lit point seen by 16 by 16 points over its quarter of a cell, so its
+probes' ways hold their cap as an engine's do, the lamp wall's second lamp switched on lies within
+0.05 of the store's steady state by its parts from the 12th frame, 0.033 at the 16th, and switched
+off from the 12th, 0.036 at the 16th, while the parts of the scene held still move 0.008 and 0.007
+at most from frame to frame, and the court's sunlit strip stepped a unit brings its points' 90th
+part from 0.851 to 0.493 by the 16th frame, where keeping each way's history the lamp lies 0.172
+and 0.197 off at the 16th frame and 0.056 and 0.088 at the 48th and the strip's 90th part 0.654 at
+the 16th (`dotnet test RadianceCascades.Tests --filter FullyQualifiedName~A_Lamp_Switched`).
+`keepSplitLight` with no spreads keeps each way's history always, since a way of the corridor's
+walk below, whose probes take 4.1 to 4.5 rays a frame over their 32 ways, meets by chance a run of
+frames of one ray each past its spread often enough to start again on noise.
 `mergeSplitCascade` merges each cascade's ways from the coarsest down, a thread a way, each way's
 own light and, by the share it lets through, the mean of the four ways above that its texel holds at
 the probes of the cascade above about it, each weighed by the share the probe's own rays let through
@@ -229,7 +248,7 @@ probes a surface's points ask for of a cascade above run past its edges and acro
 where a quarter of the pool below, as the probes of a surface at twice the spacing are, leaves the
 coarse pools short, and a pool too small for the probes asked of it in a frame leaves some probes of
 the cascade below without the probe above, which then take no light from past their own interval.
-`SplitStoreShape.Bytes` gives the store's memory, 4 bytes a uint and 16 a float4 of light, 216.3 MB
+`SplitStoreShape.Bytes` gives the store's memory, 4 bytes a uint and 16 a float4 of light, 232.8 MB
 at the default shape of 16,384 slots to the finest pool and 6 cascades, the coarse pools taking most
 of it since a probe of the sixth cascade holds 32,768 ways (`dotnet test RadianceCascades.Tests
 --filter FullyQualifiedName~SplitStoreTests`).
@@ -267,7 +286,7 @@ hundredth off it, the brightest at the sky's 1 (`dotnet test RadianceCascades.Te
 FullyQualifiedName~SplitStoreTests`).
 
 Walked along the corridor as the dense levels are, 4 frames at each quarter step after 256 at the
-first eye, in a store of 8,192 slots to the finest pool and 6 cascades, 130.7 MB, a fixed point's
+first eye, in a store of 8,192 slots to the finest pool and 6 cascades, 140.7 MB, a fixed point's
 light on the split probes steps 0.008 of its mean at worst and 0.004 at the 99th part at an engine's
 configuration, against the dense levels' 3.558 and 1.299, and 0.006 and 0.004 at the module's, the
 rays' noise alone moving it between readings with the eye still 0.007 and 0.005 at an engine's and

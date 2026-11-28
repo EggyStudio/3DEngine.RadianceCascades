@@ -1,6 +1,6 @@
 # The ladder of merges
 
-Measured on 2026-11-28 on the tree of 1dc336e with the changes committed beside it, every merge the
+Measured on 2026-11-28 on the tree of e68fd0f with the changes committed beside it, every merge the
 passes take by name (`IMerge`) run over 10 scenes on the CPU at 2 configurations, as `dotnet test
 RadianceCascades.Tests` writes it with `RC_LADDER` naming this file. The module's configuration is
 its tests' chain of four levels in one cascade of the field of 64 cells of 0.25. An engine's is one
@@ -163,7 +163,7 @@ Its two walls' light each round over the first round's, traced and by each merge
 
 The split store, `ProbeLayout.Split`, runs over each scene at each configuration on the field, the
 light and the bounce the merges run on, at its default shape with 8,192 slots to its finest pool and
-6 cascades on grids fixed in the world, the finest 0.25 apart and each above twice as far, in 130.7
+6 cascades on grids fixed in the world, the finest 0.25 apart and each above twice as far, in 140.7
 MB. Each round a store anew sees the scene's points and the places of the bounce's cells, runs 64
 frames with each hit taking its surface's own light and what the surface reflects of the light
 gathered at its cell the round before, and gathers at the same points, the irradiance the dense
@@ -233,7 +233,7 @@ world, the points it sees the corridor's faces within 16 of the eye along it.
 
 ## The cones by roughness
 
-Measured on 2026-11-28 on the tree of 1dc336e with the changes committed beside it, the cone a rough
+Measured on 2026-11-28 on the tree of e68fd0f with the changes committed beside it, the cone a rough
 surface reflects read from the cascades by `ConeAtProbes` (`IConeRead`) over 12 scenes, the ladder's
 and two of their own, on the CPU at 2 configurations after one gather, as `dotnet test
 RadianceCascades.Tests` writes it with `RC_LADDER` naming this file. Each point of a scene reflects

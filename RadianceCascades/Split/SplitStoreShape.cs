@@ -12,7 +12,7 @@ namespace RadianceCascades;
 /// along each edge (<see cref="PoolProbes"/>), and a table four times the finest pool's slots from
 /// each probe's key to its entry. Its light takes a float4 for each way of each entry, once for the
 /// probes' own light and once for the light merged from above, and the sums of the seen points'
-/// rays take five uints for each way of the probes' own light. A probe of a coarse cascade holds
+/// rays take six uints for each way of the probes' own light. A probe of a coarse cascade holds
 /// many ways, 32,768 at the sixth, so the coarse pools take most of the memory the rows past the
 /// square's edges add.
 /// </para>
@@ -64,6 +64,14 @@ public sealed record SplitStoreShape
     /// </summary>
     public const int EntryUints = 8;
 
+    /// <summary>
+    /// The uints of the sums of each probe's way, as the Slang <c>SplitSumUints</c>, its light in
+    /// red, green and blue, the share let through, its count of rays and the mean of the squares of
+    /// the light its frames brought, with the sum of its frames past its light in that uint's low
+    /// 8 bits.
+    /// </summary>
+    public const int SumUints = 6;
+
     // The uints ahead of the ages' counts, as the Slang SplitCounts.
     private const int Counts = 32;
 
@@ -108,11 +116,11 @@ public sealed record SplitStoreShape
 
     /// <summary>
     /// The uints the store lays out, its counts, the ages' counts of both parities, its table, its
-    /// pools, its free lists and the sums the seen points' rays add to each way, five a way, which
-    /// the engine's buffer of uints holds.
+    /// pools, its free lists and the sums the seen points' rays add to each way,
+    /// <see cref="SumUints"/> a way, which the engine's buffer of uints holds.
     /// </summary>
     public int Uints => Counts + 2 * AgeBins * Checked().Cascades + 2 * 4 * Slots + (EntryUints + 1) * Entries
-        + 5 * OwnLights;
+        + SumUints * OwnLights;
 
     /// <summary>
     /// The float4 of light the store lays out, its probes' own light and the light merged from

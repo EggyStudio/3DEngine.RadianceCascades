@@ -182,13 +182,14 @@ record SplitStoreShape                                   // The shape of the spl
 int BaseWays = 32;                                       // The ways of a probe of the finest cascade, as the Slang SplitBaseWays
 int AgeBins = 32;                                        // The bins each cascade's probes are counted in by how many frames ago each was asked for, as the Slang SplitAgeBins
 int EntryUints = 8;                                      // The uints of an entry of a pool, as the Slang SplitEntryUints
+int SumUints = 6;                                        // The uints of the sums of each probe's way, as the Slang SplitSumUints, its light in red, green and blue, the share let through, its count of rays and the mean of the squares of the light its frames brought, with the sum of its frames past its light in that uint's low 8 bits
 SplitStoreShape();
 int Slots { get; init; }                                 // The entries of the finest cascade's pool, a power of two at least as large as the coarsest cascade's ways over the finest's, 16384 by default
 float Spacing { get; init; }                             // The spacing of the finest cascade's probes in the engine's world unit, 0.25 by default
 int Cascades { get; init; }                              // The count of cascades, each spaced twice the one below on a grid fixed in the world, with four times its ways and an interval four times as long, from 1 to 8, 6 by default, whose coarsest interval ends 546 of the engine's units from a ray's start at the default spacing
 int Entries { get; }                                     // The entries of every pool
 int OwnLights { get; }                                   // The float4 of every cascade's own light, which an engine dispatches keepSplitLight over, a thread each, half of Lights
-int Uints { get; }                                       // The uints the store lays out, its counts, the ages' counts of both parities, its table, its pools, its free lists and the sums the seen points' rays add to each way, five a way, which the engine's buffer of uints holds
+int Uints { get; }                                       // The uints the store lays out, its counts, the ages' counts of both parities, its table, its pools, its free lists and the sums the seen points' rays add to each way, SumUints a way, which the engine's buffer of uints holds
 int Lights { get; }                                      // The float4 of light the store lays out, its probes' own light and the light merged from above, which the engine's buffer of light holds
 long Bytes { get; }                                      // The bytes the store's two buffers take, four a uint of Uints and sixteen a float4 of Lights, which an engine reads its memory by
 int PoolProbes(int cascade);                             // The entries of a cascade's pool, as the Slang splitPoolProbes, the slots for the finest, and for each above the probes of its spacing over the square of the finest's probes the slots cover, the fewest a side whose square holds them, with a row more along each edge, no more than the slots

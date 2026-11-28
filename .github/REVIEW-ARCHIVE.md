@@ -999,6 +999,22 @@ corner toward the opening, which see the sky and span the least solid angle, as 
     The worst part at both configurations is the lintel's. The engine reads its time against the 54
     ms of a query a part at the pin.
 
+23. **Fresh probes take more rays.** A pixel whose finest probe was placed within its first frames
+    sends four rays rather than one until the probe's count reaches the others', so a surface coming
+    into view fills in within those frames rather than popping in; read as the frames to settle
+    after a turn of the eye on the corridor, with the rays a frame beside. One commit. Done at
+    e68fd0f on 2026-11-28, pushed at 04:50, its run read next tick, 244 tests green. A point whose
+    finest probe is under 16 frames old sends four rays a frame, the age counted from the frame its
+    entry was taken. The corridor's turn, 6,016 newly seen points, the 95th part within a tenth of
+    steady by frame 11 at the module's configuration and 12 at the engine's against past 24 with one
+    ray, 34 and 51 points dark at the first frame against 357 and 538, rays 25,091 at the first
+    frame and 6,332 at the 24th. Ladder 0.124 and 0.407, 0.125 and 0.415 against 0.121 and 0.402,
+    the moves in the lamp box, the lamp wall and the court on the ray count and not the rule; dark
+    room 0.042 with no leak; lintel 0.334 and 0.407; walk steps 0.008 and 0.004, 0.006 and 0.004.
+    Review, done; the specks were the engine's normal (its item 323), so no pixel kernel. Item 24's
+    noise test keeps a second moment a way, which changes the store's layout for the bindings and is
+    said before its commit.
+
 The gather toward the surface, `gatherTraced`, for a surface whose probes stand off it. A point
 sends a ray along each way of the finest cascade's octahedron that faces its normal, from a cell off
 the surface, and hands each on through `mergedLight` as a ray that ended where it began, weighed by
@@ -2314,6 +2330,45 @@ alone 0.971 and 0.983, against 1.048 and 1.091 and 1.011 and 1.020 (`RC_LADDER=.
 dotnet test RadianceCascades.Tests --filter
 'FullyQualifiedName~On_The_Split_Probes|FullyQualifiedName~At_The_Lamps_Edge'`). The hand hands one
 trace a ray to both bindings, and the engine reads its time against 54 ms.
+
+Item 23, fresh probes take more rays. A seen point whose probe of the finest cascade was taken
+within the last `SplitFreshFrames`, 16, sends `SplitFreshRays`, 4, rays a frame rather than one,
+each further ray of a frame taking the step of its sequence a quarter of their range past the last,
+which lays the four on a lattice over the square. The rule reads a probe's age from the frame taken
+its entry keeps rather than from its count, since the counts sit a way and not a probe, and 16
+frames at 4 rays give a point 64 rays before it falls to one. Turned at the corridor's middle from
+the faces toward -x to those toward +x, the 6,016 points newly seen come within a tenth of their
+light 160 frames on at the 95th part by the 11th frame at the module's configuration and the 12th at
+an engine's, where at one ray a point they are still past it 24 frames on, 34 and 51 read under a
+fifth of it at the first frame against 357 and 538, and their mean distance at frames 1, 4 and 16 is
+0.243, 0.109 and 0.024 against 0.651, 0.224 and 0.061 at the module's and 0.306, 0.128 and 0.028
+against 0.778, 0.277 and 0.078 at an engine's, the 6,332 points seen sending 25,091 rays at the
+first frame and 6,332 at the 24th (`dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~A_Surface_Turned_Into_View`). By a reading not committed on the walk's 60 points
+past the turn, 16 frames bring the 99th part within a tenth by the 9th frame at the module's and the
+11th at an engine's against the 11th and the 25th at 8, for 502,768 rays over 32 frames against
+352,696, and 202,624 at one ray a point.
+
+The ladder reads the split store 0.124 from its trace on the mean and 0.407 at worst at the module's
+configuration and 0.125 and 0.415 at an engine's, against 0.121 and 0.402 at both, the dark room
+taking none of the lit room's light and the lintel's room reading 0.334 against 0.340, and the moves
+lie in the bright scenes, the closed box with one lamp 0.383 and 0.393 on the mean against 0.371 and
+0.373, the wall under a lamp 0.108 and 0.105 against 0.093 and 0.091, and the court 0.058 and 0.058
+against 0.048 and 0.057 (`RC_LADDER=.github/LADDER.md dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~The_Ladder`). By a reading not committed they come of the count of rays and not
+of the rule. At the module's one ray a point over 112 frames, the rays 16 fresh frames give over 64,
+reads the closed box 0.404, the court 0.053 and the wall 0.102, and over 256 frames 0.390, 0.056 and
+0.104, against 0.394, 0.058 and 0.109 with 16 fresh frames over 256, so at 64 frames of one ray the
+store read those scenes nearer their trace than it reads them at more rays, and at 4, 8 and 24 fresh
+frames over 64 the wall reads 0.100, 0.105 and 0.116. The walk steps 0.008 and 0.004 at an engine's
+and 0.006 and 0.004 at the module's, with the eye still 0.007 and 0.005 at an engine's and 0.005 and
+0.004 at the module's, each finest probe asked for at the last eye taking 4.5 rays a frame at an
+engine's, and at the lamp's edge the probes fed by every face read 1.042 and 1.091 of the trace and
+by their own rays alone 0.962 and 0.981, against 1.044 and 1.096 and 0.971 and 0.983
+(`RC_LADDER=.github/LADDER.md dotnet test RadianceCascades.Tests --filter
+'FullyQualifiedName~On_The_Split_Probes|FullyQualifiedName~At_The_Lamps_Edge'`). The specks are the
+engine's normals, as the reviewing session read, and no kernel reading a pixel's eight probes is
+added.
 
 ## Decisions
 
