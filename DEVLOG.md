@@ -10,6 +10,8 @@ names the item of .github/REVIEW.md or .github/REVIEW-ARCHIVE.md and the commit 
 
 Commits that day
 
+- `1dc336e` Each seen point's ray is traced once to the end of the coarsest interval and split by
+  where it ended across the cascades' intervals.
 - `4485327` The store reads at a point what a binding counts where its gathered light reads dark,
   the gather's weights, the share lent from behind its plane and the age of its youngest probe.
 

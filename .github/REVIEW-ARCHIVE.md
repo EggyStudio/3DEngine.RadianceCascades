@@ -984,6 +984,21 @@ corner toward the opening, which see the sky and span the least solid angle, as 
     trace, so the engine's specks are its frames' own and item 23 takes them with the engine's
     counts by cause.
 
+22. **One trace a ray, split by its hit.** Recorded under item 18 on 2026-11-26 from the engine's
+    device, 4,688,000 queries for 2,650,656 rays. Each ray is traced once from its surface point and
+    its one hit is split by distance into the cascades' intervals, the parts past the hit taking
+    transmittance 0 and the light at the hit alone; the ladder reads equal within noise and the
+    engine reads its time against 54 ms. The hand hands one trace a ray. One commit. Done at 1dc336e
+    on 2026-11-28, pushed at 02:12, its run read next tick, 242 tests green. traceSeenRays traces
+    each seen point's ray once to the end of the coarsest interval and splits it by where it ended;
+    a binding's ray hits take one call a ray and its step cap counts the whole ray. The ladder's
+    split store 0.121 mean and 0.402 worst at the module's configuration against 0.124 and 0.443,
+    0.121 and 0.402 at the engine's; every scene within 0.007 at the mean and 0.020 at the worst
+    part but the closed box at the module's, 0.371 and 0.375 against 0.424 and 0.443, where the
+    whole trace finds the lamp on more rays; 0.1 to 2.9 percent of the rays end in another cascade.
+    The worst part at both configurations is the lintel's. The engine reads its time against the 54
+    ms of a query a part at the pin.
+
 The gather toward the surface, `gatherTraced`, for a surface whose probes stand off it. A point
 sends a ray along each way of the finest cascade's octahedron that faces its normal, from a cell off
 the surface, and hands each on through `mergedLight` as a ray that ended where it began, weighed by
@@ -2273,6 +2288,32 @@ no ray reached, and the frames since the youngest probe about it was taken (`dot
 RadianceCascades.Tests --filter FullyQualifiedName~A_Split_Gathers_Cause`). The hand gains it for
 both bindings, a dispatch after gatherSurface over the pixels read dark, and item 23 takes the
 specks.
+
+Item 22, one trace a ray. `traceSeenRays` traces each seen point's ray once, from its start to the
+end of the coarsest cascade's interval, and splits it by where it ended, each part before the
+interval it ended in adding no light and letting all of it through, and that interval's part adding
+the light the ray took, so a binding's `IRayHits` takes one call a ray where it took one for each
+interval the ray reached, and a binding's step cap counts the whole ray. The ladder reads the split
+store 0.121 from its trace on the mean and 0.402 at worst at the module's configuration, against
+0.124 and 0.443, and 0.121 and 0.402 at an engine's, against 0.122 and 0.402, each scene's mean
+within 0.007 of its reading before and its worst part within 0.020 but the closed box with one lamp
+at the module's, 0.371 and 0.375 against 0.424 and 0.443, its floor taking 0.693 of its trace
+against 0.642, and the worst part at either configuration is the lintel's room's
+(`RC_LADDER=.github/LADDER.md dotnet test RadianceCascades.Tests --filter
+FullyQualifiedName~The_Ladder`). By a reading not committed, over 16 frames of each scene's rays
+traced both ways, 0.1 to 2.9 percent of the rays end in another cascade, a hit or the field's edge
+lying at an interval's end that one march reaches before it and the other past it, most of the 2.9
+percent under the lintel at the module's leaving the field there, and under 0.4 percent take another
+light in every scene but the lit room beside the dark one and the lintel's room, 2.1 to 2.5 percent
+there, as many above as below. In the closed box at the module's 285 of the rays met within the
+third cascade's interval meet the lid at another place, the whole trace finding the lamp on about 29
+more of 94,864 over 16 frames, against 5 fewer at an engine's, and 250 of its 414 moved rays lie at
+the end of that interval. The walk's step at the module's reads 0.006 against 0.007, and at the
+lamp's edge the probes fed by every face read 1.044 and 1.096 of the trace and by their own rays
+alone 0.971 and 0.983, against 1.048 and 1.091 and 1.011 and 1.020 (`RC_LADDER=.github/LADDER.md
+dotnet test RadianceCascades.Tests --filter
+'FullyQualifiedName~On_The_Split_Probes|FullyQualifiedName~At_The_Lamps_Edge'`). The hand hands one
+trace a ray to both bindings, and the engine reads its time against 54 ms.
 
 ## Decisions
 

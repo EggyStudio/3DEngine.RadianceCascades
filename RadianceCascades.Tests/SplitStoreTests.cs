@@ -16,11 +16,13 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
     // A store's buffers kept from frame to frame and the passes of a frame run over them, its rays
     // traced among boxes, each its low corner and its light then its high corner, in a world's cube
     // 128 a side about its middle under a sky of 1, one box out past the world where none is given.
+    // Each seen point sends one ray a frame unless the frames within which a probe is fresh are
+    // given.
     private sealed class Store(SplitStoreShape shape, float[]? boxes = null)
     {
         public readonly uint[] Uints = new uint[shape.Uints];
         public readonly float[] Light = new float[4 * shape.Lights];
-        private readonly float[] setup = new float[16];
+        private readonly float[] setup = new float[17];
         private readonly float[] boxes = boxes is { Length: > 0 } ? boxes : [1000, 1000, 1000, 0, 1001, 1001, 1001, 0];
 
         public float[] Run(int pass, Vector3 eye, uint frame, float[] points, int threads, int cascade = 0)
@@ -28,7 +30,7 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
             var count = points.Length / 8;
             (setup[0], setup[1], setup[2], setup[3], setup[4]) = (pass, eye.X, eye.Y, eye.Z, frame);
             (setup[5], setup[6], setup[7]) = (shape.Slots, shape.Spacing, shape.Cascades);
-            (setup[11], setup[12], setup[13], setup[14], setup[15]) = (cascade, count, boxes.Length / 8, 64, 1);
+            (setup[11], setup[12], setup[13], setup[14], setup[15], setup[16]) = (cascade, count, boxes.Length / 8, 64, 1, FreshFrames);
             var taken = new float[4 * Math.Max(Math.Max((1 + shape.Cascades) * count, shape.Entries), Math.Max(160, threads))];
             CpuKernel.Run("split_store_cpu.slang", ((uint)(threads + 63) / 64, 1, 1), setup, points.Length == 0 ? new float[8] : points, Uints, Light, taken, boxes);
             return taken;
@@ -62,6 +64,10 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
 
         // Keeps each way's light from the frame's sums.
         public void Keep(Vector3 eye, uint frame) => Run(10, eye, frame, [], shape.OwnLights);
+
+        // The frames within which a probe of the finest cascade is fresh, its seen points sending
+        // SplitFreshRays a frame, 0 for one ray a point always.
+        public int FreshFrames { get; init; }
 
         // The first uint of the sums.
         public int SumsAt => (int)Run(5, Vector3.Zero, 0, [], 1)[7];
@@ -404,6 +410,39 @@ public sealed class SplitStoreTests(ITestOutputHelper output)
             + $"each cascade from the finest, {missing} parts finding no probe and {off} of the sums' uints off the rays traced whole";
         output.WriteLine(said);
         Assert.True(missing == 0 && off == 0 && reached[Shape.Cascades - 1] > 0, said);
+    }
+
+    [CpuKernelFact]
+    public void A_Split_Point_Whose_Finest_Probe_Is_Fresh_Sends_Four_Rays_A_Frame_Until_Its_Probe_Is_16_Frames_Old()
+    {
+        // Each seen point of the lit corridor whose probe of the finest cascade was taken within
+        // the last 16 frames (SplitFreshFrames) adds 4 rays a frame to it (SplitFreshRays), at the
+        // first frame and the 16th of its probes, and one at the 17th.
+        var points = CorridorFaces();
+        var count = points.Length / 8;
+        var eye = new Vector3(0, 1.5f, 0);
+        var store = new Store(Shape, CorridorLitBoxes) { FreshFrames = 16 };
+        var sumsAt = store.SumsAt;
+        var finest = Shape.CascadeLights(0);
+        int Rays() => Enumerable.Range(0, finest).Sum(i => (int)(store.Uints[sumsAt + 5 * i + 4] & 0xFFFFF));
+        var rays = new List<int>();
+        var standing = 0;
+        for (uint frame = 1; frame <= 17; frame++)
+        {
+            store.Frame(eye, frame, points, rays: frame is 1 or 16 or 17, keep: false);
+            if (frame is not (1 or 16 or 17))
+                continue;
+            rays.Add(Rays());
+            if (frame == 1)
+            {
+                var whole = store.Run(13, eye, 1, points, count);
+                standing = Enumerable.Range(0, count).Count(k => whole[4 * (1 + Shape.Cascades) * k + 4] >= 0);
+            }
+            store.Keep(eye, frame);
+        }
+        var said = $"{count} seen points, {standing} of whose probes stand, add {string.Join(", ", rays)} rays to the finest cascade at frames 1, 16 and 17";
+        output.WriteLine(said);
+        Assert.True(rays[0] == 4 * standing && rays[1] == 4 * standing && rays[2] == standing && standing > 0, said);
     }
 
     [CpuKernelFact]

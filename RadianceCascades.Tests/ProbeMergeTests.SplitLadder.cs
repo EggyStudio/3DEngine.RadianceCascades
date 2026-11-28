@@ -68,7 +68,7 @@ public sealed partial class ProbeMergeTests
             if (sums.Count == MostRounds || HasSettled(sums))
             {
                 var asked = store.Asked();
-                return (each[0], light, sums.Count, HasSettled(sums), Gain(sums), (store.Standing(), store.Short(), asked, store.SeenCount / (float)Math.Max(asked, 1)));
+                return (each[0], light, sums.Count, HasSettled(sums), Gain(sums), (store.Standing(), store.Short(), asked, store.Rays / (float)Math.Max(asked, 1)));
             }
             bounce = Spread(transport, taken[points.Length..]);
         }

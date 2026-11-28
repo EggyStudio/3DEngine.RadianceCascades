@@ -132,6 +132,10 @@ public sealed partial class ProbeMergeTests
                 for (int c = 0; c + 1 < Shape.Cascades; c++)
                     Run(3, Shape.PoolProbes(c), c);
                 Run(4, seen.Length / 8);
+                // The frame's rays in the low 20 bits of each finest way's count (SplitCountBits),
+                // the sums last in the store's uints.
+                var sums = Uints.Length - 5 * Shape.OwnLights;
+                Rays = Enumerable.Range(0, Shape.CascadeLights(0)).Sum(i => (int)(Uints[sums + 5 * i + 4] & 0xFFFFF));
                 Run(5, Shape.OwnLights);
                 for (int c = Shape.Cascades - 1; c >= 0; c--)
                     Run(6, Shape.CascadeLights(c), c);
@@ -180,8 +184,16 @@ public sealed partial class ProbeMergeTests
             return shortOf;
         }
 
-        // The points seen at a frame, each sending one ray.
+        // The points seen at a frame.
         public int SeenCount => seen.Length / 8;
+
+        // The rays the finest cascade's probes took at the last frame, each ray of a seen point
+        // whose probe stands adding one part to its probe of the finest.
+        public int Rays { get; private set; }
+
+        // The frames within which a probe is fresh, the store's own unless given, 0 for one ray a
+        // point always.
+        public int FreshFrames { init => setup[55] = value + 1; }
     }
 
     // The split store over the corridor's field at a configuration. At places the eye, the field
@@ -233,7 +245,7 @@ public sealed partial class ProbeMergeTests
             walk[e] = store.Gather();
         }
         var asked = store.Asked();
-        return (walk, [.. still], store.Standing(), store.Short(), asked, store.SeenCount / (float)Math.Max(asked, 1));
+        return (walk, [.. still], store.Standing(), store.Short(), asked, store.Rays / (float)Math.Max(asked, 1));
     }
 
     [CpuKernelFact]
@@ -282,5 +294,62 @@ public sealed partial class ProbeMergeTests
                 failed.Add(said);
         }
         Assert.True(failed.Count == 0, string.Join("; ", failed));
+    }
+
+    [CpuKernelFact]
+    public void A_Surface_Turned_Into_View_On_The_Split_Probes_Settles_Within_Its_Probes_Fresh_Frames()
+    {
+        // The eye at the corridor's middle sees its faces toward -x for 32 frames and then turns to
+        // see those toward +x, each face newly seen read at every frame after the turn against its
+        // light 160 frames on, at both configurations. Each point whose finest probe is fresh sends
+        // 4 rays a frame for its first 16 frames (SplitFreshFrames), so the faces come within a
+        // tenth of that light at the 95th part within those frames, where at one ray a point always
+        // they are still past it 24 frames on, and fewer of them read dark at the first frame,
+        // under a fifth of it. The rays a frame are 4 a seen point while its probe is fresh and one
+        // after.
+        var eye = new Vector3(0, 1.5f, 0);
+        var faces = CorridorSeenFaces(0.5f, 8);
+        var newly = Enumerable.Range(0, faces.Length / 8).Select(i =>
+        {
+            var n = new Vector3(faces[8 * i + 4], faces[8 * i + 5], faces[8 * i + 6]);
+            return (new Vector3(faces[8 * i], faces[8 * i + 1], faces[8 * i + 2]) + n * 0.001f, n);
+        }).ToArray();
+        var jobs = Enum.GetValues<Configuration>().SelectMany(c => new[] { (Configuration: c, Fresh: true), (Configuration: c, Fresh: false) }).ToArray();
+        var read = new (int? Settle, int Dark, double[] Means, int Far, int Seen, int FreshRays, int Rays)[jobs.Length];
+        Parallel.For(0, jobs.Length, j =>
+        {
+            var (configuration, fresh) = jobs[j];
+            var store = fresh ? new SplitCorridor(configuration, newly) : new SplitCorridor(configuration, newly) { FreshFrames = 0 };
+            store.At(eye, CorridorSeenFaces(-8, 0));
+            store.Frames(32);
+            store.At(eye, CorridorSeenFaces(0, 8));
+            var (reads, rays) = (new List<float[]>(), new List<int>());
+            for (int f = 0; f < 24; f++)
+            {
+                store.Frames(1);
+                rays.Add(store.Rays);
+                reads.Add(store.Gather());
+            }
+            store.Frames(160);
+            var steady = store.Gather();
+            double[] Off(float[] light) => [.. Enumerable.Range(0, newly.Length)
+                .Select(i => Math.Abs(Math.Log(Math.Max(light[i], 1e-4) / Math.Max(steady[i], 1e-4)))).Order()];
+            var offs = reads.Select(Off).ToArray();
+            var settle = Enumerable.Range(0, offs.Length).Where(f => offs[f][(int)(0.95 * (newly.Length - 1))] < 0.105).Select(f => (int?)f + 1).FirstOrDefault();
+            var dark = Enumerable.Range(0, newly.Length).Count(i => reads[0][i] < 0.2f * steady[i]);
+            read[j] = (settle, dark, [offs[0].Average(), offs[3].Average(), offs[15].Average()], offs[15].Count(d => d >= 0.105), store.SeenCount, rays[0], rays[^1]);
+        });
+        var said = string.Join("; ", jobs.Select((job, j) => $"at {job.Configuration}'s configuration {(job.Fresh ? "with fresh probes' points sending 4 rays" : "at one ray a point always")} "
+            + $"{newly.Length} points newly seen come within a tenth of their light at the 95th part {(read[j].Settle is { } f ? $"at frame {f}" : "past frame 24")}, "
+            + $"{read[j].Dark} under a fifth of it at the first frame, their mean distance {string.Join(", ", read[j].Means.Select(m => $"{m:0.000}"))} at frames 1, 4 and 16, "
+            + $"{read[j].Far} past a tenth at frame 16, {read[j].FreshRays} rays at the first frame and {read[j].Rays} at the 24th for {read[j].Seen} points seen"));
+        output.WriteLine(said);
+        var held = Enumerable.Range(0, jobs.Length / 2).All(c =>
+        {
+            var (fresh, one) = (read[2 * c], read[2 * c + 1]);
+            return fresh.Settle <= 16 && (one.Settle is null || one.Settle > fresh.Settle) && fresh.Dark < one.Dark
+                && fresh.FreshRays > 3.5f * fresh.Seen && fresh.Rays == fresh.Seen && one.FreshRays == one.Seen;
+        });
+        Assert.True(held, said);
     }
 }

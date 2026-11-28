@@ -871,28 +871,58 @@ void addSplitLight<W : IStoreUints>(W uints, SplitStore shape, uint entry, uint 
     uints.add(at + 4u, 1u);
 }
 
-// Sends the seen point at index its frame's ray (splitRayWay), a thread a point after
-// askCascadeProbes, traced once from its start to the end of the coarsest cascade's interval, and
-// splits it by where it ended across the cascades' intervals, adding each part to the probe of its
-// cascade the point's probe of the finest (splitSeenCell) leads up to (askCascadeProbes), at the
-// way it falls in. Each part before the interval the ray ended in adds no light and lets all of it
-// through, and the part of that interval adds the light the ray took, the sky's past what it
-// crossed where it left the world, and lets through what it carries where it ended at the coarsest
-// interval's end with nothing met, or none, and the ray ends there, so a cascade's probe takes only
-// the rays that reach its interval. A ray whose march was capped adds nothing to the part it
-// stopped in, and a binding's cap counts the whole ray's steps. A surface the ray crosses before
-// the interval it ended in dims and lights that interval's part rather than its own, which the
-// merge, multiplying each part's light through by the next, reads as the same along the chain.
+// The frames from its taking within which a probe of the finest cascade is fresh, and the rays
+// each seen point that adds its rays to a fresh probe sends a frame rather than one, so a surface
+// coming into view fills in within those frames rather than reading dark and noisy over the many
+// frames one ray a point takes to reach each way of its probe that faces it.
+public static const uint SplitFreshFrames = 16u;
+public static const uint SplitFreshRays = 4u;
+
+// Sends the seen point at index its frame's rays (splitRayWay), a thread a point after
+// askCascadeProbes, SplitFreshRays where its probe of the finest (splitSeenCell) was taken within
+// the last SplitFreshFrames frames and one otherwise, as traceSeenRays with fresh frames gives.
 public void traceSeenRays<P : IVisiblePoints, H : IRayHits, K : ISky, W : IStoreUints>(P points, H hits, K sky, W uints,
     SplitFrame frame, SplitStore shape, uint index)
+{
+    traceSeenRays(points, hits, sky, uints, frame, shape, index, SplitFreshFrames);
+}
+
+// The same with the frames within which a probe is fresh given, 0 for one ray a point always.
+// Each ray is traced once from the point's start to the end of the coarsest cascade's interval,
+// and split by where it ended across the cascades' intervals, each part added to the probe of its
+// cascade the point's probe of the finest leads up to (askCascadeProbes), at the way it falls in.
+// Each part before the interval the ray ended in adds no light and lets all of it through, and the
+// part of that interval adds the light the ray took, the sky's past what it crossed where it left
+// the world, and lets through what it carries where it ended at the coarsest interval's end with
+// nothing met, or none, and the ray ends there, so a cascade's probe takes only the rays that reach
+// its interval. A ray whose march was capped adds nothing to the part it stopped in, and a
+// binding's cap counts the whole ray's steps. A surface the ray crosses before the interval it
+// ended in dims and lights that interval's part rather than its own, which the merge, multiplying
+// each part's light through by the next, reads as the same along the chain. A fresh probe's
+// point's further rays of a frame take the steps of its sequence a quarter of their range past the
+// frame's, each moving the step's point of the square a quarter across it and half up it, so the
+// frame's rays lie on a lattice of four over the square.
+public void traceSeenRays<P : IVisiblePoints, H : IRayHits, K : ISky, W : IStoreUints>(P points, H hits, K sky, W uints,
+    SplitFrame frame, SplitStore shape, uint index, uint fresh)
 {
     if (!points.seenAt(index) || !splitHolds(frame, shape, points.placeAt(index)))
         return;
     float3 p = points.placeAt(index);
     float3 n = points.normalAt(index);
-    float3 way = splitRayWay(n, index, frame.frame);
     float3 origin = splitRayOrigin(frame, shape, p, n);
     int3 cell = splitSeenCell(hits, shape, p, origin);
+    uint finest = findSplitProbe(uints, shape, splitKey(0u, cell));
+    uint rays = finest != SplitNone && frame.frame - uints.load(splitPoolAt(shape) + SplitEntryUints * finest + 2u) < fresh
+        ? SplitFreshRays : 1u;
+    for (uint ray = 0u; ray < rays; ray++)
+        addSeenRay(hits, sky, uints, shape, origin, splitRayWay(n, index, frame.frame + ray * 1073741824u), cell);
+}
+
+// Traces one ray of a seen point from origin along way and adds its parts to the probes cell of the
+// finest cascade leads up to, as traceSeenRays lays them.
+void addSeenRay<H : IRayHits, K : ISky, W : IStoreUints>(H hits, K sky, W uints, SplitStore shape, float3 origin, float3 way,
+    int3 cell)
+{
     ProbeRay whole = hits.along(origin, way, 0.0, splitIntervalEnd(shape, shape.cascades - 1u));
     float3 light = whole.light + (whole.ended == RayLeft ? whole.carried * sky.skyAlong(way) : float3(0.0));
     for (uint cascade = 0u; cascade < shape.cascades; cascade++)

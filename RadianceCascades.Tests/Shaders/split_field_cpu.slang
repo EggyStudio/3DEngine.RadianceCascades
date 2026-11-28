@@ -186,7 +186,7 @@ void test(uint3 id : SV_DispatchThreadID)
     else if (pass == 3u)
         askCascadeProbes(store, frame, shape, cascade, index);
     else if (pass == 4u && index < uint(setup[12]))
-        traceSeenRays(points, hits, sky, store, frame, shape, index);
+        traceSeenRays(points, hits, sky, store, frame, shape, index, setup[55] > 0.0 ? uint(setup[55]) - 1u : SplitFreshFrames);
     else if (pass == 5u)
         keepSplitLight(store, kept, frame, shape, index);
     else if (pass == 6u)
